@@ -8,3 +8,4 @@ qrcode[pil]
 Pillow
 python-dotenv
 gunicorn
+eventlet
