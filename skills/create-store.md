@@ -1,13 +1,31 @@
-Create a Pinia store called $ARGUMENTS.
+---
+name: create-store
+description: Create a Pinia store for this Vue 3 project. Use when the user asks to create a store, add state management, or needs a new Pinia store for auth, events, badges, or redemptions.
+user-invocable: true
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+---
 
-Mandatory rules:
+# /create-store — Create a Pinia Store
+
+Create a Pinia store called `$ARGUMENTS`.
+
+Arguments passed: `$ARGUMENTS`
+
+## Mandatory rules
+
 - Plain JavaScript, no TypeScript
 - Composition pattern (function, not options object)
-- File: $ARGUMENTS.js in `src/stores/`
+- File: `$ARGUMENTS.js` in `src/stores/`
 - Export as `use[Name]Store`
 
-Base pattern:
-js
+## Base pattern
+
+```js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
@@ -20,6 +38,7 @@ export const use[Name]Store = defineStore('[name]', () => {
 
   return { /* only what's needed */ }
 })
+```
 
 - Always `import api from '@/services/api'`, never `axios` directly
 - Errors with `try/catch`, expose an `error` ref if there are HTTP calls

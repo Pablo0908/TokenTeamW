@@ -1,8 +1,22 @@
+---
+name: add-styles
+description: Apply Tailwind CSS + DaisyUI styles to a Vue component. Use when the user asks to style a component, add styles, or improve the visual appearance of an existing component without changing its logic.
+user-invocable: true
+allowed-tools:
+  - Read
+  - Edit
+  - Glob
+  - Grep
+---
+
+# /add-styles — Style a Vue Component
+
 Style the following Vue component using Tailwind CSS + DaisyUI.
 
-$ARGUMENTS
+Arguments passed: `$ARGUMENTS`
 
-Rules:
+## Rules
+
 - DO NOT change logic, props, emits, or reactive data — classes only
 - Hierarchy: DaisyUI first → Tailwind for fine-tuning → custom CSS only as last resort
 - Dark theme: `bg-base-100`, `bg-base-200`, `bg-base-300`, `text-base-content`

@@ -1,20 +1,39 @@
-Create a Vue 3 component called $ARGUMENTS.
+---
+name: create-component
+description: Create a Vue 3 component for this project. Use when the user asks to create a component, add a UI element, or needs a reusable piece of the interface such as a badge card, event card, or QR scanner.
+user-invocable: true
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+---
 
-Mandatory rules:
+# /create-component — Create a Vue 3 Component
+
+Create a Vue 3 component called `$ARGUMENTS`.
+
+Arguments passed: `$ARGUMENTS`
+
+## Mandatory rules
+
 - `<script setup>` with plain JavaScript, no TypeScript
-- File in PascalCase: $ARGUMENTS.vue
+- File in PascalCase: `$ARGUMENTS.vue`
 - Location: `src/components/ui/` if generic, `src/components/domain/` if business-specific
 - Props with `defineProps`, emits with `defineEmits`
 
-Styles:
+## Styles
+
 - DaisyUI first: `btn`, `card`, `badge`, `input`, `alert` as appropriate
 - Tailwind for layout and spacing: `flex`, `gap-4`, `p-4`, etc.
 - Dark theme colors: `bg-base-100`, `bg-base-200`, `text-base-content`
 - Do not use fixed colors like `bg-blue-500` if DaisyUI already covers them
 - Mobile-first: design for mobile first, then `sm:` and `md:` for larger screens
 
-Base structure:
-vue
+## Base structure
+
+```vue
 <script setup>
 import { ref } from 'vue'
 
@@ -32,6 +51,6 @@ const emit = defineEmits([/* events based on context */])
 <style scoped>
 /* only if Tailwind/DaisyUI is not enough */
 </style>
-
+```
 
 Infer props and emits from the component name and project context: badges, events, QR, users, admin/assistant roles.
