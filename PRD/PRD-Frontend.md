@@ -1,145 +1,219 @@
-# Product Requirements Document — Lyfter Badge App (Backend)
+# Product Requirements Document — Lyfter Badge App (Frontend)
 
 **Version:** 1.0
-**Stack:** Flask · PyMongo · MongoDB · JWT · Render
+**Stack:** Vue.js · Tailwind CSS · DaisyUI · Pinia · Vue Router · Vite · Vercel
 **Event Target:** Lyfter Hackathon, Costa Rica — November 2026
+
+> **Companion document:** This PRD covers the **client application** only. The API it consumes
+> (authentication, events, badges, redemption, statistics) is specified in
+> `Documentation/PRD-Backend.md`. Where this document references an endpoint, it does so as a
+> dependency the frontend calls — it does not define backend behavior.
 
 ---
 
 ## 1. Problem Statement
 
-Physical events — conferences, hackathons, trade fairs, booth crawls — have an engagement problem. Attendees drift between sessions with no incentive to explore everything on offer. Organizers have no lightweight, real-time signal for which booths or activities are actually drawing traffic. Paper stamps, wristbands, and attendance sheets are friction-heavy and produce zero digital data.
+The Lyfter Badge App backend can issue badges, validate QR redemptions, and count engagement — but a
+backend alone is invisible to the people at the event. Attendees can't scan, see, or show off
+anything; organizers can't create a badge or watch their booth's traffic without a developer running
+queries. The **frontend is the entire experience** for both audiences.
+
+The client must turn the core loop into something that feels instant and playful on a phone at a
+crowded venue: point camera → earn badge → celebrate → see your collection grow toward a prize. For
+organizers it must be a self-service web UI — create an event, mint a badge, print its QR, and watch
+live counts — with **zero developer help on the day**.
 
 **Who has the problem:**
-- **Event organizers** (Lyfter internal teams, hackathon hosts) who want to drive booth engagement and measure participation without expensive hardware or integrations.
-- **Attendees / participants** who want a memorable, playful artifact from the event and a reason to explore every corner of the venue — but currently get nothing interactive.
+- **Attendees / participants** who want a memorable, interactive artifact and a reason to explore every
+  booth — but only have their phone's browser and a few seconds of patience per interaction.
+- **Event organizers** (Lyfter teams, booth owners, ops) who need a point-and-click admin surface, not
+  a database client, to run badges and read engagement in real time.
 
-**Why now:** Lyfter's November 2026 hackathon is a controlled first environment. The team is small, the event is scoped, and the audience is technical enough to tolerate a v1 product. A working deployment here proves the concept before pitching it to external clients.
+**Why now:** The backend is scoped and the November 2026 hackathon is a controlled first audience.
+A polished, mobile-first client is what makes the concept demonstrable — and pitchable to external
+clients afterward.
 
 ---
 
 ## 2. Goals & Success Metrics
 
-### Goal 1 — Drive badge collection engagement
-Attendees should actively scan QR codes, not passively receive them.
+### Goal 1 — Make badge collection feel instant and fun
+The scan → earn → celebrate loop must feel immediate and rewarding on a phone.
 
 | KPI | Target |
 |-----|--------|
+| Scan decode → confirmation screen rendered | < 2 seconds on 4G |
+| Median time from app-open to first successful scan | < 90 seconds |
 | Percentage of registered attendees who scan ≥ 1 badge | ≥ 70% |
-| Average badges earned per active user | ≥ 3 |
-| Median time from app-open to first badge scan | < 90 seconds |
 
-### Goal 2 — Give organizers real-time visibility
-Issuers should see live redemption counts without refreshing a page.
+### Goal 2 — Give organizers self-service visibility
+Issuers create badges and read engagement entirely through the UI.
 
 | KPI | Target |
 |-----|--------|
-| Redemption stats API response time | < 1 second |
-| Event dashboard reflects scan within | < 3 seconds of scan |
-| Admin can create a new badge + QR end-to-end | < 5 minutes |
+| Admin creates a badge + sees its QR end-to-end in the UI | < 5 minutes, no dev help |
+| Dashboard reflects a new scan after refresh/poll | < 3 seconds of scan |
+| Badge gallery first contentful paint (up to 50 earned badges) | < 1.5 seconds |
 
-### Goal 3 — Reliable, low-friction scan experience
-The core loop (scan → earn → see badge) must not fail at a live event.
+### Goal 3 — Never break in front of an attendee
+The client must degrade gracefully, never crash, never dead-end.
 
 | KPI | Target |
 |-----|--------|
-| Scan-to-badge-confirmed latency (p95) | < 2 seconds on 4G |
-| API uptime during event window | ≥ 99.5% |
-| Duplicate-scan returns a clean 409 (no crashes) | 100% |
+| Duplicate / invalid / inactive scans shown gracefully (no crash) | 100% |
+| Unrecognized (non-Lyfter) QR handled with a friendly message | 100% |
+| Attendee flow completable on a mobile browser with no install | 100% |
 
 ---
 
 ## 3. Target Users
 
 ### Persona 1 — Valentina, the Engaged Attendee
-- **Role:** Developer attendee at the Lyfter Hackathon
-- **Context:** Has her phone, heard there are "digital badges" to collect. Curious but skeptical of QR-code experiences that go nowhere.
-- **Goals:** Collect all badges, see what she's earned, maybe share one on social.
-- **Frustrations:** Apps that require sign-up before letting her do anything. Earning a badge and then having no way to show it off.
+- **Role:** Developer attendee at the Lyfter Hackathon.
+- **Device:** Her own phone, mobile browser only — she will not install a native app.
+- **Goals:** Scan fast, collect all badges, watch her progress, unlock the event prize, maybe share a
+  badge on social.
+- **Frustrations:** Sign-up walls before she can do anything; earning something and then having no way
+  to see or show it; a scanner that fights her camera.
 
 ### Persona 2 — Diego, the Booth Organizer
-- **Role:** Lyfter team lead, running a sponsorship booth at the hackathon
-- **Context:** Has a tablet at his booth. Wants attendees to scan his QR code to "unlock" a badge tied to his booth. Needs to generate the QR code himself and print it.
-- **Goals:** Generate a badge + QR without needing developer help. See live how many people scanned his booth. Know if someone tries to scan twice (and what happens to them).
-- **Frustrations:** Admin tooling that takes 20 steps to do something simple. QR codes that are generic and not tied to his specific activity.
+- **Role:** Lyfter team lead running a sponsorship booth.
+- **Device:** A tablet or laptop at his booth.
+- **Goals:** Create a badge + QR himself, print it, and watch how many people scanned his booth in
+  near-real time.
+- **Frustrations:** Admin tooling that takes 20 clicks; not being able to tell at a glance how his
+  booth is doing.
 
 ### Persona 3 — Sofía, the Event Admin
-- **Role:** Lyfter internal ops, managing the whole event
-- **Context:** She sets up the event in the app before the day, assigns badges to activities, and monitors the global scan count throughout the event.
-- **Goals:** Create the event, manage all badges across all booths, see a unified set of stats, export or share final redemption numbers after the event.
-- **Frustrations:** Having to babysit the system. Attendees getting stuck because a QR is expired or invalid. No audit trail when something goes wrong.
+- **Role:** Lyfter ops, managing the whole event.
+- **Device:** Laptop/desktop before and during the event.
+- **Goals:** Set up the event, manage badges across booths, and monitor a unified live count of all
+  redemptions.
+- **Frustrations:** Babysitting the system; attendees getting stuck on a confusing screen with no clear
+  next step.
 
 ---
 
 ## 4. Functional Requirements
 
-### 4.1 Collector (End User / Attendee) — API Responsibilities
+### 4.1 Collector (End User / Attendee)
 
-**Registration & Auth**
-- The system shall allow a user to register with name, email, and password.
-- The system shall authenticate users via email + password, returning a JWT on success.
+**Registration & Authentication**
+- The app shall provide a **login** view (email + password) that authenticates against the API and
+  stores the returned JWT client-side.
+- The app shall provide a **self-registration** view (name, email, password) so attendees can create
+  their own account without admin help.
+- The app shall store the JWT client-side and attach it to the `Authorization` header on all
+  authenticated requests (via an Axios interceptor).
+- The app shall redirect the user after login based on their role (attendee → scan/home; admin →
+  admin dashboard).
+- On a `401` (expired/invalid token) the app shall clear the session and redirect to login.
 
-**QR Redemption**
-- The system shall expose a redemption endpoint accepting `{ event_id, qr_token }` with a JWT in the request header.
-- The system shall credit the badge to the authenticated user's account on a valid, non-duplicate scan.
-- The system shall return `409 Conflict` (without creating a duplicate record) when the badge was already earned.
-- The system shall return a generic error / `403` when the QR token is invalid or the event is not `active`.
+**QR Scanning (in-app camera scanner)**
+- The app shall provide a **Scan view** that activates the device camera via the browser Web API.
+- The app shall request camera permission and show a clear prompt/explanation; if permission is denied,
+  it shall show a recovery message rather than a blank screen.
+- The app shall decode a QR code **client-side** (live, on detection) and parse a redemption URL of the
+  form `/scan/{event_id}/{qr_token}`.
+- The app shall **auto-call the redemption API immediately** after a successful decode — no extra tap
+  required.
+- The app shall recognize when a scanned QR is **not** a Lyfter badge URL and show
+  "This QR code is not a Lyfter badge." without crashing.
 
-**Badge Collection**
-- The system shall expose an endpoint returning all badges the authenticated user has earned, including each badge's name, image reference, event name, and date earned.
+**Badge Earning**
+- On a successful redemption (`200`), the app shall display a **confirmation/celebration screen** with
+  the badge name + image and a **confetti** animation.
+- The confirmation screen shall offer a clear CTA to "View My Collection".
+- The app shall show a **friendly message** (not an error crash) for each backend outcome:
+  - Already earned → friendly "You already have this badge" (API `409`).
+  - QR invalid or event not active → friendly message (API `403`).
+  - Badge redemption limit reached → friendly message (API `410`).
+  - Session expired → prompt to log in again (API `401`).
+
+**Badge Collection / Gallery**
+- The app shall provide a **personal gallery** view (`/me/badges`) listing all badges the user has
+  earned.
+- Each badge card shall display the badge name, image, event name, and date earned.
+- The gallery shall present badges grouped per event; not-yet-earned badges in an event may appear
+  greyed-out to communicate what's left to collect.
+- The app shall allow the user to tap a badge for a **detail view**.
+
+**Progress & Prize (gamification)**
+- For each event, the app shall display a **progress indicator** (e.g. `3 / 5 badges`) using a
+  `<ProgressBar>`.
+- When a user collects **all** badges in an event, the app shall render a **prize reveal**
+  (`<PrizeReveal>`) celebrating the unlocked prize.
+
+**Sharing**
+- The app shall allow the user to **download an earned badge as an image** file.
+- The app shall offer a **native share** option (Web Share API) on supported devices, with a graceful
+  fallback (e.g. download/copy) where unsupported.
 
 ---
 
 ### 4.2 Issuer (Admin / Organizer)
 
+**Authentication & Access**
+- The app shall let an admin log in and route them to the **admin dashboard**.
+- Admin routes shall be protected by a route guard; non-admin users attempting to reach them are
+  redirected away.
+
+**Dashboard & Monitoring**
+- The app shall display a **dashboard** showing total redemptions per badge, per event.
+- The dashboard shall refresh redemption counts in **near-real-time** (polling is acceptable) so
+  organizers see scans increment during the event.
+
 **Event Management**
-- The system shall allow an admin to create an event with: name, description, date, location.
-- The system shall allow an admin to set event status: `draft`, `active`, `finished`.
-- The system shall enforce that QR redemption only succeeds when the event status is `active`.
+- The app shall provide an **event create** form (name, description, date(s), location/prize as
+  applicable) that submits to the API.
 
 **Badge & QR Management**
-- The system shall allow an admin to create a badge tied to an event, with: name, description, image URL.
-- The system shall allow an admin to set an optional redemption limit per badge.
-- The system shall automatically generate a unique QR token (UUID) and QR code image upon badge creation.
-- The system shall make the generated QR code image available for printing or downloading.
-
-**Redemption Monitoring**
-- The system shall expose statistics showing total redemptions per badge, per event.
-- The system shall update the redemption count in near-real-time (suitable for polling).
-- The system shall allow an admin to retrieve a list of all redemptions with user, timestamp, and badge.
-
-**Role Enforcement**
-- The system shall restrict event creation, badge creation, and admin statistics access to users with `admin` role.
-- The system shall return a `403 Forbidden` response to non-admin requests on protected routes.
+- The app shall provide a **badge create** form (name, description, image, optional redemption limit)
+  tied to an event.
+- After creation, the app shall **render the generated QR code image inline** on the badge view.
+- The app shall provide a **badge list** view per event showing each badge with its QR thumbnail, a
+  **Download QR** action (for printing), and its live redemption count.
 
 ---
 
 ## 5. Non-Functional Requirements
 
 ### Performance
-- Scan-to-badge-confirmed API round trip: **p95 < 2 seconds** on a 4G mobile connection.
-- Admin stats endpoint responds: **< 1 second** for up to 500 redemptions.
+- **Badge gallery first contentful paint:** < 1.5 seconds for up to 50 earned badges.
+- **Cached-first rendering:** the gallery shall render instantly from local state (Pinia store) if
+  already fetched, then refresh in the background.
+- **Scan-to-confirmation:** the confirmation screen shall render within < 2 seconds of a successful
+  decode on a 4G connection (API round-trip dependent).
 
-### Security
-- All passwords stored as bcrypt hashes (cost factor ≥ 12). Plaintext passwords must never be logged or returned.
-- JWT tokens expire after **8 hours**. No persistent sessions on the server.
-- Each badge has a **unique, non-guessable `qr_token`** (UUID v4). Tokens are not sequential.
-- Duplicate redemption prevention enforced via a **compound unique index** on `(badge_id, user_id)` in MongoDB — enforced at the DB layer, not just application logic.
-- All API endpoints that mutate state require a valid JWT. Unauthenticated requests return `401`.
-- CORS is configured to allow requests only from the production frontend domain and localhost in development.
-- QR token validation does not leak information: invalid token and expired event return the same generic error message to the client.
-
-### Scalability
-- The system shall handle **500 concurrent users** scanning simultaneously without degradation (scoped to a single event).
-- MongoDB collections shall have indexes on: `users.email`, `badges.qr_token`, `redemptions.(badge_id, user_id)`.
-- The Flask app shall be stateless — no in-process session state — to enable horizontal scaling on Render if needed.
-
-### Usability
-- All API error responses shall include a plain-language message and a suggested next action.
+### Usability & Accessibility
+- The **entire attendee flow** (register → scan → earn → view gallery) shall be completable on a
+  **mobile browser** with **no native app install**.
+- The Scan view shall require **no extra interaction** after pointing the camera at a QR (auto-decode
+  on detection).
+- The UI shall meet **WCAG 2.1 AA** minimums for color contrast and text sizing.
+- All user-facing error messages shall be in **plain language with a suggested next action** (never a
+  raw error code or stack).
 
 ### Reliability
-- The redemption endpoint shall not credit a badge until the server confirms a successful, non-duplicate write.
-- The API shall return structured error responses (never a raw stack trace) for malformed or unrecognized input.
+- If the backend is unreachable during a scan, the app shall show a **timeout message and a retry CTA**
+  — it must not silently fail. The badge is considered earned only once the server confirms.
+- The app shall **not crash on malformed or unrecognized QR content** — it shows
+  "This QR code is not a Lyfter badge." instead.
+- Route guards shall prevent reaching authenticated views without a valid session.
+
+### Installability (PWA)
+- The app shall be an installable **PWA** (web app manifest + service-worker app shell) so attendees
+  can add it to their home screen for an app-like launch. (Offline data sync is out of scope — see §6.)
+
+### Compatibility
+- The app shall function on current **iOS Safari** and **Android Chrome** (the primary attendee
+  browsers) and on desktop Chrome/Edge for admin use.
+
+### Security (client-side)
+- The JWT is stored client-side and attached to requests; no secrets or API keys are bundled into the
+  client.
+- The client expects the API to enforce CORS to the production frontend origin and localhost in
+  development; the client makes no cross-origin assumptions beyond `VITE_API_URL`.
 
 ---
 
@@ -147,57 +221,71 @@ The core loop (scan → earn → see badge) must not fail at a live event.
 
 ### In Scope — v1
 
-- User registration and JWT-based login
-- Admin and attendee role distinction
-- Event creation, status management (draft / active / finished)
-- Badge creation with auto-generated QR token and QR image
-- Redemption validation with duplicate prevention
-- Endpoint returning an attendee's earned badges
-- Admin stats endpoint: per-event redemption counts per badge
-- Deployment: Flask API on Render
-- Seeded demo data for the hackathon launch event
+- Login + **self-registration** views; client-side JWT handling and role-based redirect.
+- **In-app camera QR scanner** with client-side decode and auto-redeem.
+- Badge earning **celebration screen + confetti** and friendly outcome messages (409 / 403 / 410 / 401).
+- **Badge gallery** + badge **detail view**.
+- **Per-event progress bar** and **prize reveal** on completion.
+- **Badge sharing**: image download + Web Share API.
+- Admin: **dashboard** (live redemption counts), **event create**, **badge create** with inline QR,
+  **badge list** with QR download.
+- **PWA** install (manifest + app-shell service worker).
+- Deployment: Vue SPA on **Vercel**.
 
 ### Out of Scope — v1
 
-- **Push notifications** — too much infrastructure overhead for a one-day event. Deferred to v2.
-- **Badge trading or transferability** — adds social complexity that dilutes the core collect loop.
-- **Leaderboards / public ranking** — privacy and fairness concerns for a first event; deferred.
-- **QR code expiration by time** — redemption limits per badge are sufficient for v1. Time-expiry adds clock-sync complexity.
-- **Native iOS / Android app** — a mobile browser is sufficient for the hackathon audience.
-- **Multi-tenant / white-label** — v1 is a single-org deployment for Lyfter. SaaS mode is a v3 problem.
-- **Analytics export (CSV/PDF)** — the in-app stats are sufficient for v1.
-- **Offline mode** — a live event has WiFi. Graceful degradation (error message + retry) is sufficient.
-- **Badge categories or collections** — flat badge list is fine for v1.
-- **Email verification** — adds friction for a controlled hackathon audience who will be onboarded in person.
+- **Offline mode / data sync** — a live event has WiFi; a timeout + retry message is sufficient.
+- **Leaderboards / public ranking UI** — deferred (privacy/fairness for a first event).
+- **Badge trading / transfer UI** — adds social complexity that dilutes the collect loop.
+- **Push notifications** — infra overhead not justified for a one-day event.
+- **Native iOS / Android app** — the PWA + mobile browser is sufficient.
+- **Multi-tenant theming / white-label UI** — single-org deployment for v1.
+- **In-app analytics export (CSV/PDF) UI** — the live dashboard is sufficient for v1.
 
 ---
 
-## 7. Flows (API Sequences)
+## 7. User Flows
 
-### Flow 1 — Badge Collector: Redemption
+### Flow 1 — Badge Collector: First Scan
 
-1. Client authenticates via `POST /api/auth/login` and receives a JWT.
-2. Client calls `POST /api/redenciones/validar` with `{ event_id, qr_token }` and the JWT header.
-3. **Happy path:** the API validates that the event is `active`, the token is valid, and no prior redemption exists for `(badge_id, user_id)`. It creates the redemption record, increments the denormalized counter, and returns `200` with badge data.
-4. The earned badge is immediately retrievable via `GET /api/usuarios/me/badges`.
+1. User opens the app URL on their phone (no install required; may install the PWA when prompted).
+2. If not logged in → redirected to `/login`. User logs in, or taps through to `/register` to create
+   an account.
+3. On successful auth → JWT stored client-side. User lands on the scan entry point (`/scan` or home).
+4. User taps **Scan Badge** → app requests camera permission via the browser.
+5. Camera view opens. User points it at a booth QR code.
+6. App decodes the QR URL `{APP_URL}/scan/{event_id}/{qr_token}` client-side.
+7. App calls the redemption endpoint with `{ event_id, qr_token }` + JWT header.
+8. **Happy path:** API returns `200`. App navigates to the badge-earned screen.
+9. **Celebration screen:** badge image, name, confetti, "View My Collection" CTA.
+10. User taps **View My Collection** → gallery (`/me/badges`).
+11. Gallery shows earned badges grouped by event, each with a **progress bar**; if an event is fully
+    collected, the **prize reveal** is shown.
 
-### Flow 2 — Badge Issuer: Create Badge + Generate QR
+### Flow 2 — Badge Issuer: Create Badge + Print QR
 
-1. Admin authenticates with admin credentials and receives a JWT.
-2. Admin sends `POST /api/eventos/{id}/badges` with: badge name, description, image URL, optional redemption limit.
-3. Backend generates `qr_token` (UUID v4), builds the QR code image, and stores both on the badge document.
-4. The rendered QR code image is returned/available for download so it can be printed.
-5. Admin prints the QR and places it at the physical booth.
-6. Admin monitors redemption counts throughout the event via `GET /api/admin/estadisticas/{event_id}`.
+1. Admin logs in with admin credentials → lands on the **admin dashboard** (event list + redemption
+   totals).
+2. Admin opens an event → clicks **Add Badge**.
+3. Admin fills in the badge form: name, description, image, optional redemption limit.
+4. Admin clicks **Create Badge** → the app submits to the API.
+5. The app renders the returned **QR code image inline** on the badge view.
+6. Admin clicks **Download QR** → QR image downloads for printing.
+7. Admin prints the QR and places it at the physical booth.
+8. Admin returns to the dashboard throughout the event and watches the **live redemption count**
+   increment.
 
-### Flow 3 — Edge Cases (API Behavior)
+### Flow 3 — Edge Cases (UI Behavior)
 
-| Scenario | API Behavior |
-|----------|----------------|
-| User redeems the same badge twice | API returns `409 Conflict`. No duplicate record created. |
-| Event is not active (draft or finished) | API returns `403`. |
-| Badge has reached its redemption limit | API returns `410 Gone`. |
-| JWT is expired during a redemption | API returns `401`. |
+| Scenario | Frontend behavior |
+|----------|-------------------|
+| QR is not a Lyfter URL / corrupted | Client decode fails to match the expected pattern → "This QR code is not a Lyfter badge. Try again." (no crash) |
+| User scans without being logged in | Route guard intercepts before the camera opens → redirect to `/login` |
+| Badge already earned | API `409` → friendly "You already have this badge" screen |
+| Event not active | API `403` → friendly "This badge isn't available right now" |
+| Redemption limit reached | API `410` → friendly "This badge is no longer available" |
+| Session expired mid-scan | API `401` → clear session, prompt to log in again |
+| Network timeout during redemption | Show a retry CTA after a short timeout; badge is not shown as earned until the server confirms |
 
 ---
 
@@ -206,146 +294,102 @@ The core loop (scan → earn → see badge) must not fail at a live event.
 ### Architecture Overview
 
 ```
-[Client / API consumer]
-       │ HTTPS / REST
+[Vue SPA — Vercel CDN]
+       │ HTTPS / Axios (JWT in Authorization header)
        ▼
-[Flask API — Render]
-       │ PyMongo
+[Flask API — Render]   ← specified in PRD-Backend.md
+       │
        ▼
 [MongoDB Atlas]
 ```
 
-The Flask API is a single Gunicorn-backed service on Render's free tier. There is no server-side rendering. Persistent state lives in MongoDB.
+The frontend is a **static SPA** deployed to the Vercel CDN. There is no server-side rendering. All
+client state lives in the Vue app (Pinia store); the API holds persistent data.
 
----
+### Project Structure (reference — see TDD §4.1)
 
-### QR Code Strategy
-
-**Token structure:** Each badge has one `qr_token` — a UUID v4 generated server-side at badge creation. The token is globally unique and not guessable.
-
-**What the QR encodes:** A full URL: `https://{FRONTEND_URL}/scan/{event_id}/{qr_token}`
-
-**Why a URL (not raw JSON):** Allows scanning with any standard QR reader to open the app directly. No proprietary scanner needed.
-
-**QR image generation:** Done server-side in Flask using the `qrcode` Python library. The image is returned as a base64 data URL and stored in MongoDB on the badge document. No external image storage needed for v1.
-
-**No per-user QR:** A single QR serves all users. Duplicate prevention happens at redemption time (DB compound unique index), not at QR issuance. This keeps QR printing simple.
-
-**No expiration by time (v1):** Redemption limits (`limite_redencion`) are the abuse control. Time expiry adds clock-sync risk at a live event.
-
----
-
-### Authentication Flow
-
-- `POST /api/auth/registro` — creates user, returns JWT
-- `POST /api/auth/login` — validates credentials, returns JWT
-- JWT payload: `{ user_id, email, rol, iat, exp }`
-- Expiry: **8 hours** (sufficient for a hackathon day)
-- No refresh token in v1 — re-login on expiry. (Acceptable for a single-day event)
-- Flask middleware decorator (`@jwt_required`) validates token on protected routes
-
----
-
-### Data Model Hints
-
-```python
-# usuarios
-{
-  "_id": ObjectId,
-  "nombre": str,
-  "email": str,          # unique index
-  "password_hash": str,  # bcrypt, never returned in responses
-  "rol": "admin" | "asistente",
-  "badges_ganados": [ObjectId],  # ref → badges
-  "activo": bool,
-  "created_at": datetime,
-  "updated_at": datetime
-}
-
-# eventos
-{
-  "_id": ObjectId,
-  "nombre": str,
-  "descripcion": str,
-  "fecha": datetime,
-  "lugar": str,
-  "organizador": ObjectId,  # ref → usuarios
-  "estado": "borrador" | "activo" | "finalizado",
-  "created_at": datetime
-}
-
-# badges
-{
-  "_id": ObjectId,
-  "nombre": str,
-  "descripcion": str,
-  "evento": ObjectId,       # ref → eventos
-  "imagen_url": str,
-  "qr_token": str,          # UUID v4, unique index
-  "qr_imagen_b64": str,     # base64 PNG from qrcode lib
-  "limite_redencion": int | None,
-  "total_redimidos": int,   # denormalized counter
-  "activo": bool,
-  "created_at": datetime
-}
-
-# redenciones
-{
-  "_id": ObjectId,
-  "badge_id": ObjectId,    # ref → badges
-  "evento_id": ObjectId,   # ref → eventos
-  "usuario_id": ObjectId,  # ref → usuarios
-  "qr_token_usado": str,
-  "fecha": datetime,
-  "metadata": {
-    "user_agent": str,
-    "ip": str              # hashed or truncated for privacy
-  }
-}
-# Compound unique index: (badge_id, usuario_id)
+```
+frontend/
+├── index.html
+├── vite.config.js          # Vite + PWA plugin
+├── tailwind.config.js      # Tailwind + DaisyUI plugin
+├── .env / .env.production
+└── src/
+    ├── main.js             # app init: router + Pinia
+    ├── App.vue
+    ├── api/                # axios.js (instance + interceptors), auth.js, events.js, badges.js, admin.js
+    ├── router/index.js     # routes + beforeEach navigation guard
+    ├── store/              # auth.js, events.js (Pinia)
+    ├── views/
+    │   ├── public/         # LoginView, RegisterView, ScanView, RedeemResultView
+    │   ├── participant/    # EventListView, EventDetailView, BadgeProfileView
+    │   └── admin/          # AdminDashboardView, AdminEventCreateView, AdminBadgeCreateView, AdminBadgeListView
+    └── components/         # NavBar, BadgeCard, ProgressBar, QRCard, PrizeReveal, Confetti
 ```
 
----
+### Routing & Guards
+- Vue Router with route `meta` flags: `public`, `requiresAuth`, and `role: "admin"`.
+- A `beforeEach` guard reads the token/role from the auth store: public routes pass; missing token →
+  `/login`; role mismatch → redirect to the attendee home.
+- Key routes include the **in-app** `/scan` route (camera scanner) plus `/login`, `/register`,
+  `/events`, `/events/:id`, `/me/badges`, and the `/admin/...` set.
 
-### Key Flask Endpoints (minimum surface for v1)
+### State Management
+- **Pinia** stores: `auth` (token, user, login/logout actions, persisted to client storage) and
+  `events` (cache for instant gallery render + background refresh).
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| POST | `/api/auth/registro` | None | Create user |
-| POST | `/api/auth/login` | None | Login, get JWT |
-| GET | `/api/eventos` | JWT | List active events |
-| POST | `/api/eventos` | JWT + admin | Create event |
-| PATCH | `/api/eventos/{id}/estado` | JWT + admin | Change event status |
-| GET | `/api/eventos/{id}/badges` | JWT | List badges for event |
-| POST | `/api/eventos/{id}/badges` | JWT + admin | Create badge + gen QR |
-| POST | `/api/redenciones/validar` | JWT | Validate + redeem QR |
-| GET | `/api/usuarios/me/badges` | JWT | Get my badge collection |
-| GET | `/api/admin/estadisticas/{event_id}` | JWT + admin | Redemption stats |
+### API Access
+- A single **Axios** instance keyed off `VITE_API_URL`, with a request interceptor that attaches the
+  `Bearer` token and a response interceptor that logs out + redirects on `401`.
 
----
+### QR Scanning Approach
+- The Scan view uses the **browser camera Web API** plus a **client-side QR-decode library**
+  (`BarcodeDetector` where available, falling back to a JS decoder such as `qr-scanner` /
+  `html5-qrcode`).
+- On decode, it parses the encoded `/scan/{event_id}/{qr_token}` URL, extracts the params, and calls
+  the redemption API. Non-matching content is rejected client-side with the "not a Lyfter badge"
+  message.
 
-### Deployment Notes
+### Celebration & Gamification UI
+- A confetti effect + confirmation screen on earn; a `<ProgressBar>` per event; a `<PrizeReveal>`
+  component that animates when an event is fully collected.
 
-**CORS:** Flask must allow the production frontend domain in production and the local dev frontend origin in development. Use `flask-cors` with an explicit origin allowlist — no wildcard `*` in production.
+### PWA
+- Configure `vite-plugin-pwa` to emit a web app manifest (name, icons, theme color) and a
+  service-worker app shell so the SPA is installable and launches app-like. (No offline data caching
+  beyond the shell in v1.)
 
-**Environment variables:**
-- Flask (Render): `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRY_HOURS`, `CLIENT_URL`, `FLASK_ENV`
+### Deployment (Vercel)
+- Framework preset **Vite**; build `npm run build`; output `dist`.
+- Set `VITE_API_URL` to the production API origin.
+- Add `vercel.json` with a catch-all rewrite so Vue Router history mode works on reload:
+  ```json
+  { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+  ```
+- **Render cold start:** the API free tier sleeps after inactivity; the client shall show a loading
+  state on the first request and may issue a lightweight keepalive ping so the first real scan isn't
+  blocked by a cold start.
 
-**Render cold starts:** The free tier sleeps after 15 minutes of inactivity. Implement a `/api/health` ping endpoint and configure a keepalive (e.g. UptimeRobot or a client ping) to keep the backend warm during the event.
+### Environment Variables (frontend)
+```bash
+# .env (local dev)
+VITE_API_URL=http://localhost:5000
+# .env.production (Vercel)
+VITE_API_URL=https://<your-api>.onrender.com
+```
 
 ---
 
 ## 9. Open Questions
 
 | # | Question | Why It Matters | Options |
-|---|----------|---------------|---------|
-| 1 | **Do attendees self-register, or does the admin pre-create accounts?** | Self-registration adds friction but reduces admin prep work. Pre-created accounts require distributing credentials at check-in. | (A) Self-register at the door; (B) Admin bulk-creates accounts; (C) Magic link via email |
-| 2 | **What happens when a badge hits its redemption limit?** | Do we return a 410? The edge case in Flow 3 assumes a friendly response, but the behavior needs sign-off. | (A) Hard block with `410`; (B) Allow overflow, flag for admin review; (C) No redemption limits in v1 |
-| 3 | **Where are badge images hosted?** | Storing URLs (external CDN like Cloudinary) keeps MongoDB small. Storing base64 in Mongo is simpler to implement. At 50 badges/event this is fine; at 5,000 it breaks. | (A) Cloudinary/S3; (B) Base64 in MongoDB (v1 acceptable); (C) Static assets in the frontend repo |
-| 4 | **How is the QR code printed and displayed at booths?** | A5 printout? Laptop screen? Phone screen? This affects minimum QR size and error correction level needed. | Decide on minimum display size before generating QR; recommend at least 200×200px, error correction H |
-| 5 | **Who owns the "admin" role at the hackathon?** | Is it one Lyfter ops person, or do booth owners get admin access to create their own badges? Self-service for booth owners is faster on the day but requires more trust. | (A) Central admin creates all badges; (B) Each booth owner has an admin account; (C) Hybrid: central creates events, booth owners create badges within their event |
-| 6 | **Do we need a PIN or passcode on redemption?** | Without a secondary check, a user could redeem the QR from a photo (e.g., screenshot) rather than visiting the physical location. Does that matter for this event? | (A) No — trust the honor system; (B) Booth attendant confirms; (C) Time-windowed QR (rotates every N minutes) |
-| 7 | **What is the rollback plan if Render cold-starts during the event?** | Free tier cold starts take 30–60 seconds. If multiple attendees try to scan simultaneously after a period of inactivity, all requests queue. | (A) Upgrade to Render paid plan for the event day; (B) UptimeRobot keepalive; (C) Pre-warm by scanning a test badge 5 minutes before doors open |
+|---|----------|----------------|---------|
+| 1 | **What exactly is the shared badge artifact?** | "Download badge as image" + Web Share are in scope. Does the image need branding (Lyfter logo, event name, date, user's name)? | Needs a design mockup before implementation |
+| 2 | **Which QR-decode library?** | `BarcodeDetector` isn't supported on all iOS Safari versions; a JS fallback affects bundle size and decode speed. | (A) `BarcodeDetector` + JS fallback; (B) `html5-qrcode`; (C) `qr-scanner` |
+| 3 | **DaisyUI theme / design tokens?** | Determines look-and-feel, color contrast (WCAG AA), and dark mode. | Pick a DaisyUI theme + brand palette before UI build |
+| 4 | **After self-registration, auto-login or route to login?** | Affects the onboarding flow length at the door. | (A) Auto-login on register; (B) Redirect to `/login` |
+| 5 | **First-request cold-start handling.** | A 30–60s Render cold start on the first scan is a bad first impression. | (A) Keepalive ping on app load; (B) Loading state only; (C) Pre-warm before doors open |
+| 6 | **Minimum supported screen size / orientation for the scanner.** | The camera view and confirmation screen must work on small phones in portrait. | Define a minimum viewport + portrait-first layout |
 
 ---
 
@@ -353,32 +397,38 @@ The Flask API is a single Gunicorn-backed service on Render's free tier. There i
 
 ### Functional Checklist (all must pass before go-live)
 
-- [ ] User can register and receive a JWT
-- [ ] User can log in and receive a JWT carrying their role
-- [ ] Admin can create an event and set status to `active`
-- [ ] Admin can create a badge and receive a downloadable QR code image
-- [ ] Redemption endpoint credits the badge end-to-end for a valid request
-- [ ] Earned badge is returned by the my-badges endpoint immediately after redemption
-- [ ] Duplicate scan returns `409` and does not create a duplicate record
-- [ ] Admin stats endpoint returns the correct redemption count per badge
+- [ ] User can register a new account and log in; JWT is stored and attached to requests.
+- [ ] User is redirected by role after login (attendee vs admin).
+- [ ] In-app scanner opens the camera, decodes a QR, and auto-calls the redemption API.
+- [ ] Earning a badge shows the celebration screen + confetti.
+- [ ] Earned badge appears in the gallery immediately after scan.
+- [ ] Per-event progress bar is correct; prize reveal fires when an event is fully collected.
+- [ ] Duplicate scan shows a friendly message and does not dead-end (no crash).
+- [ ] Invalid / non-Lyfter QR shows "This QR code is not a Lyfter badge." (no crash).
+- [ ] Badge sharing (download image) works on iOS Safari and Android Chrome.
+- [ ] Admin can create an event and a badge, and see the QR rendered inline.
+- [ ] Admin can download the QR image for printing.
+- [ ] Admin dashboard shows the correct redemption count per badge and updates during the event.
+- [ ] App is installable (PWA) and usable on mobile without installing anything native.
 
 ### QA Bar
 
-- Zero P0 bugs (crashes, data loss, auth bypass) at time of launch
-- Duplicate-redemption prevention verified with concurrent requests (run 5 simultaneous POSTs to `/validar` for the same user/badge — only 1 must succeed)
-- JWT expiry enforced (verified by sending an expired token — must return `401`)
-- CORS verified in production (no CORS errors from the frontend → Render)
-- QR codes scan successfully from printed paper at 20cm distance (test with iPhone + Android)
+- No CORS console errors from the frontend → API in production.
+- Route guards verified: authenticated views are unreachable without a valid session; admin views are
+  unreachable by attendees.
+- `401` handling verified: an expired token clears the session and redirects to login.
+- No uncaught exceptions on malformed QR, denied camera permission, or network timeout.
 
 ### Performance Threshold
 
-- Scan-to-badge-confirmed: p95 < 2 seconds measured over 20 real scan attempts
-- Render backend stays warm during 30-minute load test (no cold-start timeouts)
+- Badge gallery load (50 badges): < 1.5 seconds on throttled 4G (Chrome DevTools).
+- Scan decode → confirmation screen: < 2 seconds over 20 real scan attempts.
 
 ### Stakeholder Sign-Off
 
-- [ ] **PM / Team Lead:** Functional checklist verified in staging environment
-- [ ] **Lyfter Ops (Sofía persona):** Admin can create event + badges + download QR without developer assistance
-- [ ] **Test Attendee:** End-to-end redemption flow completed without guidance
-- [ ] **Security:** No plaintext passwords, JWT expiry confirmed, duplicate prevention confirmed
-- [ ] **Deployment:** Production URLs configured, env vars set, CORS verified, keepalive configured
+- [ ] **PM / Team Lead:** Functional checklist verified in staging.
+- [ ] **Lyfter Ops (Sofía):** Can create event + badge + download QR with no developer help.
+- [ ] **Test Attendee:** Completes register → scan → earn → gallery on a real phone with no guidance.
+- [ ] **Design:** UI meets WCAG 2.1 AA contrast/text; sharing artifact approved.
+- [ ] **Deployment:** Vercel project configured, `VITE_API_URL` set, `vercel.json` rewrite in place,
+      PWA installable.
