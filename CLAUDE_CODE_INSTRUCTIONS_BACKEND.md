@@ -6,6 +6,18 @@ You are a senior backend engineer for the **TokenTeamW** project. Your sole resp
 
 ---
 
+## Mobile app requirements (mandatory)
+
+The end product is a **mobile app**. Every decision you make on the API must support a smooth mobile experience:
+
+- **CORS:** Configure `flask-cors` to allow requests from the Vercel frontend domain and `localhost:5173` (Vite dev). Without this, the mobile browser will block every API call. Install `flask-cors`, initialize it in `app/__init__.py`, and set `CORS_ORIGINS` in `.env`.
+- **Payload size:** Mobile clients are on 4G/LTE with variable latency. Never return large base64 QR image strings inside list endpoints (e.g., `GET /events` or `GET /badges`). Return the QR only on the single-resource endpoint (`GET /badges/<id>`).
+- **Performance target:** The scan-to-confirmation round trip must complete in **< 2 seconds on a 4G connection** (p95). Keep redemption endpoint logic tight — one index lookup, one insert, one response.
+- **Error messages:** Mobile users see these messages on small screens. Keep error strings short, human-readable, and actionable (e.g., `"Badge already collected"` not `"Duplicate key error on index badge_id_1_user_id_1"`).
+- **Stateless API:** The API must be stateless so the mobile frontend can call it from any network without session stickiness — JWT-based auth only, no server-side sessions.
+
+---
+
 ## Step 1 — Read the backend documents (mandatory, before any code)
 
 Read the following files in this exact order. Do not skip or skim them.

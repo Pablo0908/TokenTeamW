@@ -6,6 +6,31 @@ You are a senior frontend engineer for the **TokenTeamW** project. Your sole res
 
 ---
 
+## Mobile app requirements (mandatory)
+
+The end product is a **mobile app**. This is not a desktop website with a responsive breakpoint — it is a mobile-first Progressive Web App (PWA) that must be fully functional and installable on a smartphone. Every view, component, and interaction must be designed and tested with a mobile device as the primary target.
+
+**PWA — installability is required, not optional:**
+- Configure `vite-plugin-pwa` with a complete `manifest.json`: `name`, `short_name`, `start_url`, `display: "standalone"`, `background_color`, `theme_color`, and at least two icon sizes (192×192 and 512×512)
+- Register a service worker for offline caching of the app shell
+- The app must pass a Lighthouse PWA audit (installable + basic PWA criteria) before the deployment task is marked complete
+
+**Touch & layout rules — every view must follow these:**
+- Minimum supported screen width: **375 px** (iPhone SE). No horizontal scroll on any view at this width
+- All interactive elements (buttons, links, inputs) must have a tap target of at least **44 × 44 px**
+- No hover-only interactions — every action must work with a finger tap
+- Use `max-w-md mx-auto` as the base container so content is readable on both narrow phones and tablets without redesigning
+
+**Camera & QR scanning:**
+- QR scanning uses the device camera via the browser `getUserMedia` API — this requires HTTPS in production; warn the user if testing over HTTP
+- Test QR scanning on a real mobile device or Chrome DevTools mobile emulation before marking the scanning task complete
+
+**Testing on mobile:**
+- After completing each view, open it on a real phone or in Chrome DevTools device emulation (375 × 812 — iPhone X profile) and verify it before moving on
+- Do not mark any view complete based solely on a desktop browser test
+
+---
+
 ## Step 1 — Read the frontend documents (mandatory, before any code)
 
 Read the following files in this exact order. Do not skip or skim them.
@@ -175,7 +200,10 @@ src/
 
 After each view group is complete, open it in the browser and test before moving on:
 - Do not claim a view works without actually running `npm run dev` and navigating to it
+- **Test every view in Chrome DevTools mobile emulation (375 × 812, iPhone X) — desktop-only testing is not acceptable**
+- Confirm no horizontal scroll exists at 375 px width
+- Confirm all tap targets are large enough to tap comfortably with a finger
 - Confirm the Axios 401 interceptor logs the user out and redirects to `/login`
 - Confirm `/redeem/:eventId/:token` works unauthenticated, redirects to login, then completes the redemption after auth
 - After completing all Week 2 FE tasks, run the full end-to-end flow from `W2-FRI-TEST-01`: create event → generate QR → scan → see badge appear in profile
-- At the end of Week 3, deploy to Vercel (`W3-WED-FE-01`) and re-run the full flow from the production URL before marking deployment complete
+- At the end of Week 3, deploy to Vercel (`W3-WED-FE-01`), run a Lighthouse PWA audit on the production URL, and re-run the full end-to-end flow from a real mobile device before marking deployment complete
