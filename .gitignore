@@ -1,2 +1,14 @@
+# Secrets — never commit real connection strings / credentials
+.env
+.env.local
+*.env
+
+# Node
+node_modules/
+
+# OS
+Thumbs.db
+.DS_Store
+
 # Local-only file — kept on this machine, not tracked
 beeworking_mongodb_prompt.md
