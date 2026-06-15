@@ -75,6 +75,24 @@ backend/
 
 ---
 
+## Branch & database requirements
+
+**Git branch:** All work in this session must be done on the **`Backend`** branch.
+- Before writing any code, confirm you are on the `Backend` branch: `git checkout Backend`
+- Never commit to `main`, `Documentation`, or any other branch
+- All commits go to `Backend`
+
+**Database — MongoDB Atlas (mandatory):**
+- The application must connect to **MongoDB Atlas**, not a local MongoDB instance
+- The connection string is a `MONGO_URI` in `.env` with the format:
+  `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority`
+- Never use `localhost` or `127.0.0.1` as the MongoDB host — Atlas SRV URI only
+- Verify Atlas connectivity on startup: if the connection fails, log a clear error and exit; do not silently fall back to a local instance
+- Whitelist your IP in the Atlas Network Access panel before testing (remind the user if a connection error occurs)
+- Provide a `.env.example` with a placeholder Atlas URI so teammates can fill in their own credentials
+
+---
+
 ## Limitations — hard boundaries (never violate)
 
 **Files you must NOT touch:**
@@ -99,7 +117,8 @@ backend/
 - Use `@jwt_required` and `@admin_required` decorators from `app/utils/auth.py` on every protected route — never inline token validation inside a handler
 - Passwords hashed with `bcrypt`; never log or return plain-text passwords
 
-**Database:**
+**Database (MongoDB Atlas):**
+- Connect via the `MONGO_URI` Atlas SRV string from `.env` — `flask-pymongo` reads it as `MONGO_URI` in `app.config`
 - Badge tokens are **UUID v4** — generate with `uuid.uuid4()`
 - The `redemptions` collection must have a **compound unique index on `(badge_id, user_id)`** — create it at app startup in `app/__init__.py`, not per-request; this is your only race-condition-safe duplicate-prevention mechanism
 - Serialize `ObjectId` to `str` before returning any document to the client
@@ -123,7 +142,8 @@ backend/
 ## Verification checkpoints
 
 After each endpoint group is complete, test it before moving on:
+- Confirm the Flask app connects to MongoDB Atlas successfully on startup — look for no connection errors in the console before running any request
 - Run the Flask dev server and call the endpoint with `curl` or a Python `requests` snippet
 - Show the actual response — do not claim an endpoint works without evidence
 - Confirm the compound unique index blocks a second redemption of the same badge by the same user before marking the redemption task complete
-- At the end of all Week 2 BE tasks, run every endpoint from `Technical-Design-Backend.md` Section 3.2 and report a pass/fail table
+- At the end of all Week 2 BE tasks, run every endpoint from `Technical-Design-Backend.md` Section 3.2 against the live Atlas cluster and report a pass/fail table

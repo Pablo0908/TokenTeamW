@@ -97,6 +97,22 @@ src/
 
 ---
 
+## Branch & database requirements
+
+**Git branch:** All work in this session must be done on the **`Frontend`** branch.
+- Before writing any code, confirm you are on the `Frontend` branch: `git checkout Frontend`
+- Never commit to `main`, `Documentation`, or any other branch
+- All commits go to `Frontend`
+
+**Database — MongoDB Atlas (mandatory):**
+- The frontend communicates exclusively with the Flask API, which in turn connects to **MongoDB Atlas**
+- The API base URL must point to the backend deployed on Render (or `localhost:5000` for local development) — never call MongoDB directly from the frontend
+- The base URL is read from `import.meta.env.VITE_API_URL`; provide a `.env.example` with:
+  `VITE_API_URL=http://localhost:5000` for local dev and remind the team to update it to the Render URL for production
+- If the API returns a connection error (503 or network failure), display a user-friendly message through `AlertMessage` explaining that the server may be starting up (Render free tier cold start) — do not show raw error objects
+
+---
+
 ## Limitations — hard boundaries (never violate)
 
 **Files you must NOT touch:**
