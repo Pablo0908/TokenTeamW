@@ -1,0 +1,18 @@
+# Secrets — never commit
+.env
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local scratch / diagnostics (underscore-prefixed) — but keep package __init__.py files
+_*.py
+!**/__init__.py
+*.log
