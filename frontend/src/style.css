@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: theme('colors.base-content');
+  background:
+    radial-gradient(1100px 560px at 50% -8%, #1b2440 0%, rgba(27, 36, 64, 0) 60%),
+    radial-gradient(900px 500px at 100% 110%, #241634 0%, rgba(36, 22, 52, 0) 55%),
+    linear-gradient(180deg, #0b0d14 0%, #090a10 100%);
+  background-attachment: fixed;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@layer components {
+  /* Minimum 44x44 tap target (PRD mobile rule). */
+  .tap-target {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center;
+  }
+  /* Frosted surface used by cards and the bottom nav. */
+  .surface {
+    @apply rounded-3xl border border-base-300/60 bg-base-100/70 backdrop-blur;
+  }
+  .surface-soft {
+    @apply rounded-2xl border border-base-300/50 bg-base-100/50;
+  }
+}
+
+/* Route transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: none;
+  }
+}
