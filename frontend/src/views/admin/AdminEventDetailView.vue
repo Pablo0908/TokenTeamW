@@ -144,7 +144,7 @@ onBeforeUnmount(() => clearInterval(poll))
       <!-- Freshly created QR -->
       <div v-if="lastCreated" class="surface space-y-3 p-4">
         <p class="text-center text-sm font-medium text-success">✓ “{{ lastCreated.name }}” created — print this QR</p>
-        <QRDisplay :value="lastCreated.qr_url" :label="lastCreated.name" :filename="`${lastCreated.name}-qr.png`" />
+        <QRDisplay :value="lastCreated.qr_url" :image="lastCreated.qr_image" :label="lastCreated.name" :filename="`${lastCreated.name}-qr.png`" />
       </div>
 
       <!-- Badge list -->

@@ -15,6 +15,12 @@ let badgeSeq = 100
 
 const db = {
   attendee: { id: 'u_john', name: 'John', lastname: 'Rivas', username: 'john', email: 'john@lyfter.cc', role: 'attendee' },
+  users: [
+    { id: 'u_admin', name: 'Diego', lastname: 'Soto', email: 'admin@lyfter.cc', role: 'admin', badges_count: 0 },
+    { id: 'u_john', name: 'John', lastname: 'Rivas', email: 'john@lyfter.cc', role: 'attendee', badges_count: 7 },
+    { id: 'u_mara', name: 'Mara', lastname: 'Quesada', email: 'mara@lyfter.cc', role: 'attendee', badges_count: 4 },
+    { id: 'u_leo', name: 'Leo', lastname: 'Vargas', email: 'leo@lyfter.cc', role: 'attendee', badges_count: 1 },
+  ],
   events: [
     {
       id: 'ev_cit',
@@ -238,6 +244,20 @@ function adminBadges(eventId) {
   )
 }
 
+function listUsers() {
+  return ok({ users: db.users.map((u) => ({ ...u })) })
+}
+
+function setUserRole(id, body) {
+  const role = (body?.role || '').trim().toLowerCase()
+  if (role !== 'admin' && role !== 'attendee') return err(400, "Role must be 'admin' or 'attendee'.")
+  if (id === 'u_admin') return err(400, 'You can’t change your own role.')
+  const u = db.users.find((x) => x.id === id)
+  if (!u) return err(404, 'User not found.')
+  u.role = role
+  return ok({ id, role })
+}
+
 const path = (url) => url.split('?')[0]
 
 export const mockApi = {
@@ -245,6 +265,7 @@ export const mockApi = {
     const p = path(url)
     let m
     if (p === '/events' || p === '/events/') return listEvents()
+    if (p === '/admin/users') return listUsers()
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badges$/))) return adminBadges(m[1])
     if ((m = p.match(/^\/events\/([^/]+)$/))) return getEvent(m[1])
     if (p === '/me/badges') return myBadges()
@@ -258,6 +279,12 @@ export const mockApi = {
     if (p === '/auth/register') return register(body)
     if (p === '/admin/event') return createEvent(body)
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badge$/))) return addBadge(m[1], body)
+    return err(404, `Not found (mock): ${p}`)
+  },
+  patch(url, body) {
+    const p = path(url)
+    let m
+    if ((m = p.match(/^\/admin\/users\/([^/]+)\/role$/))) return setUserRole(m[1], body)
     return err(404, `Not found (mock): ${p}`)
   },
 }

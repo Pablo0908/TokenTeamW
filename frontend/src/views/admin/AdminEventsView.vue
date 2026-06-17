@@ -29,6 +29,12 @@ function logout() {
       <button class="btn btn-ghost btn-sm tap-target" @click="logout">Log out</button>
     </header>
 
+    <!-- Admin section nav -->
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+      <RouterLink to="/admin/events" role="tab" class="tab tab-active">Events</RouterLink>
+      <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
+    </div>
+
     <RouterLink to="/admin/events/new" class="btn btn-primary w-full tap-target">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M12 5v14M5 12h14" />
