@@ -99,7 +99,13 @@ onMounted(() => users.fetchUsers())
             </div>
           </div>
 
-          <div class="mt-3 flex justify-end">
+          <div class="mt-3 flex items-center justify-between gap-2">
+            <RouterLink :to="`/admin/users/${u.id}`" class="btn btn-ghost btn-xs tap-target gap-1 text-primary">
+              View progress
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </RouterLink>
             <button
               class="btn btn-xs tap-target"
               :class="u.role === 'admin' ? 'btn-outline btn-warning' : 'btn-outline btn-secondary'"

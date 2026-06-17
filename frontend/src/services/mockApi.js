@@ -258,6 +258,37 @@ function setUserRole(id, body) {
   return ok({ id, role })
 }
 
+function userBadges(id) {
+  const u = db.users.find((x) => x.id === id)
+  if (!u) return err(404, 'User not found.')
+  // Deterministically mark this user's first `badges_count` badges as earned so the
+  // progress + claimed-badges preview is consistent with the count shown in the list.
+  let remaining = u.badges_count || 0
+  const events = db.events.map((ev) => {
+    const badges = ev.badges.map((b) => {
+      const earned = remaining > 0
+      if (earned) remaining -= 1
+      return { id: b.id, name: b.name, description: b.description, icon: b.icon, color: b.color, earned, date: earned ? ev.date : null }
+    })
+    const earnedCount = badges.filter((b) => b.earned).length
+    return {
+      event_id: ev.id,
+      event: ev.name,
+      date: ev.date,
+      status: ev.status,
+      prize: ev.prize,
+      badges_total: badges.length,
+      badges_earned: earnedCount,
+      completed: badges.length > 0 && earnedCount === badges.length,
+      badges,
+    }
+  })
+  return ok({
+    user: { id: u.id, name: u.name, lastname: u.lastname, email: u.email, role: u.role, badges_count: u.badges_count || 0 },
+    events,
+  })
+}
+
 const path = (url) => url.split('?')[0]
 
 export const mockApi = {
@@ -266,6 +297,7 @@ export const mockApi = {
     let m
     if (p === '/events' || p === '/events/') return listEvents()
     if (p === '/admin/users') return listUsers()
+    if ((m = p.match(/^\/admin\/users\/([^/]+)\/badges$/))) return userBadges(m[1])
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badges$/))) return adminBadges(m[1])
     if ((m = p.match(/^\/events\/([^/]+)$/))) return getEvent(m[1])
     if (p === '/me/badges') return myBadges()

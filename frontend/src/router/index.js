@@ -17,6 +17,7 @@ const routes = [
 
   { path: '/admin/events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
 
