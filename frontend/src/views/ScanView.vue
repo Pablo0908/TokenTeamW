@@ -37,11 +37,21 @@ async function startScanner() {
     scanner.destroy()
     scanner = null
   }
+
+  // Over plain http (non-localhost) the browser exposes no camera API at all and
+  // will never prompt — retrying can't help, so say so up front.
+  if (!secure) {
+    camError.value =
+      'Your phone’s browser blocks the camera on insecure (http://) pages, so it can’t ask for permission. Open the app over HTTPS (or on the computer at localhost) to scan QR codes.'
+    return
+  }
+
   try {
-    if (!(await QrScanner.hasCamera())) {
-      camError.value = 'No camera was found on this device.'
-      return
-    }
+    // Explicitly request the camera first: on a fresh/dismissed state this is what
+    // pops the permission prompt; if it was hard-blocked it rejects without prompting.
+    const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    probe.getTracks().forEach((t) => t.stop()) // release it; QrScanner re-acquires below
+
     scanner = new QrScanner(video.value, (res) => handleDecode(res.data), {
       preferredCamera: 'environment',
       highlightScanRegion: true,
@@ -49,10 +59,20 @@ async function startScanner() {
       maxScansPerSecond: 5,
     })
     await scanner.start()
-  } catch {
-    camError.value = secure
-      ? 'Camera permission is needed to scan. Enable it in your browser and try again.'
-      : 'Camera access requires HTTPS. Open the app over https:// (or localhost) to scan.'
+  } catch (e) {
+    const name = e?.name || ''
+    const msg = String(e?.message || e || '')
+    if (name === 'NotAllowedError' || /denied|permission|dismiss/i.test(msg)) {
+      // The browser won't re-prompt after a block — guide the user to re-enable it.
+      camError.value =
+        'Camera permission is blocked. Tap the camera (or 🔒) icon in your browser’s address bar, set Camera to “Allow”, then press “Try camera again”.'
+    } else if (name === 'NotFoundError' || /not found|no camera/i.test(msg)) {
+      camError.value = 'No camera was found on this device.'
+    } else if (name === 'NotReadableError' || /in use|readable|busy/i.test(msg)) {
+      camError.value = 'Another app is using the camera. Close it, then press “Try camera again”.'
+    } else {
+      camError.value = 'Couldn’t start the camera. Press “Try camera again”.'
+    }
   }
 }
 
@@ -177,10 +197,6 @@ onBeforeUnmount(() => {
         <div role="alert" class="alert alert-warning text-sm">{{ camError }}</div>
         <button type="button" class="btn btn-outline btn-sm w-full tap-target" @click="startScanner">Try camera again</button>
       </div>
-
-      <p v-else-if="!secure" class="text-center text-xs text-warning">
-        Camera needs HTTPS — over plain HTTP scanning is disabled.
-      </p>
 
       <button
         v-if="isMock"
