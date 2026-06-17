@@ -122,6 +122,52 @@ def list_users(current_user):
     return jsonify({"users": out}), 200
 
 
+@admin_bp.route("/users/<user_id>/badges", methods=["GET"])
+@admin_required
+def user_badges(current_user, user_id):
+    user = user_model.find_by_id(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Same per-event grouping as /me/badges, but for the user the admin is inspecting.
+    events = []
+    for ev in event_model.all_events():
+        badges = badge_model.find_by_event(ev["_id"])
+        redeemed = redemption_model.redeemed_badge_map(user_id, ev["_id"])
+        total = len(badges)
+        earned = sum(1 for b in badges if str(b["_id"]) in redeemed)
+        events.append(
+            {
+                "event_id": str(ev["_id"]),
+                "event": ev.get("name", ""),
+                "date": event_model.fmt_date(ev.get("start_date")),
+                "status": event_model.compute_status(ev.get("start_date"), ev.get("end_date")),
+                "prize": ev.get("prize", ""),
+                "badges_total": total,
+                "badges_earned": earned,
+                "completed": total > 0 and earned >= total,
+                "badges": [
+                    badge_model.public_badge(b, str(b["_id"]) in redeemed, redeemed.get(str(b["_id"])))
+                    for b in badges
+                ],
+            }
+        )
+
+    return jsonify(
+        {
+            "user": {
+                "id": str(user["_id"]),
+                "name": user.get("name", ""),
+                "lastname": user.get("lastname", ""),
+                "email": user.get("email", ""),
+                "role": user.get("role", "attendee"),
+                "badges_count": redemption_model.count_for_user(user_id),
+            },
+            "events": events,
+        }
+    ), 200
+
+
 @admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
 @admin_required
 def set_user_role(current_user, user_id):
