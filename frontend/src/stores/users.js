@@ -12,7 +12,8 @@ export const useUsersStore = defineStore('users', () => {
   const loaded = ref(false)
 
   const adminCount = computed(() => users.value.filter((u) => u.role === 'admin').length)
-  const attendeeCount = computed(() => users.value.filter((u) => u.role !== 'admin').length)
+  const assistantCount = computed(() => users.value.filter((u) => u.role === 'assistant').length)
+  const attendeeCount = computed(() => users.value.filter((u) => u.role === 'attendee').length)
 
   async function fetchUsers() {
     loading.value = true
@@ -59,5 +60,5 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
-  return { users, current, error, loading, loaded, adminCount, attendeeCount, fetchUsers, fetchUserBadges, setRole }
+  return { users, current, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, setRole }
 })

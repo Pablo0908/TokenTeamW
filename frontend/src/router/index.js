@@ -15,11 +15,13 @@ const routes = [
   // Public QR landing — redirects to login then back (handled inside the view).
   { path: '/redeem/:eventId/:token', name: 'redeem', component: () => import('@/views/RedeemView.vue'), meta: { public: true } },
 
-  { path: '/admin/events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  // Staff (admin + assistant) can view these; assistant is read-only (enforced in-view + by the API).
+  { path: '/admin/events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
+  { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
+  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
+  { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
+  // Creating events is admin-only.
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
@@ -42,9 +44,13 @@ router.beforeEach((to) => {
     return { name: 'home' }
   }
 
+  if (to.meta.requiresStaff && !auth.isStaff) {
+    return { name: 'home' }
+  }
+
   // Logged-in users shouldn't see auth screens — send them to their home surface.
   if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
-    return auth.isAdmin ? { name: 'admin-events' } : { name: 'home' }
+    return auth.isStaff ? { name: 'admin-events' } : { name: 'home' }
   }
 
   return true

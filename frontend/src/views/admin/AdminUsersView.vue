@@ -19,11 +19,17 @@ const sorted = computed(() =>
 
 const isSelf = (u) => u.id === auth.user?.id
 
-async function toggleRole(u) {
-  const next = u.role === 'admin' ? 'attendee' : 'admin'
+// Admin sees "Organizer"; assistant sees "Assistant".
+const roleLabel = computed(() => (auth.isAdmin ? 'Organizer' : 'Assistant'))
+const roleBadgeClass = (role) =>
+  role === 'admin' ? 'badge-secondary' : role === 'assistant' ? 'badge-accent' : 'badge-ghost'
+
+// Admin-only: set any user to attendee / assistant / admin.
+async function changeRole(u, role) {
+  if (role === u.role) return
   updatingId.value = u.id
   try {
-    await users.setRole(u.id, next)
+    await users.setRole(u.id, role)
   } catch {
     /* error surfaced via store */
   } finally {
@@ -43,7 +49,7 @@ onMounted(() => users.fetchUsers())
   <div class="space-y-5 px-4 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
-        <p class="text-xs uppercase tracking-wide text-secondary">Organizer</p>
+        <p class="text-xs uppercase tracking-wide text-secondary">{{ roleLabel }}</p>
         <h1 class="text-2xl font-bold">Users</h1>
       </div>
       <button class="btn btn-ghost btn-sm tap-target" @click="logout">Log out</button>
@@ -62,12 +68,12 @@ onMounted(() => users.fetchUsers())
       <!-- Summary -->
       <section class="grid grid-cols-3 gap-3">
         <div class="surface-soft rounded-2xl p-3 text-center">
-          <p class="text-2xl font-bold text-primary">{{ users.users.length }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Users</p>
-        </div>
-        <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-secondary">{{ users.adminCount }}</p>
           <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Admins</p>
+        </div>
+        <div class="surface-soft rounded-2xl p-3 text-center">
+          <p class="text-2xl font-bold text-accent">{{ users.assistantCount }}</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Assistants</p>
         </div>
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-success">{{ users.attendeeCount }}</p>
@@ -85,10 +91,7 @@ onMounted(() => users.fetchUsers())
             <div class="min-w-0 flex-1">
               <p class="flex items-center gap-2 truncate font-medium">
                 {{ [u.name, u.lastname].filter(Boolean).join(' ') || u.email }}
-                <span
-                  class="badge badge-sm"
-                  :class="u.role === 'admin' ? 'badge-secondary' : 'badge-ghost'"
-                >{{ u.role }}</span>
+                <span class="badge badge-sm" :class="roleBadgeClass(u.role)">{{ u.role }}</span>
                 <span v-if="isSelf(u)" class="badge badge-sm badge-outline">you</span>
               </p>
               <p class="truncate text-xs text-base-content/55">{{ u.email }}</p>
@@ -106,16 +109,22 @@ onMounted(() => users.fetchUsers())
                 <path d="M9 5l7 7-7 7" />
               </svg>
             </RouterLink>
-            <button
-              class="btn btn-xs tap-target"
-              :class="u.role === 'admin' ? 'btn-outline btn-warning' : 'btn-outline btn-secondary'"
-              :disabled="isSelf(u) || updatingId === u.id"
-              :title="isSelf(u) ? 'You can’t change your own role.' : ''"
-              @click="toggleRole(u)"
-            >
-              <span v-if="updatingId === u.id" class="loading loading-spinner loading-xs" />
-              {{ u.role === 'admin' ? 'Demote to attendee' : 'Promote to admin' }}
-            </button>
+            <!-- Admins can set any role; assistants view only (no control). -->
+            <div v-if="auth.isAdmin && !isSelf(u)" class="flex items-center gap-2">
+              <span v-if="updatingId === u.id" class="loading loading-spinner loading-xs text-primary" />
+              <select
+                class="select select-bordered select-xs w-auto bg-base-100/70"
+                :value="u.role"
+                :disabled="updatingId === u.id"
+                aria-label="Change role"
+                @change="(e) => changeRole(u, e.target.value)"
+              >
+                <option value="attendee">Attendee</option>
+                <option value="assistant">Assistant</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <span v-else-if="isSelf(u)" class="text-xs text-base-content/40">your account</span>
           </div>
         </div>
       </section>

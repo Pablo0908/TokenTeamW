@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
 import QRDisplay from '@/components/domain/QRDisplay.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
@@ -9,6 +10,7 @@ import AlertMessage from '@/components/ui/AlertMessage.vue'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const events = useEventsStore()
 const id = route.params.id
 
@@ -17,6 +19,17 @@ const creating = ref(false)
 const badgeTouched = ref(false)
 const lastCreated = ref(null)
 const expanded = ref(null)
+const copiedToken = ref(null)
+
+async function copyToken(token) {
+  try {
+    await navigator.clipboard.writeText(token)
+    copiedToken.value = token
+    setTimeout(() => (copiedToken.value = null), 1500)
+  } catch {
+    /* clipboard unavailable */
+  }
+}
 
 const colors = ['primary', 'secondary', 'accent', 'success', 'info', 'warning', 'error']
 const form = reactive({ name: '', description: '', icon: '🏅', color: 'primary' })
@@ -100,8 +113,8 @@ onBeforeUnmount(() => clearInterval(poll))
         Live — counts refresh automatically
       </p>
 
-      <!-- Add badge -->
-      <div class="surface p-4">
+      <!-- Add badge (admin only) -->
+      <div v-if="auth.isAdmin" class="surface p-4">
         <button class="flex w-full items-center justify-between tap-target" :aria-expanded="showForm" @click="showForm = !showForm">
           <span class="font-semibold">Add badge</span>
           <span class="text-xl text-primary">{{ showForm ? '−' : '+' }}</span>
@@ -165,8 +178,18 @@ onBeforeUnmount(() => clearInterval(poll))
             <div class="mt-3">
               <ProgressBar :value="b.redeemed_by" :max="b.total_attendees" :show-count="false" />
             </div>
-            <div v-if="expanded === b.id" class="mt-4">
+            <div v-if="expanded === b.id" class="mt-4 space-y-3">
               <QRDisplay :value="b.qr_url" :label="b.name" :filename="`${b.name}-qr.png`" />
+              <!-- Unique token paired with its QR (for staff verification). -->
+              <div class="surface-soft rounded-xl p-3">
+                <p class="mb-1 text-[0.7rem] uppercase tracking-wide text-base-content/45">Unique token</p>
+                <div class="flex items-center gap-2">
+                  <code class="min-w-0 flex-1 truncate font-mono text-xs text-base-content/80">{{ b.token }}</code>
+                  <button class="btn btn-ghost btn-xs tap-target" @click="copyToken(b.token)">
+                    {{ copiedToken === b.token ? 'Copied!' : 'Copy' }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

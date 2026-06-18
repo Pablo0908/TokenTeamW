@@ -12,6 +12,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => role.value === 'admin')
+  const isAssistant = computed(() => role.value === 'assistant')
+  // Staff = admin or assistant: can reach the organizer screens (assistant is read-only).
+  const isStaff = computed(() => role.value === 'admin' || role.value === 'assistant')
   const displayName = computed(() => {
     if (user.value?.name) return user.value.name
     return user.value?.email ? user.value.email.split('@')[0] : 'there'
@@ -97,6 +100,8 @@ export const useAuthStore = defineStore('auth', () => {
     redirectAfterLogin,
     isAuthenticated,
     isAdmin,
+    isAssistant,
+    isStaff,
     displayName,
     loadFromStorage,
     login,

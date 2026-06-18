@@ -17,6 +17,7 @@ const db = {
   attendee: { id: 'u_john', name: 'John', lastname: 'Rivas', username: 'john', email: 'john@lyfter.cc', role: 'attendee' },
   users: [
     { id: 'u_admin', name: 'Diego', lastname: 'Soto', email: 'admin@lyfter.cc', role: 'admin', badges_count: 0 },
+    { id: 'u_sam', name: 'Sam', lastname: 'Vega', email: 'sam.assistant@lyfter.cc', role: 'assistant', badges_count: 0 },
     { id: 'u_john', name: 'John', lastname: 'Rivas', email: 'john@lyfter.cc', role: 'attendee', badges_count: 7 },
     { id: 'u_mara', name: 'Mara', lastname: 'Quesada', email: 'mara@lyfter.cc', role: 'attendee', badges_count: 4 },
     { id: 'u_leo', name: 'Leo', lastname: 'Vargas', email: 'leo@lyfter.cc', role: 'attendee', badges_count: 1 },
@@ -107,11 +108,13 @@ const today = () => new Date().toISOString().slice(0, 10)
 function login(body) {
   const email = (body?.email || '').trim().toLowerCase()
   if (!email || !body?.password) return err(400, 'Email and password are required.')
-  const isAdmin = email.includes('admin')
-  const role = isAdmin ? 'admin' : 'attendee'
-  const user = isAdmin
-    ? { id: 'u_admin', name: 'Diego', lastname: 'Soto', username: 'diego', email, role }
-    : { ...db.attendee, email }
+  const role = email.includes('admin') ? 'admin' : email.includes('assistant') ? 'assistant' : 'attendee'
+  const user =
+    role === 'admin'
+      ? { id: 'u_admin', name: 'Diego', lastname: 'Soto', username: 'diego', email, role }
+      : role === 'assistant'
+        ? { id: 'u_sam', name: 'Sam', lastname: 'Vega', username: 'sam', email, role }
+        : { ...db.attendee, email }
   return ok({ token: `demo.${btoa(email)}.jwt`, role, user })
 }
 
@@ -250,7 +253,7 @@ function listUsers() {
 
 function setUserRole(id, body) {
   const role = (body?.role || '').trim().toLowerCase()
-  if (role !== 'admin' && role !== 'attendee') return err(400, "Role must be 'admin' or 'attendee'.")
+  if (!['admin', 'assistant', 'attendee'].includes(role)) return err(400, "Role must be 'admin', 'assistant' or 'attendee'.")
   if (id === 'u_admin') return err(400, 'You can’t change your own role.')
   const u = db.users.find((x) => x.id === id)
   if (!u) return err(404, 'User not found.')

@@ -50,7 +50,7 @@ onMounted(() => users.fetchUserBadges(id))
         <div class="min-w-0">
           <h1 class="flex items-center gap-2 truncate text-xl font-bold">
             {{ fullName }}
-            <span class="badge badge-sm" :class="person.role === 'admin' ? 'badge-secondary' : 'badge-ghost'">{{ person.role }}</span>
+            <span class="badge badge-sm" :class="person.role === 'admin' ? 'badge-secondary' : person.role === 'assistant' ? 'badge-accent' : 'badge-ghost'">{{ person.role }}</span>
           </h1>
           <p class="truncate text-sm text-base-content/55">{{ person.email }}</p>
         </div>
