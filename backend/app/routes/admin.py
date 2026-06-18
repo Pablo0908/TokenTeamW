@@ -4,7 +4,7 @@ from app.models import event as event_model
 from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import user as user_model
-from app.utils.auth import admin_required
+from app.utils.auth import admin_required, staff_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
 # All admin operations live here: event/badge creation, badge stats, and user management.
@@ -70,7 +70,7 @@ def create_badge(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
-@admin_required
+@staff_required
 def list_badges(current_user, event_id):
     ev = event_model.find_by_id(event_id)
     if not ev:
@@ -102,7 +102,7 @@ def list_badges(current_user, event_id):
 # --- User management (admin-only): track badge counts, promote/demote ---
 
 @admin_bp.route("/users", methods=["GET"])
-@admin_required
+@staff_required
 def list_users(current_user):
     counts = redemption_model.counts_by_user()
     out = []
@@ -123,7 +123,7 @@ def list_users(current_user):
 
 
 @admin_bp.route("/users/<user_id>/badges", methods=["GET"])
-@admin_required
+@staff_required
 def user_badges(current_user, user_id):
     user = user_model.find_by_id(user_id)
     if not user:
@@ -173,8 +173,8 @@ def user_badges(current_user, user_id):
 def set_user_role(current_user, user_id):
     body = request.get_json(silent=True) or {}
     role = (body.get("role") or "").strip().lower()
-    if role not in ("admin", "attendee"):
-        return jsonify({"error": "Role must be 'admin' or 'attendee'."}), 400
+    if role not in ("admin", "attendee", "assistant"):
+        return jsonify({"error": "Role must be 'admin', 'assistant' or 'attendee'."}), 400
     if user_id == current_user["sub"]:
         return jsonify({"error": "You can’t change your own role."}), 400
     if not user_model.find_by_id(user_id):

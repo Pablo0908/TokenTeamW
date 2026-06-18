@@ -65,3 +65,16 @@ def admin_required(f):
         return f(*args, current_user=current_user, **kwargs)
 
     return decorated
+
+
+def staff_required(f):
+    """Admin OR assistant. Used for read-only staff views (user directory, badge
+    tokens/QRs); write operations stay behind admin_required."""
+    @jwt_required
+    @wraps(f)
+    def decorated(*args, current_user, **kwargs):
+        if current_user.get("role") not in ("admin", "assistant"):
+            return jsonify({"error": "Staff access required."}), 403
+        return f(*args, current_user=current_user, **kwargs)
+
+    return decorated
