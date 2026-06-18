@@ -40,6 +40,13 @@ def find_by_token(event_id, token):
     return mongo.db.badges.find_one({"event_id": _oid(event_id), "token": token})
 
 
+def find_by_id(badge_id):
+    try:
+        return mongo.db.badges.find_one({"_id": _oid(badge_id)})
+    except Exception:
+        return None
+
+
 def count_for_event(event_id):
     return mongo.db.badges.count_documents({"event_id": _oid(event_id)})
 
