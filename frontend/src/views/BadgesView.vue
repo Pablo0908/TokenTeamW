@@ -3,13 +3,19 @@ import { ref, computed, onMounted } from 'vue'
 import { useBadgesStore } from '@/stores/badges'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
+import ShareSheet from '@/components/domain/ShareSheet.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 
 const badges = useBadgesStore()
 
 const selected = ref(null) // { badge, event }
-const canShare = typeof navigator !== 'undefined' && !!navigator.share
+const downloading = ref(false)
+
+// Public share link — the backend serves an Open Graph preview card for it.
+const apiBase = import.meta.env.VITE_API_URL || ''
+const shareUrl = (id) => `${apiBase}/share/badge/${id}`
+const shareText = (badge, event) => `${badge.name}${event ? ' — ' + event : ''}. Join us at Lyfter!`
 
 onMounted(() => {
   if (!badges.loaded) badges.fetchMyBadges()
@@ -24,71 +30,23 @@ function close() {
   selected.value = null
 }
 
-function renderCanvas(badge, eventName) {
-  const c = document.createElement('canvas')
-  c.width = 600
-  c.height = 760
-  const ctx = c.getContext('2d')
-  const bg = ctx.createLinearGradient(0, 0, 600, 760)
-  bg.addColorStop(0, '#12151d')
-  bg.addColorStop(1, '#0b0d14')
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, 600, 760)
-  ctx.beginPath()
-  ctx.arc(300, 300, 180, 0, Math.PI * 2)
-  const circle = ctx.createLinearGradient(120, 120, 480, 480)
-  circle.addColorStop(0, '#2dd4bf')
-  circle.addColorStop(1, '#0e7490')
-  ctx.fillStyle = circle
-  ctx.fill()
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.font = '150px serif'
-  ctx.fillText(badge.icon || '🏅', 300, 300)
-  ctx.fillStyle = '#e2e8f0'
-  const name = badge.name || 'Badge'
-  let nameSize = 44
-  ctx.font = `bold ${nameSize}px sans-serif`
-  while (nameSize > 22 && ctx.measureText(name).width > 540) {
-    nameSize -= 2
-    ctx.font = `bold ${nameSize}px sans-serif`
+// Download the backend-rendered share card (branded PNG).
+async function downloadCard(badge) {
+  downloading.value = true
+  try {
+    const res = await fetch(`${shareUrl(badge.id)}/image.png`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${badge.name}-lyfter.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    window.open(`${shareUrl(badge.id)}/image.png`, '_blank', 'noopener')
+  } finally {
+    downloading.value = false
   }
-  ctx.fillText(name, 300, 560)
-  ctx.fillStyle = '#94a3b8'
-  ctx.font = '28px sans-serif'
-  ctx.fillText(eventName || '', 300, 612)
-  ctx.fillStyle = '#2dd4bf'
-  ctx.font = '600 24px sans-serif'
-  ctx.fillText('Lyfter Badges', 300, 706)
-  return c
-}
-
-function toBlob(canvas) {
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
-}
-
-async function download(badge, eventName) {
-  const blob = await toBlob(renderCanvas(badge, eventName))
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${badge.name}.png`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-async function share(badge, eventName) {
-  const blob = await toBlob(renderCanvas(badge, eventName))
-  const file = new File([blob], `${badge.name}.png`, { type: 'image/png' })
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: badge.name, text: `I earned the ${badge.name} badge at ${eventName}!` })
-      return
-    } catch {
-      /* user cancelled — fall through to download */
-    }
-  }
-  await download(badge, eventName)
 }
 </script>
 
@@ -146,19 +104,20 @@ async function share(badge, eventName) {
           <p v-if="selected.badge.description" class="mt-2 text-sm text-base-content/70">{{ selected.badge.description }}</p>
         </div>
 
-        <template v-if="selected.badge.earned">
-          <div class="flex gap-2">
-            <button v-if="canShare" class="btn btn-primary btn-sm flex-1 tap-target" @click="share(selected.badge, selected.event)">
-              Share
-            </button>
-            <button class="btn btn-outline btn-sm flex-1 tap-target" @click="download(selected.badge, selected.event)">
-              Download
-            </button>
-          </div>
-        </template>
-        <p v-else class="rounded-xl bg-base-300/60 px-3 py-2 text-sm text-base-content/60">
-          🔒 Locked — scan this badge to unlock it.
+        <p v-if="!selected.badge.earned" class="rounded-xl bg-base-300/60 px-3 py-2 text-sm text-base-content/60">
+          🔒 Not earned yet — scan this badge to unlock it.
         </p>
+
+        <ShareSheet
+          :url="shareUrl(selected.badge.id)"
+          :text="shareText(selected.badge, selected.event)"
+          :title="selected.badge.name"
+        />
+
+        <button class="btn btn-ghost btn-sm w-full gap-2 tap-target" :disabled="downloading" @click="downloadCard(selected.badge)">
+          <span v-if="downloading" class="loading loading-spinner loading-xs" />
+          Download image
+        </button>
 
         <button class="btn btn-ghost btn-sm w-full tap-target" @click="close">Close</button>
       </div>
