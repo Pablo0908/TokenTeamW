@@ -3,6 +3,7 @@ import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import BrandLogo from '@/components/ui/BrandLogo.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -34,10 +35,8 @@ async function submit() {
 
 <template>
   <div class="flex min-h-dvh flex-col justify-center px-6 py-10">
-    <div class="mb-6 flex flex-col items-center gap-3 text-center">
-      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-secondary to-primary text-3xl shadow-lg shadow-secondary/30">
-        ✨
-      </span>
+    <div class="mb-6 flex flex-col items-center gap-4 text-center">
+      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" />
       <div>
         <h1 class="text-2xl font-bold">Create your account</h1>
         <p class="text-sm text-base-content/60">Start collecting badges in seconds.</p>

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { isMock } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import BrandLogo from '@/components/ui/BrandLogo.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -20,16 +21,14 @@ async function submit() {
   const ok = await auth.login({ email: form.email.trim(), password: form.password })
   if (!ok) return
   const target = auth.consumeRedirect()
-  router.push(target || (auth.isAdmin ? '/admin/events' : '/'))
+  router.push(target || (auth.isStaff ? '/admin/events' : '/'))
 }
 </script>
 
 <template>
   <div class="flex min-h-dvh flex-col justify-center px-6 py-10">
-    <div class="mb-8 flex flex-col items-center gap-3 text-center">
-      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-info text-3xl shadow-lg shadow-primary/30">
-        🏅
-      </span>
+    <div class="mb-8 flex flex-col items-center gap-4 text-center">
+      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" />
       <div>
         <h1 class="text-2xl font-bold">Welcome back</h1>
         <p class="text-sm text-base-content/60">Sign in to keep collecting badges.</p>

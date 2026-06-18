@@ -14,15 +14,26 @@ body,
 
 body {
   margin: 0;
+  /* Gotham (brand body) -> Montserrat stand-in. */
+  font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
   color: theme('colors.base-content');
+  /* Deep brand-navy base; the animated orbs come from BrandBackground on top. */
   background:
-    radial-gradient(1100px 560px at 50% -8%, #1b2440 0%, rgba(27, 36, 64, 0) 60%),
-    radial-gradient(900px 500px at 100% 110%, #241634 0%, rgba(36, 22, 52, 0) 55%),
-    linear-gradient(180deg, #0b0d14 0%, #090a10 100%);
+    radial-gradient(1100px 600px at 50% -10%, #1b2536 0%, rgba(27, 37, 54, 0) 60%),
+    radial-gradient(900px 520px at 100% 110%, #241a36 0%, rgba(36, 26, 54, 0) 55%),
+    linear-gradient(180deg, #0c0f16 0%, #090b11 100%);
   background-attachment: fixed;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Newake (brand display) -> Space Grotesk stand-in, used for titles and the wordmark. */
+h1,
+h2,
+.font-display {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 @layer components {
@@ -39,20 +50,53 @@ body {
   }
 }
 
-/* Route transition */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease;
+/* Route transition — the prototype's screen-in entry on every navigation. */
+.screen-enter-active {
+  animation: screenIn 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-.fade-enter-from,
-.fade-leave-to {
+.screen-leave-active {
+  transition: opacity 0.12s ease;
+}
+.screen-leave-to {
   opacity: 0;
 }
 
+/* --- Brand entry animations (from the Lyfter prototype) --- */
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(113, 206, 255, 0.45); }
+  50% { box-shadow: 0 0 0 12px rgba(113, 206, 255, 0); }
+}
+
+.anim-screen-in { animation: screenIn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-pop { animation: pop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-pulse-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
+
 /* Respect users who prefer reduced motion. */
 @media (prefers-reduced-motion: reduce) {
-  .fade-enter-active,
-  .fade-leave-active {
+  .screen-enter-active {
+    animation: none;
+  }
+  .screen-leave-active {
     transition: none;
+  }
+  .anim-screen-in,
+  .anim-rise,
+  .anim-pop,
+  .anim-pulse-glow {
+    animation: none;
   }
 }

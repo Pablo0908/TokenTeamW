@@ -9,6 +9,7 @@ import BadgeCard from '@/components/domain/BadgeCard.vue'
 import EventCard from '@/components/domain/EventCard.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import BrandLogo from '@/components/ui/BrandLogo.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -50,8 +51,8 @@ const loading = computed(() => badges.loading && !badges.loaded)
           {{ newThisWeek }} new badge{{ newThisWeek === 1 ? '' : 's' }} this week
         </p>
       </div>
-      <span class="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-info text-xl shadow-lg shadow-primary/20">
-        🏅
+      <span class="surface grid h-11 w-11 place-items-center rounded-2xl p-2">
+        <BrandLogo :size="28" :show-wordmark="false" />
       </span>
     </header>
 
@@ -59,9 +60,9 @@ const loading = computed(() => badges.loading && !badges.loaded)
 
     <!-- Stats -->
     <section class="grid grid-cols-3 gap-3">
-      <StatTile :value="badges.totalEarned" label="Badges" tone="primary" />
-      <StatTile :value="badges.eventsCount" label="Events" tone="secondary" />
-      <StatTile :value="streak" label="Streak" tone="accent" />
+      <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" label="Badges" tone="primary" />
+      <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" label="Events" tone="secondary" />
+      <StatTile class="anim-rise" style="animation-delay: 0.19s" :value="streak" label="Streak" tone="accent" />
     </section>
 
     <!-- Scan CTA -->
@@ -70,7 +71,7 @@ const loading = computed(() => badges.loading && !badges.loaded)
       class="surface flex w-full items-center gap-4 bg-gradient-to-r from-primary/20 to-secondary/15 p-4 text-left transition-transform active:scale-[0.98]"
       @click="router.push('/scan')"
     >
-      <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/20 text-primary">
+      <span class="anim-pulse-glow grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/20 text-primary">
         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M7 3.75h-1A2.25 2.25 0 003.75 6v1M17 3.75h1A2.25 2.25 0 0120.25 6v1M7 20.25h-1A2.25 2.25 0 013.75 18v-1M17 20.25h1A2.25 2.25 0 0020.25 18v-1" />
           <path d="M3.75 12h16.5" />
@@ -88,7 +89,7 @@ const loading = computed(() => badges.loading && !badges.loaded)
       <!-- My badges -->
       <section class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold">My badges</h2>
+          <h2 class="font-semibold">Badges</h2>
           <RouterLink to="/badges" class="text-sm font-medium text-primary tap-target">see all</RouterLink>
         </div>
         <div v-if="previewBadges.length" class="grid grid-cols-4 gap-2.5">
