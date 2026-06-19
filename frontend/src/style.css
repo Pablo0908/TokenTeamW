@@ -6,26 +6,30 @@
   color-scheme: dark;
 }
 
-html,
-body,
-#app {
+html {
   height: 100%;
+  /* Solid root canvas: any area not covered by content (overscroll bounce, the
+     region past the last screen) is always this dark tone — never a brighter
+     cut-off. The decorative gradient lives on the fixed BrandBackground layer,
+     which reliably covers the viewport at every scroll position. */
+  background-color: #090b11;
 }
 
 body {
   margin: 0;
+  min-height: 100%;
   /* Gotham (brand body) -> Montserrat stand-in. */
   font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
   color: theme('colors.base-content');
-  /* Deep brand-navy base; the animated orbs come from BrandBackground on top. */
-  background:
-    radial-gradient(1100px 600px at 50% -10%, #1b2536 0%, rgba(27, 37, 54, 0) 60%),
-    radial-gradient(900px 520px at 100% 110%, #241a36 0%, rgba(36, 26, 54, 0) 55%),
-    linear-gradient(180deg, #0c0f16 0%, #090b11 100%);
-  background-attachment: fixed;
+  background-color: #090b11;
+  overscroll-behavior: none; /* no rubber-band overscroll revealing the canvas */
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+#app {
+  min-height: 100%;
 }
 
 /* Newake (brand display) -> Space Grotesk stand-in, used for titles and the wordmark. */

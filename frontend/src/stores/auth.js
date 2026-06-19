@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api, readApiError } from '@/services/api'
+import { t } from '@/i18n'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(null)
@@ -49,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
       persist()
       return true
     } catch (e) {
-      error.value = readApiError(e, 'Could not sign in. Check your credentials.')
+      error.value = readApiError(e, t('errors.signIn'))
       return false
     } finally {
       loading.value = false
@@ -63,7 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
       await api.post('/auth/register', payload)
       return true
     } catch (e) {
-      error.value = readApiError(e, 'Could not create your account.')
+      error.value = readApiError(e, t('errors.register'))
       return false
     } finally {
       loading.value = false

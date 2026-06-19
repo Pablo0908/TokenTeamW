@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import QrScanner from 'qr-scanner'
+import { t } from '@/i18n'
 import { useBadgesStore } from '@/stores/badges'
 import { isMock } from '@/services/api'
 import Confetti from '@/components/domain/Confetti.vue'
@@ -41,8 +42,7 @@ async function startScanner() {
   // Over plain http (non-localhost) the browser exposes no camera API at all and
   // will never prompt — retrying can't help, so say so up front.
   if (!secure) {
-    camError.value =
-      'Your phone’s browser blocks the camera on insecure (http://) pages, so it can’t ask for permission. Open the app over HTTPS (or on the computer at localhost) to scan QR codes.'
+    camError.value = t('scan.errInsecure')
     return
   }
 
@@ -50,7 +50,7 @@ async function startScanner() {
     // Explicitly request the camera first: on a fresh/dismissed state this is what
     // pops the permission prompt; if it was hard-blocked it rejects without prompting.
     const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    probe.getTracks().forEach((t) => t.stop()) // release it; QrScanner re-acquires below
+    probe.getTracks().forEach((tr) => tr.stop()) // release it; QrScanner re-acquires below
 
     scanner = new QrScanner(video.value, (res) => handleDecode(res.data), {
       preferredCamera: 'environment',
@@ -63,15 +63,13 @@ async function startScanner() {
     const name = e?.name || ''
     const msg = String(e?.message || e || '')
     if (name === 'NotAllowedError' || /denied|permission|dismiss/i.test(msg)) {
-      // The browser won't re-prompt after a block — guide the user to re-enable it.
-      camError.value =
-        'Camera permission is blocked. Tap the camera (or 🔒) icon in your browser’s address bar, set Camera to “Allow”, then press “Try camera again”.'
+      camError.value = t('scan.errDenied')
     } else if (name === 'NotFoundError' || /not found|no camera/i.test(msg)) {
-      camError.value = 'No camera was found on this device.'
+      camError.value = t('scan.errNotFound')
     } else if (name === 'NotReadableError' || /in use|readable|busy/i.test(msg)) {
-      camError.value = 'Another app is using the camera. Close it, then press “Try camera again”.'
+      camError.value = t('scan.errBusy')
     } else {
-      camError.value = 'Couldn’t start the camera. Press “Try camera again”.'
+      camError.value = t('scan.errGeneric')
     }
   }
 }
@@ -80,7 +78,7 @@ function handleDecode(text) {
   if (locked) return
   const parsed = parseRedeem(text)
   if (!parsed) {
-    flash.value = 'This QR code is not a Lyfter badge. Try again.'
+    flash.value = t('scan.notLyfter')
     clearTimeout(flashTimer)
     flashTimer = setTimeout(() => (flash.value = ''), 2500)
     return
@@ -90,11 +88,19 @@ function handleDecode(text) {
   redeemAndShow(parsed.eventId, parsed.token)
 }
 
-const OUTCOMES = {
-  409: { kind: 'duplicate', title: 'Already collected', message: 'You already have this badge.' },
-  403: { kind: 'error', title: 'Not available', message: 'This badge isn’t available right now.' },
-  410: { kind: 'error', title: 'No longer available', message: 'This badge has reached its limit.' },
-  401: { kind: 'error', title: 'Session expired', message: 'Please sign in again to continue.' },
+function outcomeFor(status) {
+  switch (status) {
+    case 409:
+      return { kind: 'duplicate', title: t('outcome.duplicateTitle'), message: t('outcome.duplicateMsg') }
+    case 403:
+      return { kind: 'error', title: t('outcome.notAvailableTitle'), message: t('outcome.notAvailableMsg') }
+    case 410:
+      return { kind: 'error', title: t('outcome.limitTitle'), message: t('outcome.limitMsg') }
+    case 401:
+      return { kind: 'error', title: t('outcome.sessionTitle'), message: t('outcome.sessionMsg') }
+    default:
+      return null
+  }
 }
 
 async function redeemAndShow(eventId, token) {
@@ -104,16 +110,16 @@ async function redeemAndShow(eventId, token) {
     const completed = res.data.event_completed
     result.value = {
       kind: completed ? 'completed' : 'success',
-      title: completed ? 'Event completed!' : 'Badge earned!',
+      title: completed ? t('outcome.eventCompleted') : t('outcome.badgeEarned'),
       badge: res.data.badge,
       event: res.data.event,
       prize: res.data.prize,
     }
   } else {
-    result.value = OUTCOMES[res.status] || {
+    result.value = outcomeFor(res.status) || {
       kind: 'error',
-      title: 'Scan failed',
-      message: res.error || 'Something went wrong. Please try again.',
+      title: t('scan.failTitle'),
+      message: res.error || t('outcome.genericMsg'),
     }
   }
   state.value = 'result'
@@ -155,7 +161,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="min-h-dvh px-4 pb-4 pt-6">
     <header class="mb-4">
-      <h1 class="text-2xl font-bold">Scan badges</h1>
+      <h1 class="text-2xl font-bold">{{ $t('scan.title') }}</h1>
     </header>
 
     <Confetti :active="celebrating" />
@@ -189,13 +195,13 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="text-center">
-        <h2 class="text-lg font-semibold">Scan to earn</h2>
-        <p class="text-sm text-base-content/60">Point at any QR at an event station</p>
+        <h2 class="text-lg font-semibold">{{ $t('scan.heading') }}</h2>
+        <p class="text-sm text-base-content/60">{{ $t('scan.sub') }}</p>
       </div>
 
       <div v-if="camError" class="space-y-3">
         <div role="alert" class="alert alert-warning text-sm">{{ camError }}</div>
-        <button type="button" class="btn btn-outline btn-sm w-full tap-target" @click="startScanner">Try camera again</button>
+        <button type="button" class="btn btn-outline btn-sm w-full tap-target" @click="startScanner">{{ $t('scan.tryAgain') }}</button>
       </div>
 
       <button
@@ -204,7 +210,7 @@ onBeforeUnmount(() => {
         class="btn btn-secondary btn-outline w-full tap-target"
         @click="simulate"
       >
-        Simulate a scan (demo)
+        {{ $t('scan.simulate') }}
       </button>
     </div>
 
@@ -235,13 +241,13 @@ onBeforeUnmount(() => {
         v-if="result.kind === 'completed' && result.prize"
         class="surface w-full bg-gradient-to-r from-warning/20 to-secondary/15 p-4"
       >
-        <p class="text-xs uppercase tracking-wide text-base-content/55">Prize unlocked</p>
+        <p class="text-xs uppercase tracking-wide text-base-content/55">{{ $t('outcome.prizeUnlocked') }}</p>
         <p class="mt-1 font-semibold text-warning">🎁 {{ result.prize }}</p>
       </div>
 
       <div class="mt-2 w-full space-y-2">
-        <button class="btn btn-primary w-full tap-target" @click="router.push('/badges')">View my collection</button>
-        <button class="btn btn-ghost w-full tap-target" @click="scanAgain">Scan another</button>
+        <button class="btn btn-primary w-full tap-target" @click="router.push('/badges')">{{ $t('redeem.viewCollection') }}</button>
+        <button class="btn btn-ghost w-full tap-target" @click="scanAgain">{{ $t('redeem.scanAnother') }}</button>
       </div>
     </div>
   </div>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { locale, setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
 import StatTile from '@/components/domain/StatTile.vue'
@@ -38,20 +39,20 @@ function logout() {
       <div>
         <h1 class="text-xl font-bold">{{ fullName }}</h1>
         <p class="text-sm text-base-content/60">{{ auth.user?.email }}</p>
-        <span class="badge badge-sm mt-2 border-0" :class="auth.isAdmin ? 'badge-secondary' : 'badge-primary'">
-          {{ auth.isAdmin ? 'Organizer' : 'Attendee' }}
+        <span class="badge badge-sm mt-2 border-0" :class="auth.isAdmin ? 'badge-secondary' : auth.isAssistant ? 'badge-accent' : 'badge-primary'">
+          {{ auth.isAdmin ? $t('profile.organizer') : auth.isAssistant ? $t('profile.assistant') : $t('profile.attendee') }}
         </span>
       </div>
     </header>
 
     <section class="grid grid-cols-3 gap-3">
-      <StatTile :value="badges.totalEarned" label="Badges" tone="primary" />
-      <StatTile :value="badges.eventsCount" label="Events" tone="secondary" />
-      <StatTile :value="badges.completedEvents" label="Done" tone="accent" />
+      <StatTile :value="badges.totalEarned" :label="$t('profile.badges')" tone="primary" />
+      <StatTile :value="badges.eventsCount" :label="$t('profile.events')" tone="secondary" />
+      <StatTile :value="badges.completedEvents" :label="$t('profile.done')" tone="accent" />
     </section>
 
     <section v-if="badges.groups.length" class="space-y-3">
-      <h2 class="font-semibold">Progress by event</h2>
+      <h2 class="font-semibold">{{ $t('profile.progressByEvent') }}</h2>
       <div class="surface space-y-4 p-4">
         <div v-for="g in badges.groups" :key="g.event_id" class="space-y-1.5">
           <div class="flex items-center justify-between text-sm">
@@ -63,10 +64,33 @@ function logout() {
       </div>
     </section>
 
-    <RouterLink v-if="auth.isAdmin" to="/admin/events" class="btn btn-outline w-full tap-target">
-      Open organizer panel
+    <!-- Language setting -->
+    <section class="space-y-2">
+      <h2 class="font-semibold">{{ $t('profile.language') }}</h2>
+      <div class="surface flex gap-2 p-2">
+        <button
+          type="button"
+          class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+          :class="locale === 'en' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
+          @click="setLocale('en')"
+        >
+          English
+        </button>
+        <button
+          type="button"
+          class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+          :class="locale === 'es' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
+          @click="setLocale('es')"
+        >
+          Español
+        </button>
+      </div>
+    </section>
+
+    <RouterLink v-if="auth.isStaff" to="/admin/events" class="btn btn-outline w-full tap-target">
+      {{ $t('profile.openAdmin') }}
     </RouterLink>
 
-    <button class="btn btn-ghost w-full text-error tap-target" @click="logout">Log out</button>
+    <button class="btn btn-ghost w-full text-error tap-target" @click="logout">{{ $t('common.logout') }}</button>
   </div>
 </template>

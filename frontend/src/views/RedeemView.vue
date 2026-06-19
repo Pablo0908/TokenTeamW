@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
 import Confetti from '@/components/domain/Confetti.vue'
@@ -16,11 +17,19 @@ const result = ref(null)
 
 const celebrating = computed(() => ['success', 'completed'].includes(result.value?.kind))
 
-const OUTCOMES = {
-  409: { kind: 'duplicate', title: 'Already collected', message: 'You already have this badge.' },
-  403: { kind: 'error', title: 'Not available', message: 'This badge isn’t available right now.' },
-  410: { kind: 'error', title: 'No longer available', message: 'This badge has reached its limit.' },
-  401: { kind: 'error', title: 'Session expired', message: 'Please sign in again to continue.' },
+function outcomeFor(status) {
+  switch (status) {
+    case 409:
+      return { kind: 'duplicate', title: t('outcome.duplicateTitle'), message: t('outcome.duplicateMsg') }
+    case 403:
+      return { kind: 'error', title: t('outcome.notAvailableTitle'), message: t('outcome.notAvailableMsg') }
+    case 410:
+      return { kind: 'error', title: t('outcome.limitTitle'), message: t('outcome.limitMsg') }
+    case 401:
+      return { kind: 'error', title: t('outcome.sessionTitle'), message: t('outcome.sessionMsg') }
+    default:
+      return null
+  }
 }
 
 async function redeem() {
@@ -30,16 +39,16 @@ async function redeem() {
     const completed = res.data.event_completed
     result.value = {
       kind: completed ? 'completed' : 'success',
-      title: completed ? 'Event completed!' : 'Badge earned!',
+      title: completed ? t('outcome.eventCompleted') : t('outcome.badgeEarned'),
       badge: res.data.badge,
       event: res.data.event,
       prize: res.data.prize,
     }
   } else {
-    result.value = OUTCOMES[res.status] || {
+    result.value = outcomeFor(res.status) || {
       kind: 'error',
-      title: 'Could not redeem',
-      message: res.error || 'Something went wrong. Please try again.',
+      title: t('redeem.failTitle'),
+      message: res.error || t('outcome.genericMsg'),
     }
   }
   state.value = 'result'
@@ -60,7 +69,7 @@ onMounted(() => {
   <div class="flex min-h-dvh flex-col items-center justify-center px-6 py-10 text-center">
     <Confetti :active="celebrating" />
 
-    <LoadingSpinner v-if="state === 'working'" label="Redeeming your badge…" />
+    <LoadingSpinner v-if="state === 'working'" :label="$t('redeem.working')" />
 
     <div v-else class="flex w-full flex-col items-center gap-5">
       <div
@@ -86,13 +95,13 @@ onMounted(() => {
         v-if="result.kind === 'completed' && result.prize"
         class="surface w-full max-w-sm bg-gradient-to-r from-warning/20 to-secondary/15 p-4"
       >
-        <p class="text-xs uppercase tracking-wide text-base-content/55">Prize unlocked</p>
+        <p class="text-xs uppercase tracking-wide text-base-content/55">{{ $t('outcome.prizeUnlocked') }}</p>
         <p class="mt-1 font-semibold text-warning">🎁 {{ result.prize }}</p>
       </div>
 
       <div class="w-full max-w-sm space-y-2">
-        <button class="btn btn-primary w-full tap-target" @click="router.push('/badges')">View my collection</button>
-        <button class="btn btn-ghost w-full tap-target" @click="router.push('/scan')">Scan another</button>
+        <button class="btn btn-primary w-full tap-target" @click="router.push('/badges')">{{ $t('redeem.viewCollection') }}</button>
+        <button class="btn btn-ghost w-full tap-target" @click="router.push('/scan')">{{ $t('redeem.scanAnother') }}</button>
       </div>
     </div>
   </div>

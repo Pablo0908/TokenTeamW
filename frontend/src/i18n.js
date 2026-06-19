@@ -1,0 +1,262 @@
+import { ref } from 'vue'
+
+// Lightweight i18n: a reactive, persisted locale + a t(key, params) lookup.
+// English is the default; Spanish is Latin-American neutral.
+const STORAGE_KEY = 'lyfter_locale'
+export const SUPPORTED = ['en', 'es']
+
+const en = {
+  common: {
+    close: 'Close', cancel: 'Cancel', back: 'Back', logout: 'Log out',
+    seeAll: 'see all', none: 'None', loading: 'Loading…',
+  },
+  nav: { home: 'Home', scan: 'Scan', badges: 'Badges', events: 'Events', profile: 'Profile' },
+  auth: {
+    loginTitle: 'Welcome back',
+    loginSubtitle: 'Sign in to keep collecting badges.',
+    registerTitle: 'Create your account',
+    registerSubtitle: 'Start collecting badges in seconds.',
+    email: 'Email', password: 'Password', firstName: 'First name', lastName: 'Last name',
+    confirmPassword: 'Confirm password',
+    signIn: 'Sign in', signingIn: 'Signing in…',
+    create: 'Create account', creating: 'Creating…',
+    newHere: 'New here?', createLink: 'Create an account',
+    haveAccount: 'Already have an account?', signInLink: 'Sign in',
+    errEmail: 'Enter a valid email.', errPasswordRequired: 'Password is required.',
+    errPassword6: 'At least 6 characters.', errMatch: 'Passwords don’t match.',
+  },
+  home: {
+    greeting: 'Hey, {name}',
+    newBadgeOne: '{n} new badge this week',
+    newBadgeMany: '{n} new badges this week',
+    scanTitle: 'Scan a QR code', scanSub: 'Point at any event badge station',
+    badges: 'Badges', events: 'Events', streak: 'Streak',
+    noBadges: 'No badges yet — scan your first one!', loading: 'Loading your badges…',
+  },
+  badges: {
+    title: 'Badges & Events',
+    summary: '{earned} earned · {completed} events completed',
+    loading: 'Loading your collection…',
+    emptyTitle: 'No badges yet',
+    emptySub: 'Scan a QR at an event station to earn your first badge.',
+    emptyCta: 'Start scanning',
+    notEarned: '🔒 Not earned yet — scan this badge to unlock it.',
+    download: 'Download image',
+  },
+  share: {
+    heading: 'Share this badge', copyLink: 'Copy link', copied: 'Link copied!',
+    copiedIn: 'Link copied — paste it in {app}', more: 'More',
+  },
+  events: {
+    title: 'Events', all: 'All', active: 'Active', past: 'Past',
+    loading: 'Loading events…', empty: 'No events to show.',
+    status: { completed: 'Completed', active: 'Active', upcoming: 'Upcoming', past: 'Past', event: 'Event' },
+    dateTba: 'Date TBA', progress: 'Progress', unitBadges: 'badges',
+  },
+  eventDetail: {
+    loading: 'Loading event…', yourProgress: 'Your progress', completed: 'Completed',
+    prizeUnlocked: 'Prize unlocked', prizeLocked: 'Complete all badges to unlock',
+    prizeDefault: 'A special reward', badges: 'Badges',
+    noBadges: 'No badges have been added to this event yet.',
+  },
+  profile: {
+    organizer: 'Organizer', attendee: 'Attendee', assistant: 'Assistant',
+    badges: 'Badges', events: 'Events', done: 'Done',
+    progressByEvent: 'Progress by event', openAdmin: 'Open organizer panel',
+    language: 'Language',
+  },
+  scan: {
+    title: 'Scan badges', heading: 'Scan to earn', sub: 'Point at any QR at an event station',
+    tryAgain: 'Try camera again', simulate: 'Simulate a scan (demo)',
+    notLyfter: 'This QR code is not a Lyfter badge. Try again.',
+    errInsecure: 'Your phone’s browser blocks the camera on insecure (http://) pages, so it can’t ask for permission. Open the app over HTTPS (or on the computer at localhost) to scan QR codes.',
+    errDenied: 'Camera permission is blocked. Tap the camera (or 🔒) icon in your browser’s address bar, set Camera to “Allow”, then press “Try camera again”.',
+    errNotFound: 'No camera was found on this device.',
+    errBusy: 'Another app is using the camera. Close it, then press “Try camera again”.',
+    errGeneric: 'Couldn’t start the camera. Press “Try camera again”.',
+    failTitle: 'Scan failed',
+  },
+  redeem: { working: 'Redeeming your badge…', failTitle: 'Could not redeem', viewCollection: 'View my collection', scanAnother: 'Scan another' },
+  outcome: {
+    badgeEarned: 'Badge earned!', eventCompleted: 'Event completed!',
+    duplicateTitle: 'Already collected', duplicateMsg: 'You already have this badge.',
+    notAvailableTitle: 'Not available', notAvailableMsg: 'This badge isn’t available right now.',
+    limitTitle: 'No longer available', limitMsg: 'This badge has reached its limit.',
+    sessionTitle: 'Session expired', sessionMsg: 'Please sign in again to continue.',
+    genericMsg: 'Something went wrong. Please try again.', prizeUnlocked: 'Prize unlocked',
+  },
+  welcome: {
+    greeting: 'Welcome to Lyfter! 👋',
+    question: 'Which language would you like to use?',
+    english: 'English', spanish: 'Español', continue: 'Continue',
+  },
+  coach: {
+    scanTitle: 'Scan badges', scanBody: 'Tap here to open the camera and scan a QR at any booth to earn a badge.',
+    badgesTitle: 'Your badges', badgesBody: 'Badges you earn show up here — tap one to view or share it.',
+    eventsTitle: 'Events', eventsBody: 'Browse events and track your progress toward each prize.',
+    gotIt: 'Got it',
+  },
+  errors: {
+    signIn: 'Could not sign in. Check your credentials.',
+    register: 'Could not create your account.',
+    events: 'Could not load events. Please try again.',
+    event: 'Could not load the event.',
+    badges: 'Could not load your badges.',
+    coldStart: 'The server may be starting up — please try again in a moment.',
+    generic: 'Something went wrong. Please try again.',
+  },
+}
+
+const es = {
+  common: {
+    close: 'Cerrar', cancel: 'Cancelar', back: 'Atrás', logout: 'Cerrar sesión',
+    seeAll: 'ver todo', none: 'Ninguno', loading: 'Cargando…',
+  },
+  nav: { home: 'Inicio', scan: 'Escanear', badges: 'Insignias', events: 'Eventos', profile: 'Perfil' },
+  auth: {
+    loginTitle: 'Bienvenido de nuevo',
+    loginSubtitle: 'Inicia sesión para seguir coleccionando insignias.',
+    registerTitle: 'Crea tu cuenta',
+    registerSubtitle: 'Empieza a coleccionar insignias en segundos.',
+    email: 'Correo', password: 'Contraseña', firstName: 'Nombre', lastName: 'Apellido',
+    confirmPassword: 'Confirmar contraseña',
+    signIn: 'Iniciar sesión', signingIn: 'Iniciando sesión…',
+    create: 'Crear cuenta', creating: 'Creando…',
+    newHere: '¿Nuevo por aquí?', createLink: 'Crea una cuenta',
+    haveAccount: '¿Ya tienes una cuenta?', signInLink: 'Inicia sesión',
+    errEmail: 'Ingresa un correo válido.', errPasswordRequired: 'La contraseña es obligatoria.',
+    errPassword6: 'Al menos 6 caracteres.', errMatch: 'Las contraseñas no coinciden.',
+  },
+  home: {
+    greeting: 'Hola, {name}',
+    newBadgeOne: '{n} insignia nueva esta semana',
+    newBadgeMany: '{n} insignias nuevas esta semana',
+    scanTitle: 'Escanea un código QR', scanSub: 'Apunta a cualquier estación de insignias del evento',
+    badges: 'Insignias', events: 'Eventos', streak: 'Racha',
+    noBadges: 'Aún no tienes insignias, ¡escanea la primera!', loading: 'Cargando tus insignias…',
+  },
+  badges: {
+    title: 'Insignias y Eventos',
+    summary: '{earned} obtenidas · {completed} eventos completados',
+    loading: 'Cargando tu colección…',
+    emptyTitle: 'Aún no hay insignias',
+    emptySub: 'Escanea un QR en una estación del evento para obtener tu primera insignia.',
+    emptyCta: 'Empezar a escanear',
+    notEarned: '🔒 Aún no obtenida: escanea esta insignia para desbloquearla.',
+    download: 'Descargar imagen',
+  },
+  share: {
+    heading: 'Comparte esta insignia', copyLink: 'Copiar enlace', copied: '¡Enlace copiado!',
+    copiedIn: 'Enlace copiado: pégalo en {app}', more: 'Más',
+  },
+  events: {
+    title: 'Eventos', all: 'Todos', active: 'Activos', past: 'Pasados',
+    loading: 'Cargando eventos…', empty: 'No hay eventos para mostrar.',
+    status: { completed: 'Completado', active: 'Activo', upcoming: 'Próximo', past: 'Pasado', event: 'Evento' },
+    dateTba: 'Fecha por definir', progress: 'Progreso', unitBadges: 'insignias',
+  },
+  eventDetail: {
+    loading: 'Cargando evento…', yourProgress: 'Tu progreso', completed: 'Completado',
+    prizeUnlocked: 'Premio desbloqueado', prizeLocked: 'Completa todas las insignias para desbloquear',
+    prizeDefault: 'Una recompensa especial', badges: 'Insignias',
+    noBadges: 'Aún no se han agregado insignias a este evento.',
+  },
+  profile: {
+    organizer: 'Organizador', attendee: 'Participante', assistant: 'Asistente',
+    badges: 'Insignias', events: 'Eventos', done: 'Completados',
+    progressByEvent: 'Progreso por evento', openAdmin: 'Abrir panel de organizador',
+    language: 'Idioma',
+  },
+  scan: {
+    title: 'Escanear insignias', heading: 'Escanea para ganar', sub: 'Apunta a cualquier QR en una estación del evento',
+    tryAgain: 'Reintentar cámara', simulate: 'Simular escaneo (demo)',
+    notLyfter: 'Este código QR no es una insignia de Lyfter. Inténtalo de nuevo.',
+    errInsecure: 'El navegador de tu teléfono bloquea la cámara en páginas no seguras (http://), por lo que no puede pedir permiso. Abre la app por HTTPS (o en la computadora con localhost) para escanear códigos QR.',
+    errDenied: 'El permiso de la cámara está bloqueado. Toca el ícono de cámara (o 🔒) en la barra de direcciones, permite la cámara y pulsa “Reintentar cámara”.',
+    errNotFound: 'No se encontró cámara en este dispositivo.',
+    errBusy: 'Otra app está usando la cámara. Ciérrala y pulsa “Reintentar cámara”.',
+    errGeneric: 'No se pudo iniciar la cámara. Pulsa “Reintentar cámara”.',
+    failTitle: 'Error al escanear',
+  },
+  redeem: { working: 'Canjeando tu insignia…', failTitle: 'No se pudo canjear', viewCollection: 'Ver mi colección', scanAnother: 'Escanear otra' },
+  outcome: {
+    badgeEarned: '¡Insignia obtenida!', eventCompleted: '¡Evento completado!',
+    duplicateTitle: 'Ya la tienes', duplicateMsg: 'Ya tienes esta insignia.',
+    notAvailableTitle: 'No disponible', notAvailableMsg: 'Esta insignia no está disponible en este momento.',
+    limitTitle: 'Ya no está disponible', limitMsg: 'Esta insignia alcanzó su límite.',
+    sessionTitle: 'Sesión expirada', sessionMsg: 'Inicia sesión de nuevo para continuar.',
+    genericMsg: 'Algo salió mal. Inténtalo de nuevo.', prizeUnlocked: 'Premio desbloqueado',
+  },
+  welcome: {
+    greeting: '¡Bienvenido a Lyfter! 👋',
+    question: '¿En qué idioma quieres usar la app?',
+    english: 'English', spanish: 'Español', continue: 'Continuar',
+  },
+  coach: {
+    scanTitle: 'Escanea insignias', scanBody: 'Toca aquí para abrir la cámara y escanear un QR en cualquier estación y ganar una insignia.',
+    badgesTitle: 'Tus insignias', badgesBody: 'Las insignias que ganes aparecen aquí: toca una para verla o compartirla.',
+    eventsTitle: 'Eventos', eventsBody: 'Explora los eventos y sigue tu progreso hacia cada premio.',
+    gotIt: 'Entendido',
+  },
+  errors: {
+    signIn: 'No se pudo iniciar sesión. Revisa tus credenciales.',
+    register: 'No se pudo crear tu cuenta.',
+    events: 'No se pudieron cargar los eventos. Inténtalo de nuevo.',
+    event: 'No se pudo cargar el evento.',
+    badges: 'No se pudieron cargar tus insignias.',
+    coldStart: 'El servidor puede estar iniciando — inténtalo de nuevo en un momento.',
+    generic: 'Algo salió mal. Inténtalo de nuevo.',
+  },
+}
+
+const messages = { en, es }
+
+const saved = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || ''
+export const locale = ref(SUPPORTED.includes(saved) ? saved : 'en')
+
+// Allow a shareable ?lang=es / ?lang=en link to preset the language.
+if (typeof location !== 'undefined') {
+  const q = new URLSearchParams(location.search).get('lang')
+  if (SUPPORTED.includes(q)) {
+    locale.value = q
+    try {
+      localStorage.setItem(STORAGE_KEY, q)
+    } catch {
+      /* storage unavailable */
+    }
+  }
+}
+
+function lookup(obj, path) {
+  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj)
+}
+
+export function t(key, params) {
+  let str = lookup(messages[locale.value], key)
+  if (str == null) str = lookup(messages.en, key)
+  if (str == null) return key
+  if (params) for (const k in params) str = str.replaceAll(`{${k}}`, params[k])
+  return str
+}
+
+export function setLocale(value) {
+  if (!SUPPORTED.includes(value)) return
+  locale.value = value
+  try {
+    localStorage.setItem(STORAGE_KEY, value)
+  } catch {
+    /* storage unavailable */
+  }
+  if (typeof document !== 'undefined') document.documentElement.setAttribute('lang', value)
+}
+
+export function useLocale() {
+  return { locale, t, setLocale }
+}
+
+export const i18n = {
+  install(app) {
+    app.config.globalProperties.$t = t
+    if (typeof document !== 'undefined') document.documentElement.setAttribute('lang', locale.value)
+  },
+}

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { t } from '@/i18n'
 import { mockApi } from './mockApi'
 
 // Demo mode: serve built-in sample data so every screen is previewable before the
@@ -7,12 +8,12 @@ export const isMock = import.meta.env.VITE_USE_MOCK === 'true'
 
 // Normalize an Axios error into a user-facing string. Maps network failures and 503s to a
 // Render cold-start hint (per session instructions); never leaks raw error objects.
-export function readApiError(e, fallback = 'Something went wrong. Please try again.') {
+export function readApiError(e, fallback) {
   if (e?.response?.data?.error) return e.response.data.error
   if (!e?.response || e.response.status === 503) {
-    return 'The server may be starting up — please try again in a moment.'
+    return t('errors.coldStart')
   }
-  return fallback
+  return fallback || t('errors.generic')
 }
 
 function createRealApi() {

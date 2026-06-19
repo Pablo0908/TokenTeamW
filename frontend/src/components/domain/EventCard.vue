@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { t, locale } from '@/i18n'
 import ProgressBar from './ProgressBar.vue'
 
 const props = defineProps({
@@ -13,28 +14,30 @@ const total = computed(() => props.event.badges_total ?? 0)
 const completed = computed(() => props.event.completed || (total.value > 0 && earned.value >= total.value))
 
 const status = computed(() => {
-  if (completed.value) return { label: 'Completed', cls: 'badge-primary' }
+  if (completed.value) return { label: t('events.status.completed'), cls: 'badge-primary' }
   switch (props.event.status) {
     case 'active':
-      return { label: 'Active', cls: 'badge-success' }
+      return { label: t('events.status.active'), cls: 'badge-success' }
     case 'upcoming':
-      return { label: 'Upcoming', cls: 'badge-secondary' }
+      return { label: t('events.status.upcoming'), cls: 'badge-secondary' }
     case 'past':
-      return { label: 'Past', cls: 'badge-ghost text-base-content/60' }
+      return { label: t('events.status.past'), cls: 'badge-ghost text-base-content/60' }
     default:
-      return { label: 'Event', cls: 'badge-ghost' }
+      return { label: t('events.status.event'), cls: 'badge-ghost' }
   }
 })
 
 const dateLabel = computed(() => {
   const fmt = (iso) => {
     const d = new Date(iso)
-    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return Number.isNaN(d.getTime())
+      ? ''
+      : d.toLocaleDateString(locale.value === 'es' ? 'es' : 'en-US', { month: 'short', day: 'numeric' })
   }
   const start = fmt(props.event.date)
   const end = props.event.endDate ? fmt(props.event.endDate) : ''
   if (start && end && end !== start) return `${start} – ${end}`
-  return start || 'Date TBA'
+  return start || t('events.dateTba')
 })
 </script>
 
@@ -63,8 +66,8 @@ const dateLabel = computed(() => {
       :value="earned"
       :max="total"
       :show-count="true"
-      unit="badges"
-      :label="completed ? 'Completed' : 'Progress'"
+      :unit="$t('events.unitBadges')"
+      :label="completed ? $t('events.status.completed') : $t('events.progress')"
     />
   </component>
 </template>

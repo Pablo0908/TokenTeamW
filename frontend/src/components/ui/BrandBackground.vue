@@ -47,6 +47,12 @@ const stars = [
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  /* Decorative base gradient (was on <body>, which only covered one viewport and
+     cut off on scroll). A fixed layer covers the viewport at any scroll position. */
+  background:
+    radial-gradient(1100px 600px at 50% -10%, #1b2536 0%, rgba(27, 37, 54, 0) 60%),
+    radial-gradient(900px 520px at 100% 110%, #241a36 0%, rgba(36, 26, 54, 0) 55%),
+    linear-gradient(180deg, #0c0f16 0%, #090b11 100%);
 }
 
 .grid-pan {

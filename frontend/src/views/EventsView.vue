@@ -26,7 +26,7 @@ const visible = computed(() => {
 <template>
   <div class="space-y-5 px-4 pb-4 pt-6">
     <header>
-      <h1 class="text-2xl font-bold">Events</h1>
+      <h1 class="text-2xl font-bold">{{ $t('events.title') }}</h1>
     </header>
 
     <div role="tablist" class="flex gap-2">
@@ -35,16 +35,16 @@ const visible = computed(() => {
         :key="f"
         role="tab"
         :aria-selected="filter === f"
-        class="tap-target flex-1 rounded-full px-4 py-2 text-sm font-medium capitalize transition-colors"
+        class="tap-target flex-1 rounded-full px-4 py-2 text-sm font-medium transition-colors"
         :class="filter === f ? 'bg-primary text-primary-content' : 'bg-base-100/60 text-base-content/60'"
         @click="filter = f"
       >
-        {{ f }}
+        {{ $t('events.' + f) }}
       </button>
     </div>
 
     <AlertMessage type="warning" :message="events.error || ''" />
-    <LoadingSpinner v-if="events.loading && !events.loaded" label="Loading events…" />
+    <LoadingSpinner v-if="events.loading && !events.loaded" :label="$t('events.loading')" />
 
     <div v-else-if="visible.length" class="space-y-3">
       <EventCard
@@ -56,7 +56,7 @@ const visible = computed(() => {
     </div>
 
     <div v-else class="surface p-8 text-center text-sm text-base-content/60">
-      No {{ filter === 'all' ? '' : filter }} events to show.
+      {{ $t('events.empty') }}
     </div>
   </div>
 </template>

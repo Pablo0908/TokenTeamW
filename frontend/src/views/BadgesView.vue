@@ -53,14 +53,14 @@ async function downloadCard(badge) {
 <template>
   <div class="space-y-6 px-4 pb-4 pt-6">
     <header>
-      <h1 class="text-2xl font-bold">My badges</h1>
+      <h1 class="text-2xl font-bold">{{ $t('badges.title') }}</h1>
       <p class="text-sm text-base-content/60">
-        {{ badges.totalEarned }} earned · {{ badges.completedEvents }} events completed
+        {{ $t('badges.summary', { earned: badges.totalEarned, completed: badges.completedEvents }) }}
       </p>
     </header>
 
     <AlertMessage type="warning" :message="badges.error || ''" />
-    <LoadingSpinner v-if="badges.loading && !badges.loaded" label="Loading your collection…" />
+    <LoadingSpinner v-if="badges.loading && !badges.loaded" :label="$t('badges.loading')" />
 
     <template v-else-if="nonEmpty">
       <section v-for="group in badges.groups" :key="group.event_id" class="space-y-3">
@@ -83,9 +83,9 @@ async function downloadCard(badge) {
 
     <div v-else class="surface flex flex-col items-center gap-2 p-8 text-center">
       <span class="text-4xl">🎯</span>
-      <p class="font-medium">No badges yet</p>
-      <p class="text-sm text-base-content/60">Scan a QR at an event station to earn your first badge.</p>
-      <RouterLink to="/scan" class="btn btn-primary btn-sm mt-2 tap-target">Start scanning</RouterLink>
+      <p class="font-medium">{{ $t('badges.emptyTitle') }}</p>
+      <p class="text-sm text-base-content/60">{{ $t('badges.emptySub') }}</p>
+      <RouterLink to="/scan" class="btn btn-primary btn-sm mt-2 tap-target">{{ $t('badges.emptyCta') }}</RouterLink>
     </div>
 
     <!-- Badge detail modal -->
@@ -105,7 +105,7 @@ async function downloadCard(badge) {
         </div>
 
         <p v-if="!selected.badge.earned" class="rounded-xl bg-base-300/60 px-3 py-2 text-sm text-base-content/60">
-          🔒 Not earned yet — scan this badge to unlock it.
+          {{ $t('badges.notEarned') }}
         </p>
 
         <ShareSheet
@@ -116,10 +116,10 @@ async function downloadCard(badge) {
 
         <button class="btn btn-ghost btn-sm w-full gap-2 tap-target" :disabled="downloading" @click="downloadCard(selected.badge)">
           <span v-if="downloading" class="loading loading-spinner loading-xs" />
-          Download image
+          {{ $t('badges.download') }}
         </button>
 
-        <button class="btn btn-ghost btn-sm w-full tap-target" @click="close">Close</button>
+        <button class="btn btn-ghost btn-sm w-full tap-target" @click="close">{{ $t('common.close') }}</button>
       </div>
     </div>
   </div>

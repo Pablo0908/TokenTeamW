@@ -70,7 +70,7 @@ async function nativeShare() {
 
 <template>
   <div class="space-y-3">
-    <p class="text-left text-xs font-medium uppercase tracking-wide text-base-content/45">Share this badge</p>
+    <p class="text-left text-xs font-medium uppercase tracking-wide text-base-content/45">{{ $t('share.heading') }}</p>
 
     <div class="grid grid-cols-4 gap-3">
       <button
@@ -92,7 +92,7 @@ async function nativeShare() {
         type="button"
         class="flex flex-col items-center gap-1.5 tap-target"
         :title="`Copy the link, then paste it in ${t.label}`"
-        @click="copyLink(`Link copied — paste it in ${t.label}`)"
+        @click="copyLink($t('share.copiedIn', { app: t.label }))"
       >
         <span class="grid h-12 w-12 place-items-center rounded-full text-white shadow-lg" :style="{ backgroundColor: t.bg }">
           <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path :d="ICON[t.key]" /></svg>
@@ -112,13 +112,13 @@ async function nativeShare() {
             <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
           </svg>
         </span>
-        <span class="text-[0.65rem] text-base-content/60">More</span>
+        <span class="text-[0.65rem] text-base-content/60">{{ $t('share.more') }}</span>
       </button>
     </div>
 
     <button type="button" class="btn btn-outline btn-sm w-full gap-2 tap-target" @click="copyLink()">
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path :d="ICON.link" /></svg>
-      {{ copied ? (copyNote || 'Copied!') : 'Copy link' }}
+      {{ copied ? (copyNote || $t('share.copied')) : $t('share.copyLink') }}
     </button>
   </div>
 </template>

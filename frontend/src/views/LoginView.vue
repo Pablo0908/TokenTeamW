@@ -2,12 +2,14 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useOnboardingStore } from '@/stores/onboarding'
 import { isMock } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const onboarding = useOnboardingStore()
 
 const form = reactive({ email: '', password: '' })
 const touched = ref(false)
@@ -20,6 +22,8 @@ async function submit() {
   if (!valid.value) return
   const ok = await auth.login({ email: form.email.trim(), password: form.password })
   if (!ok) return
+  // First-time attendees (per account) get the greeting + language picker + tutorial on home.
+  if (!auth.isStaff) onboarding.maybeStart(auth.user?.id)
   const target = auth.consumeRedirect()
   router.push(target || (auth.isStaff ? '/admin/events' : '/'))
 }
@@ -30,8 +34,8 @@ async function submit() {
     <div class="mb-8 flex flex-col items-center gap-4 text-center">
       <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" />
       <div>
-        <h1 class="text-2xl font-bold">Welcome back</h1>
-        <p class="text-sm text-base-content/60">Sign in to keep collecting badges.</p>
+        <h1 class="text-2xl font-bold">{{ $t('auth.loginTitle') }}</h1>
+        <p class="text-sm text-base-content/60">{{ $t('auth.loginSubtitle') }}</p>
       </div>
     </div>
 
@@ -39,7 +43,7 @@ async function submit() {
       <AlertMessage type="error" :message="auth.error || ''" />
 
       <label class="form-control w-full">
-        <span class="label-text mb-1 text-base-content/70">Email</span>
+        <span class="label-text mb-1 text-base-content/70">{{ $t('auth.email') }}</span>
         <input
           v-model="form.email"
           type="email"
@@ -49,11 +53,11 @@ async function submit() {
           class="input input-bordered w-full bg-base-100/70"
           :class="{ 'input-error': touched && !emailValid }"
         />
-        <span v-if="touched && !emailValid" class="mt-1 text-xs text-error">Enter a valid email.</span>
+        <span v-if="touched && !emailValid" class="mt-1 text-xs text-error">{{ $t('auth.errEmail') }}</span>
       </label>
 
       <label class="form-control w-full">
-        <span class="label-text mb-1 text-base-content/70">Password</span>
+        <span class="label-text mb-1 text-base-content/70">{{ $t('auth.password') }}</span>
         <input
           v-model="form.password"
           type="password"
@@ -62,18 +66,18 @@ async function submit() {
           class="input input-bordered w-full bg-base-100/70"
           :class="{ 'input-error': touched && !form.password }"
         />
-        <span v-if="touched && !form.password" class="mt-1 text-xs text-error">Password is required.</span>
+        <span v-if="touched && !form.password" class="mt-1 text-xs text-error">{{ $t('auth.errPasswordRequired') }}</span>
       </label>
 
       <button type="submit" class="btn btn-primary w-full tap-target" :disabled="auth.loading">
         <span v-if="auth.loading" class="loading loading-spinner loading-sm" />
-        {{ auth.loading ? 'Signing in…' : 'Sign in' }}
+        {{ auth.loading ? $t('auth.signingIn') : $t('auth.signIn') }}
       </button>
     </form>
 
     <p class="mt-6 text-center text-sm text-base-content/60">
-      New here?
-      <RouterLink to="/register" class="font-medium text-primary">Create an account</RouterLink>
+      {{ $t('auth.newHere') }}
+      <RouterLink to="/register" class="font-medium text-primary">{{ $t('auth.createLink') }}</RouterLink>
     </p>
 
     <p v-if="isMock" class="mt-6 rounded-xl border border-base-300/60 bg-base-100/40 p-3 text-center text-xs text-base-content/50">

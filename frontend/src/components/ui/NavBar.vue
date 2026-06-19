@@ -24,7 +24,7 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
           :to="{ name: item.name }"
           class="tap-target relative flex flex-1 flex-col items-center gap-1 rounded-2xl py-2 transition-colors"
           :class="isActive(item.name) ? 'text-primary' : 'text-base-content/55'"
-          :aria-label="item.label"
+          :aria-label="$t('nav.' + item.name)"
           :aria-current="isActive(item.name) ? 'page' : undefined"
         >
           <span
@@ -44,7 +44,7 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
           >
             <path v-for="(d, i) in item.paths" :key="i" :d="d" />
           </svg>
-          <span class="relative text-[0.625rem] font-medium leading-none">{{ item.label }}</span>
+          <span class="relative text-[0.625rem] font-medium leading-none">{{ $t('nav.' + item.name) }}</span>
         </RouterLink>
       </div>
     </div>

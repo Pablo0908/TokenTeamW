@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api, readApiError } from '@/services/api'
+import { t } from '@/i18n'
 
-const readError = (e) => readApiError(e, 'Could not load events. Please try again.')
+const readError = (e) => readApiError(e, t('errors.events'))
 
 export const useEventsStore = defineStore('events', () => {
   const events = ref([])

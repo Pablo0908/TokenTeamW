@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { locale } from '@/i18n'
 import { useEventsStore } from '@/stores/events'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
@@ -24,7 +25,7 @@ const dateLabel = computed(() => {
   if (!ev.value) return ''
   const fmt = (iso) => {
     const d = new Date(iso)
-    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(locale.value === 'es' ? 'es' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
   const s = fmt(ev.value.date)
   const e = ev.value.endDate ? fmt(ev.value.endDate) : ''
@@ -40,11 +41,11 @@ onMounted(() => events.fetchEvent(route.params.id))
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
       </svg>
-      Back
+      {{ $t('common.back') }}
     </button>
 
     <AlertMessage type="warning" :message="events.error || ''" />
-    <LoadingSpinner v-if="events.loading || !ev" label="Loading event…" />
+    <LoadingSpinner v-if="events.loading || !ev" :label="$t('eventDetail.loading')" />
 
     <template v-else>
       <header class="space-y-2">
@@ -57,7 +58,7 @@ onMounted(() => events.fetchEvent(route.params.id))
       </header>
 
       <div class="surface space-y-2 p-4">
-        <ProgressBar :value="earned" :max="total" :label="completed ? 'Completed' : 'Your progress'" />
+        <ProgressBar :value="earned" :max="total" :label="completed ? $t('eventDetail.completed') : $t('eventDetail.yourProgress')" />
       </div>
 
       <div
@@ -65,19 +66,19 @@ onMounted(() => events.fetchEvent(route.params.id))
         :class="completed ? 'bg-gradient-to-r from-warning/20 to-secondary/15' : ''"
       >
         <p class="text-xs uppercase tracking-wide text-base-content/55">
-          {{ completed ? 'Prize unlocked' : 'Complete all badges to unlock' }}
+          {{ completed ? $t('eventDetail.prizeUnlocked') : $t('eventDetail.prizeLocked') }}
         </p>
         <p class="mt-1 font-semibold" :class="completed ? 'text-warning' : 'text-base-content'">
-          🎁 {{ ev.prize || 'A special reward' }}
+          🎁 {{ ev.prize || $t('eventDetail.prizeDefault') }}
         </p>
       </div>
 
       <section class="space-y-3">
-        <h2 class="font-semibold">Badges</h2>
+        <h2 class="font-semibold">{{ $t('eventDetail.badges') }}</h2>
         <div v-if="ev.badges?.length" class="grid grid-cols-4 gap-2.5">
           <BadgeCard v-for="b in ev.badges" :key="b.id" :badge="b" />
         </div>
-        <p v-else class="text-sm text-base-content/50">No badges have been added to this event yet.</p>
+        <p v-else class="text-sm text-base-content/50">{{ $t('eventDetail.noBadges') }}</p>
       </section>
     </template>
   </div>
