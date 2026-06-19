@@ -65,6 +65,14 @@ const en = {
     progressByEvent: 'Progress by event', openAdmin: 'Open organizer panel',
     language: 'Language',
   },
+  settings: {
+    title: 'Settings',
+    language: 'Language',
+    lightMode: 'Light mode', lightModeHint: 'Use a light theme (dark by default).',
+    effects: 'Extra effects', effectsHint: 'Animations, glow and confetti.',
+    saturation: 'Color saturation', contrast: 'Color contrast',
+    reset: 'Reset to defaults',
+  },
   scan: {
     title: 'Scan badges', heading: 'Scan to earn', sub: 'Point at any QR at an event station',
     tryAgain: 'Try camera again', simulate: 'Simulate a scan (demo)',
@@ -166,6 +174,14 @@ const es = {
     badges: 'Insignias', events: 'Eventos', done: 'Completados',
     progressByEvent: 'Progreso por evento', openAdmin: 'Abrir panel de organizador',
     language: 'Idioma',
+  },
+  settings: {
+    title: 'Configuración',
+    language: 'Idioma',
+    lightMode: 'Modo claro', lightModeHint: 'Usar un tema claro (oscuro por defecto).',
+    effects: 'Efectos adicionales', effectsHint: 'Animaciones, brillo y confeti.',
+    saturation: 'Saturación de color', contrast: 'Contraste de color',
+    reset: 'Restablecer valores',
   },
   scan: {
     title: 'Escanear insignias', heading: 'Escanea para ganar', sub: 'Apunta a cualquier QR en una estación del evento',

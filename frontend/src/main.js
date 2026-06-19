@@ -12,6 +12,7 @@ import router from './router'
 import './style.css'
 import { i18n } from './i18n'
 import { useAuthStore } from './stores/auth'
+import { useSettingsStore } from './stores/settings'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -22,6 +23,9 @@ app.use(i18n)
 
 // Rehydrate the session from localStorage before the router guard runs.
 useAuthStore().loadFromStorage()
+
+// Apply saved appearance preferences (theme / light mode / effects) before mount.
+useSettingsStore().apply()
 
 app.use(router)
 app.mount('#app')

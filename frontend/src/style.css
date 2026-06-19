@@ -104,3 +104,62 @@ h2,
     animation: none;
   }
 }
+
+/* --- Settings: "extra effects" off --- */
+/* Mirrors the reduced-motion behaviour on demand: stop entrance/idle animations, the
+   animated brand backdrop, falling glyphs and confetti. The static layout stays intact. */
+html.fx-off .screen-enter-active,
+html.fx-off .anim-screen-in,
+html.fx-off .anim-rise,
+html.fx-off .anim-pop,
+html.fx-off .anim-pulse-glow,
+html.fx-off .grid-pan,
+html.fx-off .orb,
+html.fx-off .glyph,
+html.fx-off .star {
+  animation: none !important;
+}
+html.fx-off .screen-leave-active {
+  transition: none;
+}
+html.fx-off .glyph {
+  opacity: 0;
+}
+html.fx-off .confetti-piece {
+  display: none;
+}
+
+/* --- Settings: light mode --- */
+/* The dark canvas tones live on <html>/<body> and the fixed BrandBackground gradient;
+   override them for the opt-in light theme (DaisyUI swaps the component palette). */
+html.theme-light,
+html.theme-light body {
+  background-color: #eef1f6;
+}
+html.theme-light .bg {
+  background:
+    radial-gradient(1100px 600px at 50% -10%, #cfe2fb 0%, rgba(207, 226, 251, 0) 60%),
+    radial-gradient(900px 520px at 100% 110%, #ecdcf7 0%, rgba(236, 220, 247, 0) 55%),
+    linear-gradient(180deg, #f7f9fd 0%, #e9edf5 100%);
+}
+html.theme-light .grid-pan {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+/* Same ambient effects as dark mode, re-inked for a light canvas: the orbs glow
+   stronger, white stars become slate, and the pastel code glyphs are darkened/saturated
+   so they read against white (their per-glyph hues are preserved). */
+html.theme-light .orb {
+  opacity: 0.55;
+}
+html.theme-light .orb-c,
+html.theme-light .orb-d {
+  opacity: 0.42;
+}
+html.theme-light .star {
+  background: #5b6b8c;
+}
+html.theme-light .glyph {
+  filter: saturate(1.5) brightness(0.6);
+}

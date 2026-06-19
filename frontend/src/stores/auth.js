@@ -48,6 +48,9 @@ export const useAuthStore = defineStore('auth', () => {
       role.value = data.role ?? data.user?.role ?? 'attendee'
       user.value = data.user ?? { email: credentials.email, role: role.value }
       persist()
+      // Apply this account's saved appearance preferences (server is source of truth).
+      const { useSettingsStore } = await import('@/stores/settings')
+      useSettingsStore().hydrate(data.user?.preferences)
       return true
     } catch (e) {
       error.value = readApiError(e, t('errors.signIn'))

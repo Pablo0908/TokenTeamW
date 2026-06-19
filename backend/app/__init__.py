@@ -65,8 +65,9 @@ def create_app(config_class=Config):
     from app.routes.redemptions import redemptions_bp
     from app.routes.admin import admin_bp
     from app.routes.share import share_bp
+    from app.routes.me import me_bp
 
-    for blueprint in (auth_bp, events_bp, badges_bp, redemptions_bp, admin_bp, share_bp):
+    for blueprint in (auth_bp, events_bp, badges_bp, redemptions_bp, admin_bp, share_bp, me_bp):
         app.register_blueprint(blueprint)
 
     @app.route("/health")

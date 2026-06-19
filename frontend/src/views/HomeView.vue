@@ -106,7 +106,6 @@ function openEvent(id) {
       <Coachmark
         v-if="onboarding.showTip('scan')"
         class="absolute left-1/2 top-[calc(100%+10px)] z-30 -translate-x-1/2"
-        arrow="up"
         :title="$t('coach.scanTitle')"
         :body="$t('coach.scanBody')"
         @dismiss="onboarding.dismissTip('scan')"
@@ -124,7 +123,6 @@ function openEvent(id) {
           <Coachmark
             v-if="onboarding.showTip('badges')"
             class="absolute right-0 top-[calc(100%+10px)] z-30"
-            arrow="up"
             :title="$t('coach.badgesTitle')"
             :body="$t('coach.badgesBody')"
             @dismiss="onboarding.dismissTip('badges')"
@@ -144,7 +142,6 @@ function openEvent(id) {
           <Coachmark
             v-if="onboarding.showTip('events')"
             class="absolute right-0 top-[calc(100%+10px)] z-30"
-            arrow="up"
             :title="$t('coach.eventsTitle')"
             :body="$t('coach.eventsBody')"
             @dismiss="onboarding.dismissTip('events')"

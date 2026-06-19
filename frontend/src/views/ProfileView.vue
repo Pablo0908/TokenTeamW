@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router'
 import { locale, setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
+import { useSettingsStore, SATURATION_RANGE, CONTRAST_RANGE } from '@/stores/settings'
 import StatTile from '@/components/domain/StatTile.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
 const badges = useBadgesStore()
+const settings = useSettingsStore()
 
 const initials = computed(() => {
   const n = auth.user?.name ?? ''
@@ -64,26 +66,88 @@ function logout() {
       </div>
     </section>
 
-    <!-- Language setting -->
-    <section class="space-y-2">
-      <h2 class="font-semibold">{{ $t('profile.language') }}</h2>
-      <div class="surface flex gap-2 p-2">
-        <button
-          type="button"
-          class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
-          :class="locale === 'en' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
-          @click="setLocale('en')"
-        >
-          English
-        </button>
-        <button
-          type="button"
-          class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
-          :class="locale === 'es' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
-          @click="setLocale('es')"
-        >
-          Español
-        </button>
+    <!-- Configuration -->
+    <section class="space-y-3">
+      <h2 class="font-semibold">{{ $t('settings.title') }}</h2>
+      <div class="surface space-y-5 p-4">
+        <!-- Language -->
+        <div class="space-y-2">
+          <span class="text-sm font-medium">{{ $t('settings.language') }}</span>
+          <div class="surface-soft flex gap-2 p-1.5">
+            <button
+              type="button"
+              class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+              :class="locale === 'en' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
+              @click="setLocale('en')"
+            >
+              English
+            </button>
+            <button
+              type="button"
+              class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+              :class="locale === 'es' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
+              @click="setLocale('es')"
+            >
+              Español
+            </button>
+          </div>
+        </div>
+
+        <!-- Light mode -->
+        <label class="flex cursor-pointer items-center justify-between gap-3">
+          <span>
+            <span class="block text-sm font-medium">{{ $t('settings.lightMode') }}</span>
+            <span class="block text-xs text-base-content/55">{{ $t('settings.lightModeHint') }}</span>
+          </span>
+          <input v-model="settings.lightMode" type="checkbox" class="toggle toggle-primary" />
+        </label>
+
+        <!-- Extra effects -->
+        <label class="flex cursor-pointer items-center justify-between gap-3">
+          <span>
+            <span class="block text-sm font-medium">{{ $t('settings.effects') }}</span>
+            <span class="block text-xs text-base-content/55">{{ $t('settings.effectsHint') }}</span>
+          </span>
+          <input v-model="settings.effects" type="checkbox" class="toggle toggle-primary" />
+        </label>
+
+        <!-- Color saturation -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">{{ $t('settings.saturation') }}</span>
+            <span class="text-xs tabular-nums text-base-content/55">{{ Math.round(settings.saturation * 100) }}%</span>
+          </div>
+          <input
+            v-model.number="settings.saturation"
+            type="range"
+            class="range range-primary range-sm"
+            :min="SATURATION_RANGE.min"
+            :max="SATURATION_RANGE.max"
+            :step="SATURATION_RANGE.step"
+          />
+        </div>
+
+        <!-- Color contrast -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">{{ $t('settings.contrast') }}</span>
+            <span class="text-xs tabular-nums text-base-content/55">{{ Math.round(settings.contrast * 100) }}%</span>
+          </div>
+          <input
+            v-model.number="settings.contrast"
+            type="range"
+            class="range range-primary range-sm"
+            :min="CONTRAST_RANGE.min"
+            :max="CONTRAST_RANGE.max"
+            :step="CONTRAST_RANGE.step"
+          />
+        </div>
+
+        <div class="border-t border-base-300/60 pt-4">
+          <button type="button" class="btn btn-outline btn-primary w-full tap-target" @click="settings.reset()">
+            {{ $t('settings.reset') }}
+          </button>
+        </div>
       </div>
     </section>
 

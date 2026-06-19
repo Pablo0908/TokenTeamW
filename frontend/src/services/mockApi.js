@@ -13,7 +13,11 @@ const err = (status, message, ms = DELAY) =>
 let eventSeq = 100
 let badgeSeq = 100
 
+const DEFAULT_PREFS = { language: 'en', lightMode: false, effects: true, saturation: 1, contrast: 1 }
+
 const db = {
+  // Demo preferences live in-memory so the Settings panel round-trips like the real API.
+  prefs: { ...DEFAULT_PREFS },
   attendee: { id: 'u_john', name: 'John', lastname: 'Rivas', username: 'john', email: 'john@lyfter.cc', role: 'attendee' },
   users: [
     { id: 'u_admin', name: 'Diego', lastname: 'Soto', email: 'admin@lyfter.cc', role: 'admin', badges_count: 0 },
@@ -115,7 +119,21 @@ function login(body) {
       : role === 'assistant'
         ? { id: 'u_sam', name: 'Sam', lastname: 'Vega', username: 'sam', email, role }
         : { ...db.attendee, email }
-  return ok({ token: `demo.${btoa(email)}.jwt`, role, user })
+  return ok({ token: `demo.${btoa(email)}.jwt`, role, user: { ...user, preferences: { ...db.prefs } } })
+}
+
+function getSettings() {
+  return ok({ ...db.prefs })
+}
+
+function putSettings(body) {
+  const b = body || {}
+  if (['en', 'es'].includes(b.language)) db.prefs.language = b.language
+  if ('lightMode' in b) db.prefs.lightMode = !!b.lightMode
+  if ('effects' in b) db.prefs.effects = !!b.effects
+  if ('saturation' in b) db.prefs.saturation = Math.min(1.5, Math.max(0.5, Number(b.saturation) || 1))
+  if ('contrast' in b) db.prefs.contrast = Math.min(1.2, Math.max(0.8, Number(b.contrast) || 1))
+  return ok({ ...db.prefs })
 }
 
 function register(body) {
@@ -304,6 +322,7 @@ export const mockApi = {
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badges$/))) return adminBadges(m[1])
     if ((m = p.match(/^\/events\/([^/]+)$/))) return getEvent(m[1])
     if (p === '/me/badges') return myBadges()
+    if (p === '/me/settings') return getSettings()
     if ((m = p.match(/^\/redeem\/([^/]+)\/([^/]+)$/))) return redeem(m[1], m[2])
     return err(404, `Not found (mock): ${p}`)
   },
@@ -314,6 +333,11 @@ export const mockApi = {
     if (p === '/auth/register') return register(body)
     if (p === '/admin/event') return createEvent(body)
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badge$/))) return addBadge(m[1], body)
+    return err(404, `Not found (mock): ${p}`)
+  },
+  put(url, body) {
+    const p = path(url)
+    if (p === '/me/settings') return putSettings(body)
     return err(404, `Not found (mock): ${p}`)
   },
   patch(url, body) {

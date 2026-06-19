@@ -56,6 +56,7 @@ def login():
                 "lastname": user.get("lastname", ""),
                 "email": user["email"],
                 "role": user["role"],
+                "preferences": user_model.merged_preferences(user),
             },
         }
     ), 200
