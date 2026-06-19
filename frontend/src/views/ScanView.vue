@@ -5,12 +5,15 @@ import QrScanner from 'qr-scanner'
 import { t } from '@/i18n'
 import { useBadgesStore } from '@/stores/badges'
 import { useRedeemQueueStore } from '@/stores/redeemQueue'
+import { useSettingsStore } from '@/stores/settings'
 import { isMock } from '@/services/api'
+import { playEarnChime } from '@/utils/sound'
 import Confetti from '@/components/domain/Confetti.vue'
 
 const router = useRouter()
 const badges = useBadgesStore()
 const redeemQueue = useRedeemQueueStore()
+const settings = useSettingsStore()
 
 // qr-scanner is the decode engine: BarcodeDetector isn't available on iOS Safari,
 // so we use this library for reliable cross-browser scanning (TDD §QR Scanning).
@@ -117,6 +120,8 @@ async function redeemAndShow(eventId, token) {
       event: res.data.event,
       prize: res.data.prize,
     }
+    // Earn chime — opt-out via Settings → extra effects.
+    if (settings.effects) playEarnChime(completed)
   } else if (res.offline) {
     // No connection — save the scan and tell the user it'll sync automatically.
     redeemQueue.enqueue(eventId, token)

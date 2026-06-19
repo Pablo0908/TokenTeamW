@@ -27,6 +27,7 @@ const showBulk = ref(false)
 const bulkText = ref('')
 const bulkIcon = ref('🏅')
 const bulkColor = ref('primary')
+const bulkImage = ref('')
 const bulkCreating = ref(false)
 const bulkResult = ref('')
 const exporting = ref(false)
@@ -46,7 +47,7 @@ async function copyToken(token) {
 }
 
 const colors = ['primary', 'secondary', 'accent', 'success', 'info', 'warning', 'error']
-const form = reactive({ name: '', description: '', icon: '🏅', color: 'primary' })
+const form = reactive({ name: '', description: '', icon: '🏅', color: 'primary', image: '' })
 
 const ev = computed(() => events.current)
 const list = computed(() => events.adminBadges)
@@ -72,6 +73,7 @@ async function addBadge() {
     form.description = ''
     form.icon = '🏅'
     form.color = 'primary'
+    form.image = ''
     badgeTouched.value = false
   } catch {
     /* error surfaced via store */
@@ -86,7 +88,7 @@ async function addBulk() {
   bulkCreating.value = true
   bulkResult.value = ''
   try {
-    const list = names.map((name) => ({ name, icon: bulkIcon.value, color: bulkColor.value }))
+    const list = names.map((name) => ({ name, icon: bulkIcon.value, color: bulkColor.value, image: bulkImage.value.trim() }))
     const res = await events.addBadgesBulk(id, list)
     await refresh()
     bulkResult.value = `✓ Created ${res.count} badge${res.count === 1 ? '' : 's'}`
@@ -190,6 +192,13 @@ onBeforeUnmount(() => clearInterval(poll))
               </select>
             </label>
           </div>
+          <label class="form-control w-full">
+            <span class="label-text mb-1 text-base-content/70">Image URL (optional — overrides the icon)</span>
+            <div class="flex items-center gap-2">
+              <input v-model="form.image" type="url" class="input input-bordered w-full bg-base-100/70" placeholder="https://…/badge.png" />
+              <img v-if="form.image" :src="form.image" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-base-300" />
+            </div>
+          </label>
           <button type="submit" class="btn btn-primary w-full tap-target" :disabled="creating">
             <span v-if="creating" class="loading loading-spinner loading-sm" />
             {{ creating ? 'Creating…' : 'Create badge + QR' }}
@@ -226,6 +235,10 @@ onBeforeUnmount(() => clearInterval(poll))
               </select>
             </label>
           </div>
+          <label class="form-control w-full">
+            <span class="label-text mb-1 text-base-content/70">Image URL (optional — applied to all)</span>
+            <input v-model="bulkImage" type="url" class="input input-bordered w-full bg-base-100/70" placeholder="https://…/badge.png" />
+          </label>
           <p class="text-xs text-base-content/55">{{ bulkNames.length }} badge{{ bulkNames.length === 1 ? '' : 's' }} — each gets its own QR code.</p>
           <button type="button" class="btn btn-primary w-full tap-target" :disabled="bulkCreating || !bulkNames.length" @click="addBulk">
             <span v-if="bulkCreating" class="loading loading-spinner loading-sm" />

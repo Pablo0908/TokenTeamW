@@ -4,6 +4,7 @@ from app.models import event as event_model
 from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import user as user_model
+from app.models import audit as audit_model
 from app.utils.auth import admin_required, staff_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -28,6 +29,7 @@ def create_event(current_user):
         prize=(body.get("prize") or "").strip(),
         created_by=current_user["sub"],
     )
+    audit_model.log(current_user["sub"], "event.create", name)
     return jsonify({"id": event_id, "name": name}), 201
 
 
@@ -57,6 +59,7 @@ def create_badge(current_user, event_id):
         color=(body.get("color") or "primary"),
         image=(body.get("image") or "").strip(),
     )
+    audit_model.log(current_user["sub"], "badge.create", f"{name} · {ev.get('name', '')}")
     return jsonify(
         {
             "id": badge_id,
@@ -130,6 +133,7 @@ def create_badges_bulk(current_user, event_id):
                 "redeem_path": f"/redeem/{str(ev['_id'])}/{token}",
             }
         )
+    audit_model.log(current_user["sub"], "badge.bulk_create", f"{len(created)} badges · {ev.get('name', '')}")
     return jsonify({"created": created, "count": len(created)}), 201
 
 
@@ -153,6 +157,7 @@ def list_badges(current_user, event_id):
                 "description": b.get("description", ""),
                 "icon": b.get("icon", "🏅"),
                 "color": b.get("color", "primary"),
+                "image": b.get("image", ""),
                 "token": token,
                 "qr_url": build_redeem_url(str(ev["_id"]), token),
                 "redeem_path": f"/redeem/{str(ev['_id'])}/{token}",
@@ -241,8 +246,16 @@ def set_user_role(current_user, user_id):
         return jsonify({"error": "Role must be 'admin', 'assistant' or 'attendee'."}), 400
     if user_id == current_user["sub"]:
         return jsonify({"error": "You can’t change your own role."}), 400
-    if not user_model.find_by_id(user_id):
+    target = user_model.find_by_id(user_id)
+    if not target:
         return jsonify({"error": "User not found"}), 404
 
     user_model.set_role(user_id, role)
+    audit_model.log(current_user["sub"], "user.role_change", f"{target.get('email', user_id)} → {role}")
     return jsonify({"id": user_id, "role": role}), 200
+
+
+@admin_bp.route("/audit", methods=["GET"])
+@admin_required
+def audit_log(current_user):
+    return jsonify({"entries": audit_model.recent(150)}), 200

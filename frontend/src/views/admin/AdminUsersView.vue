@@ -59,6 +59,7 @@ onMounted(() => users.fetchUsers())
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
       <RouterLink to="/admin/events" role="tab" class="tab">Events</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab tab-active">Users</RouterLink>
+      <RouterLink v-if="auth.isAdmin" to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
     </div>
 
     <AlertMessage type="warning" :message="users.error || ''" />

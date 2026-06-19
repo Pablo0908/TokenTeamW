@@ -52,12 +52,13 @@ def create_app(config_class=Config):
     mongo.db = mongo.client[app.config["DB_NAME"]]
 
     # Indexes are created once at startup (not per-request).
-    from app.models import user, event, badge, redemption
+    from app.models import user, event, badge, redemption, audit
 
     user.create_indexes()
     event.create_indexes()
     badge.create_indexes()
     redemption.create_indexes()
+    audit.create_indexes()
 
     from app.routes.auth import auth_bp
     from app.routes.events import events_bp

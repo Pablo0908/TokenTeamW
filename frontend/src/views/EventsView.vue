@@ -5,12 +5,15 @@ import { useEventsStore } from '@/stores/events'
 import EventCard from '@/components/domain/EventCard.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import PullToRefresh from '@/components/ui/PullToRefresh.vue'
 
 const router = useRouter()
 const events = useEventsStore()
 
 const filters = ['all', 'active', 'past']
 const filter = ref('all')
+
+const onRefresh = () => events.fetchEvents()
 
 onMounted(() => {
   if (!events.loaded) events.fetchEvents()
@@ -25,6 +28,7 @@ const visible = computed(() => {
 
 <template>
   <div class="space-y-5 px-4 pb-4 pt-6">
+    <PullToRefresh :on-refresh="onRefresh" />
     <header>
       <h1 class="text-2xl font-bold">{{ $t('events.title') }}</h1>
     </header>

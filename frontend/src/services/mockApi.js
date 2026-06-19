@@ -15,9 +15,13 @@ let badgeSeq = 100
 
 const DEFAULT_PREFS = { language: 'en', lightMode: false, effects: true, saturation: 1, contrast: 1 }
 
+let auditSeq = 0
+
 const db = {
   // Demo preferences live in-memory so the Settings panel round-trips like the real API.
   prefs: { ...DEFAULT_PREFS },
+  // Admin audit log (most-recent first).
+  audit: [],
   attendee: { id: 'u_john', name: 'John', lastname: 'Rivas', username: 'john', email: 'john@lyfter.cc', role: 'attendee' },
   users: [
     { id: 'u_admin', name: 'Diego', lastname: 'Soto', email: 'admin@lyfter.cc', role: 'admin', badges_count: 0 },
@@ -112,6 +116,7 @@ const publicBadge = (b) => ({
   description: b.description,
   icon: b.icon,
   color: b.color,
+  image: b.image || '',
   earned: !!b.earnedAt,
   date: b.earnedAt,
   redeemed_by: b.redeemedBy ?? 0,
@@ -120,6 +125,10 @@ const publicBadge = (b) => ({
 
 const base = () => import.meta.env.VITE_PUBLIC_URL || window.location.origin
 const today = () => new Date().toISOString().slice(0, 10)
+
+function pushAudit(action, details) {
+  db.audit.unshift({ id: `a_${++auditSeq}`, actor_email: 'admin@lyfter.cc', action, details, at: new Date().toISOString() })
+}
 
 function login(body) {
   const email = (body?.email || '').trim().toLowerCase()
@@ -223,6 +232,7 @@ function createEvent(body) {
     badges: [],
   }
   db.events.unshift(ev)
+  pushAudit('event.create', ev.name)
   return ok({ id: ev.id, name: ev.name }, 600)
 }
 
@@ -243,6 +253,7 @@ function addBadge(eventId, body) {
     redeemedBy: 0,
   }
   ev.badges.push(badge)
+  pushAudit('badge.create', `${badge.name} · ${ev.name}`)
   return ok(
     {
       id: badge.id,
@@ -286,7 +297,12 @@ function addBadgesBulk(eventId, body) {
     ev.badges.push(badge)
     return { id: badge.id, name: badge.name, token, qr_url: `${base()}/redeem/${ev.id}/${token}`, redeem_path: `/redeem/${ev.id}/${token}` }
   })
+  pushAudit('badge.bulk_create', `${created.length} badges · ${ev.name}`)
   return ok({ created, count: created.length }, 600)
+}
+
+function getAudit() {
+  return ok({ entries: db.audit.slice(0, 150) })
 }
 
 function adminBadges(eventId) {
@@ -302,6 +318,7 @@ function adminBadges(eventId) {
       description: b.description,
       icon: b.icon,
       color: b.color,
+      image: b.image || '',
       token: b.token,
       qr_url: `${base()}/redeem/${ev.id}/${b.token}`,
       redeem_path: `/redeem/${ev.id}/${b.token}`,
@@ -322,6 +339,7 @@ function setUserRole(id, body) {
   const u = db.users.find((x) => x.id === id)
   if (!u) return err(404, 'User not found.')
   u.role = role
+  pushAudit('user.role_change', `${u.email} → ${role}`)
   return ok({ id, role })
 }
 
@@ -363,6 +381,7 @@ export const mockApi = {
     const p = path(url)
     let m
     if (p === '/events' || p === '/events/') return listEvents()
+    if (p === '/admin/audit') return getAudit()
     if (p === '/admin/users') return listUsers()
     if ((m = p.match(/^\/admin\/users\/([^/]+)\/badges$/))) return userBadges(m[1])
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badges$/))) return adminBadges(m[1])
