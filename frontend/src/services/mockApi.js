@@ -96,6 +96,16 @@ const summary = (ev) => {
   }
 }
 
+const MOCK_ATTENDEES = 60
+const mockRarity = (n) => {
+  if (!n || n <= 0) return undefined
+  const rate = n / MOCK_ATTENDEES
+  if (rate <= 0.05) return 'legendary'
+  if (rate <= 0.15) return 'epic'
+  if (rate <= 0.4) return 'rare'
+  return 'common'
+}
+
 const publicBadge = (b) => ({
   id: b.id,
   name: b.name,
@@ -104,6 +114,8 @@ const publicBadge = (b) => ({
   color: b.color,
   earned: !!b.earnedAt,
   date: b.earnedAt,
+  redeemed_by: b.redeemedBy ?? 0,
+  rarity: mockRarity(b.redeemedBy ?? 0),
 })
 
 const base = () => import.meta.env.VITE_PUBLIC_URL || window.location.origin
@@ -243,6 +255,40 @@ function addBadge(eventId, body) {
   )
 }
 
+function addBadgesBulk(eventId, body) {
+  const ev = db.events.find((e) => e.id === eventId)
+  if (!ev) return err(404, 'Event not found.')
+  let specs = Array.isArray(body?.badges) ? body.badges : null
+  if (!specs) {
+    const count = body?.count
+    const prefix = (body?.name_prefix || body?.name || '').trim()
+    if (Number.isInteger(count) && count > 0 && prefix) {
+      specs = Array.from({ length: count }, (_, i) => ({ name: `${prefix} ${i + 1}`, icon: body?.icon, color: body?.color }))
+    } else {
+      return err(400, "Provide a 'badges' list, or a 'count' plus a 'name_prefix'.")
+    }
+  }
+  const cleaned = specs.filter((s) => s && (s.name || '').trim())
+  if (!cleaned.length) return err(400, 'No valid badge names were provided.')
+  if (cleaned.length > 100) return err(400, 'You can create at most 100 badges at once.')
+  const created = cleaned.map((s) => {
+    const token = `tok_${Math.random().toString(36).slice(2, 10)}`
+    const badge = {
+      id: `b_${++badgeSeq}`,
+      name: s.name.trim(),
+      description: s.description || '',
+      icon: s.icon || '🏅',
+      color: s.color || 'primary',
+      token,
+      earnedAt: null,
+      redeemedBy: 0,
+    }
+    ev.badges.push(badge)
+    return { id: badge.id, name: badge.name, token, qr_url: `${base()}/redeem/${ev.id}/${token}`, redeem_path: `/redeem/${ev.id}/${token}` }
+  })
+  return ok({ created, count: created.length }, 600)
+}
+
 function adminBadges(eventId) {
   const ev = db.events.find((e) => e.id === eventId)
   if (!ev) return err(404, 'Event not found.')
@@ -332,6 +378,7 @@ export const mockApi = {
     if (p === '/auth/login') return login(body)
     if (p === '/auth/register') return register(body)
     if (p === '/admin/event') return createEvent(body)
+    if ((m = p.match(/^\/admin\/events\/([^/]+)\/badges\/bulk$/))) return addBadgesBulk(m[1], body)
     if ((m = p.match(/^\/admin\/events\/([^/]+)\/badge$/))) return addBadge(m[1], body)
     return err(404, `Not found (mock): ${p}`)
   },

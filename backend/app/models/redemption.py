@@ -51,3 +51,13 @@ def counts_by_user():
     """Return {user_id_str: total_badges_redeemed} across all events (one aggregation)."""
     pipeline = [{"$group": {"_id": "$user_id", "count": {"$sum": 1}}}]
     return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}
+
+
+def counts_by_badge(event_id):
+    """Return {badge_id_str: redemption_count} for one event (one aggregation) — used to
+    compute each badge's rarity without a query per badge."""
+    pipeline = [
+        {"$match": {"event_id": _oid(event_id)}},
+        {"$group": {"_id": "$badge_id", "count": {"$sum": 1}}},
+    ]
+    return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}

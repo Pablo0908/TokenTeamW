@@ -92,6 +92,16 @@ const en = {
     limitTitle: 'No longer available', limitMsg: 'This badge has reached its limit.',
     sessionTitle: 'Session expired', sessionMsg: 'Please sign in again to continue.',
     genericMsg: 'Something went wrong. Please try again.', prizeUnlocked: 'Prize unlocked',
+    queuedTitle: 'Saved offline', queuedMsg: 'No connection — this badge will be added automatically when you’re back online.',
+  },
+  queue: {
+    pendingOne: '1 scan waiting to sync', pendingMany: '{n} scans waiting to sync',
+    syncedOne: 'Synced 1 queued badge.', syncedMany: 'Synced {n} queued badges.',
+    syncFailed: 'Some queued scans couldn’t be redeemed.',
+  },
+  rarity: {
+    legendary: 'Legendary', epic: 'Epic', rare: 'Rare', common: 'Common',
+    collectedOne: '1 collected', collectedMany: '{n} collected', tapToFlip: 'Tap the badge for details',
   },
   welcome: {
     greeting: 'Welcome to Lyfter! 👋',
@@ -202,6 +212,16 @@ const es = {
     limitTitle: 'Ya no está disponible', limitMsg: 'Esta insignia alcanzó su límite.',
     sessionTitle: 'Sesión expirada', sessionMsg: 'Inicia sesión de nuevo para continuar.',
     genericMsg: 'Algo salió mal. Inténtalo de nuevo.', prizeUnlocked: 'Premio desbloqueado',
+    queuedTitle: 'Guardado sin conexión', queuedMsg: 'Sin conexión: esta insignia se agregará automáticamente cuando vuelvas a estar en línea.',
+  },
+  queue: {
+    pendingOne: '1 escaneo pendiente de sincronizar', pendingMany: '{n} escaneos pendientes de sincronizar',
+    syncedOne: 'Se sincronizó 1 insignia en cola.', syncedMany: 'Se sincronizaron {n} insignias en cola.',
+    syncFailed: 'Algunos escaneos en cola no se pudieron canjear.',
+  },
+  rarity: {
+    legendary: 'Legendaria', epic: 'Épica', rare: 'Rara', common: 'Común',
+    collectedOne: '1 obtenida', collectedMany: '{n} obtenidas', tapToFlip: 'Toca la insignia para ver detalles',
   },
   welcome: {
     greeting: '¡Bienvenido a Lyfter! 👋',

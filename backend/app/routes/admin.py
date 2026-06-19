@@ -69,6 +69,70 @@ def create_badge(current_user, event_id):
     ), 201
 
 
+@admin_bp.route("/events/<event_id>/badges/bulk", methods=["POST"])
+@admin_required
+def create_badges_bulk(current_user, event_id):
+    """Create many badges in one call. Accepts either an explicit list:
+        {"badges": [{"name", "description?", "icon?", "color?"}, ...]}
+    or a template + count (names become "<name_prefix> 1..N"):
+        {"count": N, "name_prefix": "Booth", "icon?": "🏅", "color?": "primary"}
+    Returns the created badges (qr generated client-side from qr_url for the print sheet)."""
+    ev = event_model.find_by_id(event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+
+    body = request.get_json(silent=True) or {}
+    specs = body.get("badges")
+
+    if not isinstance(specs, list):
+        count = body.get("count")
+        prefix = (body.get("name_prefix") or body.get("name") or "").strip()
+        shared = {"icon": body.get("icon", "🏅"), "color": body.get("color", "primary")}
+        if isinstance(count, int) and count > 0 and prefix:
+            specs = [{"name": f"{prefix} {i}", **shared} for i in range(1, count + 1)]
+        else:
+            return jsonify({"error": "Provide a 'badges' list, or a 'count' plus a 'name_prefix'."}), 400
+
+    cleaned = []
+    for s in specs:
+        if not isinstance(s, dict):
+            continue
+        name = (s.get("name") or "").strip()
+        if name:
+            cleaned.append({**s, "name": name})
+
+    if not cleaned:
+        return jsonify({"error": "No valid badge names were provided."}), 400
+    if len(cleaned) > 100:
+        return jsonify({"error": "You can create at most 100 badges at once."}), 400
+
+    created = []
+    for s in cleaned:
+        token = generate_badge_token()
+        qr_url = build_redeem_url(str(ev["_id"]), token)
+        qr_image = generate_qr_data_url(qr_url)
+        badge_id = badge_model.create_badge(
+            event_id=ev["_id"],
+            name=s["name"],
+            description=(s.get("description") or "").strip(),
+            token=token,
+            qr_image=qr_image,
+            icon=(s.get("icon") or "🏅"),
+            color=(s.get("color") or "primary"),
+            image=(s.get("image") or "").strip(),
+        )
+        created.append(
+            {
+                "id": badge_id,
+                "name": s["name"],
+                "token": token,
+                "qr_url": qr_url,
+                "redeem_path": f"/redeem/{str(ev['_id'])}/{token}",
+            }
+        )
+    return jsonify({"created": created, "count": len(created)}), 201
+
+
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
 @staff_required
 def list_badges(current_user, event_id):

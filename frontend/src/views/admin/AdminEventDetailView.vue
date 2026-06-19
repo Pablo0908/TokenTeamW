@@ -7,6 +7,7 @@ import QRDisplay from '@/components/domain/QRDisplay.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import { printQrSheet } from '@/utils/qrSheet'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +21,19 @@ const badgeTouched = ref(false)
 const lastCreated = ref(null)
 const expanded = ref(null)
 const copiedToken = ref(null)
+
+// Bulk add (one badge name per line) + QR sheet export.
+const showBulk = ref(false)
+const bulkText = ref('')
+const bulkIcon = ref('🏅')
+const bulkColor = ref('primary')
+const bulkCreating = ref(false)
+const bulkResult = ref('')
+const exporting = ref(false)
+
+const bulkNames = computed(() =>
+  bulkText.value.split('\n').map((l) => l.trim()).filter(Boolean),
+)
 
 async function copyToken(token) {
   try {
@@ -63,6 +77,35 @@ async function addBadge() {
     /* error surfaced via store */
   } finally {
     creating.value = false
+  }
+}
+
+async function addBulk() {
+  const names = bulkNames.value
+  if (!names.length) return
+  bulkCreating.value = true
+  bulkResult.value = ''
+  try {
+    const list = names.map((name) => ({ name, icon: bulkIcon.value, color: bulkColor.value }))
+    const res = await events.addBadgesBulk(id, list)
+    await refresh()
+    bulkResult.value = `✓ Created ${res.count} badge${res.count === 1 ? '' : 's'}`
+    bulkText.value = ''
+  } catch {
+    /* error surfaced via store */
+  } finally {
+    bulkCreating.value = false
+  }
+}
+
+async function exportSheet() {
+  if (!list.value.length) return
+  exporting.value = true
+  try {
+    const opened = await printQrSheet(ev.value?.name || 'Event', list.value)
+    if (!opened) alert('Allow pop-ups to export the QR sheet.')
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -154,6 +197,44 @@ onBeforeUnmount(() => clearInterval(poll))
         </form>
       </div>
 
+      <!-- Bulk add (admin only) -->
+      <div v-if="auth.isAdmin" class="surface p-4">
+        <button class="flex w-full items-center justify-between tap-target" :aria-expanded="showBulk" @click="showBulk = !showBulk">
+          <span class="font-semibold">Bulk add badges</span>
+          <span class="text-xl text-primary">{{ showBulk ? '−' : '+' }}</span>
+        </button>
+
+        <div v-if="showBulk" class="mt-4 space-y-3">
+          <label class="form-control w-full">
+            <span class="label-text mb-1 text-base-content/70">One badge name per line</span>
+            <textarea
+              v-model="bulkText"
+              rows="5"
+              class="textarea textarea-bordered w-full bg-base-100/70"
+              placeholder="Opening keynote&#10;Sponsor booth&#10;Closing party"
+            />
+          </label>
+          <div class="flex gap-3">
+            <label class="form-control w-24">
+              <span class="label-text mb-1 text-base-content/70">Icon</span>
+              <input v-model="bulkIcon" type="text" maxlength="2" class="input input-bordered w-full bg-base-100/70 text-center text-xl" />
+            </label>
+            <label class="form-control flex-1">
+              <span class="label-text mb-1 text-base-content/70">Color</span>
+              <select v-model="bulkColor" class="select select-bordered w-full bg-base-100/70 capitalize">
+                <option v-for="c in colors" :key="c" :value="c">{{ c }}</option>
+              </select>
+            </label>
+          </div>
+          <p class="text-xs text-base-content/55">{{ bulkNames.length }} badge{{ bulkNames.length === 1 ? '' : 's' }} — each gets its own QR code.</p>
+          <button type="button" class="btn btn-primary w-full tap-target" :disabled="bulkCreating || !bulkNames.length" @click="addBulk">
+            <span v-if="bulkCreating" class="loading loading-spinner loading-sm" />
+            {{ bulkCreating ? 'Creating…' : `Create ${bulkNames.length || ''} badges + QR` }}
+          </button>
+          <p v-if="bulkResult" class="text-center text-sm font-medium text-success">{{ bulkResult }}</p>
+        </div>
+      </div>
+
       <!-- Freshly created QR -->
       <div v-if="lastCreated" class="surface space-y-3 p-4">
         <p class="text-center text-sm font-medium text-success">✓ “{{ lastCreated.name }}” created — print this QR</p>
@@ -162,7 +243,22 @@ onBeforeUnmount(() => clearInterval(poll))
 
       <!-- Badge list -->
       <section class="space-y-3">
-        <h2 class="font-semibold">Badges &amp; QR codes</h2>
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-semibold">Badges &amp; QR codes</h2>
+          <button
+            v-if="list.length"
+            type="button"
+            class="btn btn-outline btn-xs tap-target gap-1"
+            :disabled="exporting"
+            @click="exportSheet"
+          >
+            <span v-if="exporting" class="loading loading-spinner loading-xs" />
+            <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z" />
+            </svg>
+            QR sheet
+          </button>
+        </div>
         <div v-if="list.length" class="space-y-3">
           <div v-for="b in list" :key="b.id" class="surface p-4">
             <div class="flex items-center gap-3">

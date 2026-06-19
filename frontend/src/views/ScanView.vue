@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router'
 import QrScanner from 'qr-scanner'
 import { t } from '@/i18n'
 import { useBadgesStore } from '@/stores/badges'
+import { useRedeemQueueStore } from '@/stores/redeemQueue'
 import { isMock } from '@/services/api'
 import Confetti from '@/components/domain/Confetti.vue'
 
 const router = useRouter()
 const badges = useBadgesStore()
+const redeemQueue = useRedeemQueueStore()
 
 // qr-scanner is the decode engine: BarcodeDetector isn't available on iOS Safari,
 // so we use this library for reliable cross-browser scanning (TDD §QR Scanning).
@@ -115,6 +117,14 @@ async function redeemAndShow(eventId, token) {
       event: res.data.event,
       prize: res.data.prize,
     }
+  } else if (res.offline) {
+    // No connection — save the scan and tell the user it'll sync automatically.
+    redeemQueue.enqueue(eventId, token)
+    result.value = {
+      kind: 'queued',
+      title: t('outcome.queuedTitle'),
+      message: t('outcome.queuedMsg'),
+    }
   } else {
     result.value = outcomeFor(res.status) || {
       kind: 'error',
@@ -150,7 +160,11 @@ function simulate() {
   redeemAndShow(e, t)
 }
 
-onMounted(startScanner)
+onMounted(() => {
+  startScanner()
+  // Opening the scanner is a good moment to flush anything queued while offline.
+  redeemQueue.flush()
+})
 onBeforeUnmount(() => {
   clearTimeout(flashTimer)
   scanner?.destroy()
@@ -165,6 +179,18 @@ onBeforeUnmount(() => {
     </header>
 
     <Confetti :active="celebrating" />
+
+    <!-- Pending offline syncs -->
+    <div
+      v-if="redeemQueue.pending"
+      class="mb-4 flex items-center gap-2 rounded-xl bg-info/15 px-3 py-2 text-sm text-info"
+    >
+      <span v-if="redeemQueue.syncing" class="loading loading-spinner loading-xs" />
+      <svg v-else class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8v4l3 3M3.05 11a9 9 0 119 10" /><path d="M3 16v-5h5" />
+      </svg>
+      <span>{{ redeemQueue.pending === 1 ? $t('queue.pendingOne') : $t('queue.pendingMany', { n: redeemQueue.pending }) }}</span>
+    </div>
 
     <!-- Scanning -->
     <div v-if="state !== 'result'" class="space-y-5">
@@ -221,11 +247,13 @@ onBeforeUnmount(() => {
         :class="{
           'bg-gradient-to-br from-success/30 to-primary/20 shadow-success/30': celebrating,
           'bg-warning/15 shadow-warning/20': result.kind === 'duplicate',
+          'bg-info/15 shadow-info/20': result.kind === 'queued',
           'bg-error/15 shadow-error/20': result.kind === 'error',
         }"
       >
         <template v-if="celebrating">{{ result.badge?.icon || '🏅' }}</template>
         <template v-else-if="result.kind === 'duplicate'">✅</template>
+        <template v-else-if="result.kind === 'queued'">📡</template>
         <template v-else>⚠️</template>
       </div>
 

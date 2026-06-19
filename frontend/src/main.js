@@ -13,6 +13,7 @@ import './style.css'
 import { i18n } from './i18n'
 import { useAuthStore } from './stores/auth'
 import { useSettingsStore } from './stores/settings'
+import { useRedeemQueueStore } from './stores/redeemQueue'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -26,6 +27,9 @@ useAuthStore().loadFromStorage()
 
 // Apply saved appearance preferences (theme / light mode / effects) before mount.
 useSettingsStore().apply()
+
+// Replay any redemptions queued while offline, and re-sync whenever we come back online.
+useRedeemQueueStore().init()
 
 app.use(router)
 app.mount('#app')

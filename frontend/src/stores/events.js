@@ -68,6 +68,18 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
+  // Create many badges at once. `badges` is an array of { name, description?, icon?, color? }.
+  async function addBadgesBulk(eventId, badgesList) {
+    error.value = null
+    try {
+      const { data } = await api.post(`/admin/events/${eventId}/badges/bulk`, { badges: badgesList })
+      return data // { created: [...], count }
+    } catch (e) {
+      error.value = readApiError(e, 'Could not create the badges.')
+      throw e
+    }
+  }
+
   async function fetchAdminBadges(eventId) {
     error.value = null
     try {
@@ -93,6 +105,7 @@ export const useEventsStore = defineStore('events', () => {
     fetchEvent,
     createEvent,
     addBadge,
+    addBadgesBulk,
     fetchAdminBadges,
   }
 })

@@ -41,7 +41,10 @@ export const useBadgesStore = defineStore('badges', () => {
       loaded.value = false // gallery should refetch next time it opens
       return { ok: true, data }
     } catch (e) {
-      return { ok: false, status: e.response?.status, error: readError(e) }
+      // No HTTP response (or the browser reports offline) ⇒ a network failure the caller
+      // can recover from by queueing the scan for later sync.
+      const offline = !e.response || (typeof navigator !== 'undefined' && navigator.onLine === false)
+      return { ok: false, offline, status: e.response?.status, error: readError(e) }
     }
   }
 
