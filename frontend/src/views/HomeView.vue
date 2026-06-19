@@ -86,7 +86,7 @@ function openEvent(id) {
     </section>
 
     <!-- Scan CTA -->
-    <div class="relative">
+    <div :class="['relative', onboarding.showTip('scan') && 'z-30']">
       <button
         type="button"
         class="surface flex w-full items-center gap-4 bg-gradient-to-r from-primary/20 to-secondary/15 p-4 text-left transition-transform active:scale-[0.98]"
@@ -103,13 +103,17 @@ function openEvent(id) {
           <span class="block text-sm text-base-content/60">{{ $t('home.scanSub') }}</span>
         </span>
       </button>
-      <Coachmark
-        v-if="onboarding.showTip('scan')"
-        class="absolute left-1/2 top-[calc(100%+10px)] z-30 -translate-x-1/2"
-        :title="$t('coach.scanTitle')"
-        :body="$t('coach.scanBody')"
-        @dismiss="onboarding.dismissTip('scan')"
-      />
+      <transition name="coachmark">
+        <Coachmark
+          v-if="onboarding.showTip('scan')"
+          class="absolute left-1/2 top-[calc(100%+10px)] z-30 -translate-x-1/2"
+          :title="$t('coach.scanTitle')"
+          :body="$t('coach.scanBody')"
+          :step="1"
+          :total="3"
+          @dismiss="onboarding.dismissTip('scan')"
+        />
+      </transition>
     </div>
 
     <LoadingSpinner v-if="loading" :label="$t('home.loading')" />
@@ -117,16 +121,20 @@ function openEvent(id) {
     <template v-else>
       <!-- My badges -->
       <section class="space-y-3">
-        <div class="relative flex items-center justify-between">
+        <div :class="['relative flex items-center justify-between', onboarding.showTip('badges') && 'z-30']">
           <h2 class="font-semibold">{{ $t('home.badges') }}</h2>
           <button class="text-sm font-medium text-primary tap-target" @click="goBadges">{{ $t('common.seeAll') }}</button>
-          <Coachmark
-            v-if="onboarding.showTip('badges')"
-            class="absolute right-0 top-[calc(100%+10px)] z-30"
-            :title="$t('coach.badgesTitle')"
-            :body="$t('coach.badgesBody')"
-            @dismiss="onboarding.dismissTip('badges')"
-          />
+          <transition name="coachmark">
+            <Coachmark
+              v-if="onboarding.showTip('badges')"
+              class="absolute right-0 top-[calc(100%+10px)] z-30"
+              :title="$t('coach.badgesTitle')"
+              :body="$t('coach.badgesBody')"
+              :step="2"
+              :total="3"
+              @dismiss="onboarding.dismissTip('badges')"
+            />
+          </transition>
         </div>
         <div v-if="previewBadges.length" class="grid grid-cols-4 gap-2.5">
           <BadgeCard v-for="b in previewBadges" :key="b.id" :badge="b" />
@@ -136,16 +144,20 @@ function openEvent(id) {
 
       <!-- Events -->
       <section class="space-y-3">
-        <div class="relative flex items-center justify-between">
+        <div :class="['relative flex items-center justify-between', onboarding.showTip('events') && 'z-30']">
           <h2 class="font-semibold">{{ $t('home.events') }}</h2>
           <RouterLink to="/events" class="text-sm font-medium text-primary tap-target" @click="onboarding.dismissTip('events')">{{ $t('common.seeAll') }}</RouterLink>
-          <Coachmark
-            v-if="onboarding.showTip('events')"
-            class="absolute right-0 top-[calc(100%+10px)] z-30"
-            :title="$t('coach.eventsTitle')"
-            :body="$t('coach.eventsBody')"
-            @dismiss="onboarding.dismissTip('events')"
-          />
+          <transition name="coachmark">
+            <Coachmark
+              v-if="onboarding.showTip('events')"
+              class="absolute right-0 top-[calc(100%+10px)] z-30"
+              :title="$t('coach.eventsTitle')"
+              :body="$t('coach.eventsBody')"
+              :step="3"
+              :total="3"
+              @dismiss="onboarding.dismissTip('events')"
+            />
+          </transition>
         </div>
         <div class="space-y-3">
           <EventCard
@@ -157,6 +169,15 @@ function openEvent(id) {
         </div>
       </section>
     </template>
+
+    <!-- Dim backdrop while coachmark tips are showing — click to skip -->
+    <transition name="tutorial-fade">
+      <div
+        v-if="onboarding.tipsActive && onboarding.currentTip"
+        class="fixed inset-0 z-20 bg-black/55 backdrop-blur-[2px]"
+        @click="onboarding.dismissTip(onboarding.currentTip)"
+      />
+    </transition>
 
     <!-- First-run greeting + language picker -->
     <LanguageModal v-if="onboarding.welcomeOpen" @choose="onboarding.chooseLanguage" />

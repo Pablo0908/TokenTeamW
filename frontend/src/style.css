@@ -226,3 +226,143 @@ html.theme-light .star {
 html.theme-light .glyph {
   filter: saturate(1.5) brightness(0.6);
 }
+
+/* ============================================================
+   WELCOME MODAL (LanguageModal)
+   ============================================================ */
+
+/* Overlay fade */
+.welcome-overlay-enter-active { transition: opacity 0.35s ease; }
+.welcome-overlay-leave-active  { transition: opacity 0.2s ease; }
+.welcome-overlay-enter-from,
+.welcome-overlay-leave-to      { opacity: 0; }
+
+/* Deep blurred tinted backdrop */
+.welcome-backdrop {
+  background: rgba(4, 6, 14, 0.86);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Ambient orbs — brand colours bleeding through the blur */
+.welcome-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: welcomeFloat 7s ease-in-out infinite;
+}
+.welcome-orb-a {
+  width: 380px; height: 380px;
+  top: -130px; left: -90px;
+  background: radial-gradient(circle, rgba(113, 206, 255, 0.30) 0%, transparent 70%);
+}
+.welcome-orb-b {
+  width: 320px; height: 320px;
+  bottom: -100px; right: -70px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.24) 0%, transparent 70%);
+  animation-delay: -3.5s;
+}
+@keyframes welcomeFloat {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50%       { transform: scale(1.08) translateY(-20px); }
+}
+
+/* Card: spring-like entrance from scale(0.92) */
+@keyframes welcomeCardIn {
+  from { transform: scale(0.92) translateY(18px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+/* Logo: overshoot pop */
+@keyframes welcomeLogoIn {
+  0%   { transform: scale(0.35); opacity: 0; }
+  65%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+/* Content stagger: gentle rise */
+@keyframes welcomeRise {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+/* One-shot shimmer sweep */
+@keyframes welcomeShimmerSweep {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+
+/* Wire animations to the Vue transition enter phase */
+.welcome-overlay-enter-active .welcome-card {
+  animation: welcomeCardIn 0.65s cubic-bezier(0.34, 1.15, 0.64, 1) both;
+}
+.welcome-overlay-enter-active .welcome-logo {
+  animation: welcomeLogoIn 0.75s cubic-bezier(0.34, 1.5, 0.64, 1) 80ms both;
+}
+.welcome-overlay-enter-active .welcome-stagger-1 {
+  animation: welcomeRise 0.5s cubic-bezier(0.23, 1, 0.32, 1) 170ms both;
+}
+.welcome-overlay-enter-active .welcome-stagger-2 {
+  animation: welcomeRise 0.5s cubic-bezier(0.23, 1, 0.32, 1) 250ms both;
+}
+.welcome-overlay-enter-active .welcome-stagger-3 {
+  animation: welcomeRise 0.5s cubic-bezier(0.23, 1, 0.32, 1) 330ms both;
+}
+
+/* Shimmer: runs once, 0.7s after card enters */
+.welcome-shimmer {
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.065) 50%,
+    transparent 70%
+  );
+  animation: welcomeShimmerSweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.7s 1 both;
+}
+
+/* ============================================================
+   COACHMARK TRANSITION
+   ============================================================ */
+.coachmark-enter-active {
+  transition: transform 300ms cubic-bezier(0.34, 1.2, 0.64, 1),
+              opacity   220ms ease-out;
+}
+.coachmark-enter-from {
+  transform: scale(0.88) translateY(-8px);
+  opacity: 0;
+}
+.coachmark-leave-active {
+  transition: transform 140ms ease-in, opacity 120ms ease-in;
+}
+.coachmark-leave-to {
+  transform: scale(0.9) translateY(-4px);
+  opacity: 0;
+}
+
+/* ============================================================
+   TUTORIAL BACKDROP (dims page during coachmark steps)
+   ============================================================ */
+.tutorial-fade-enter-active { transition: opacity 300ms ease; }
+.tutorial-fade-leave-active { transition: opacity 220ms ease; }
+.tutorial-fade-enter-from,
+.tutorial-fade-leave-to     { opacity: 0; }
+
+/* ============================================================
+   REDUCED MOTION + FX-OFF
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .welcome-orb, .welcome-shimmer { animation: none; }
+  .welcome-overlay-enter-active .welcome-card,
+  .welcome-overlay-enter-active .welcome-logo,
+  .welcome-overlay-enter-active .welcome-stagger-1,
+  .welcome-overlay-enter-active .welcome-stagger-2,
+  .welcome-overlay-enter-active .welcome-stagger-3 { animation: none; }
+  .coachmark-enter-active, .coachmark-leave-active { transition: none; }
+}
+html.fx-off .welcome-orb,
+html.fx-off .welcome-shimmer { animation: none !important; }
+html.fx-off .welcome-overlay-enter-active .welcome-card,
+html.fx-off .welcome-overlay-enter-active .welcome-logo,
+html.fx-off .welcome-overlay-enter-active .welcome-stagger-1,
+html.fx-off .welcome-overlay-enter-active .welcome-stagger-2,
+html.fx-off .welcome-overlay-enter-active .welcome-stagger-3 { animation: none !important; }
+html.fx-off .coachmark-enter-active,
+html.fx-off .coachmark-leave-active { transition: none !important; }
