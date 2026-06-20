@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
+import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -12,6 +13,7 @@ const onboarding = useOnboardingStore()
 
 const form = reactive({ name: '', lastname: '', email: '', password: '', confirm: '' })
 const touched = ref(false)
+const emailTaken = ref(false)
 
 const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
 
@@ -26,8 +28,18 @@ const passwordValid = computed(() => Object.values(pwdRules.value).every(Boolean
 const match = computed(() => form.password === form.confirm)
 const valid = computed(() => form.name.trim() && emailValid.value && passwordValid.value && match.value)
 
+async function handleGoogle(credential) {
+  const ok = await auth.loginWithGoogle(credential)
+  if (ok) {
+    if (!auth.isStaff) onboarding.maybeStart(auth.user?.id)
+    const target = auth.consumeRedirect()
+    router.push(target || '/')
+  }
+}
+
 async function submit() {
   touched.value = true
+  emailTaken.value = false
   if (!valid.value) return
   const registered = await auth.register({
     name: form.name.trim(),
@@ -35,6 +47,7 @@ async function submit() {
     email: form.email.trim(),
     password: form.password,
   })
+  if (registered === 'duplicate') { emailTaken.value = true; return }
   if (!registered) return
   // Auto-login after self-registration to shorten the door flow.
   const loggedIn = await auth.login({ email: form.email.trim(), password: form.password })
@@ -100,9 +113,11 @@ async function submit() {
           inputmode="email"
           autocomplete="email"
           class="input input-bordered w-full bg-base-100/70"
-          :class="{ 'input-error': touched && !emailValid }"
+          :class="{ 'input-error': (touched && !emailValid) || emailTaken }"
+          @input="emailTaken = false"
         />
         <span v-if="touched && !emailValid" class="mt-1 text-xs text-error">{{ $t('auth.errEmail') }}</span>
+        <span v-else-if="emailTaken" class="mt-1 text-xs text-error">{{ $t('auth.errEmailTaken') }}</span>
       </label>
 
       <label class="form-control w-full">
@@ -143,6 +158,15 @@ async function submit() {
         {{ auth.loading ? $t('auth.creating') : $t('auth.create') }}
       </button>
     </form>
+
+    <div class="mt-6 flex flex-col gap-3">
+      <div class="flex items-center gap-3 text-xs text-base-content/40">
+        <span class="flex-1 border-t border-base-content/10" />
+        <span>or</span>
+        <span class="flex-1 border-t border-base-content/10" />
+      </div>
+      <GoogleSignInButton @credential="handleGoogle" />
+    </div>
 
     <p class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.haveAccount') }}

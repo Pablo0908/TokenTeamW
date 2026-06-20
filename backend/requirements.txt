@@ -10,3 +10,5 @@ python-dotenv>=1.0
 certifi>=2024.2.2
 gunicorn>=21.0
 flask-limiter>=3.5
+google-auth>=2.29
+requests>=2.31

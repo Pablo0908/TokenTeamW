@@ -6,6 +6,7 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import { isMock } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
+import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -27,6 +28,11 @@ function finishLogin() {
   if (!auth.isStaff) onboarding.maybeStart(auth.user?.id)
   const target = auth.consumeRedirect()
   router.push(target || (auth.isStaff ? '/admin/events' : '/'))
+}
+
+async function handleGoogle(credential) {
+  const ok = await auth.loginWithGoogle(credential)
+  if (ok) finishLogin()
 }
 
 async function submitCredentials() {
@@ -155,6 +161,15 @@ function backToCredentials() {
         </button>
       </div>
     </form>
+
+    <div v-if="step === 'credentials'" class="mt-6 flex flex-col gap-3">
+      <div class="flex items-center gap-3 text-xs text-base-content/40">
+        <span class="flex-1 border-t border-base-content/10" />
+        <span>or</span>
+        <span class="flex-1 border-t border-base-content/10" />
+      </div>
+      <GoogleSignInButton @credential="handleGoogle" />
+    </div>
 
     <p v-if="step === 'credentials'" class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.newHere') }}

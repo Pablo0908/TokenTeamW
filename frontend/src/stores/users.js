@@ -60,5 +60,17 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
-  return { users, current, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, setRole }
+  async function deleteUser(id) {
+    error.value = null
+    try {
+      await api.delete(`/admin/users/${id}`)
+      users.value = users.value.filter((u) => u.id !== id)
+      return true
+    } catch (e) {
+      error.value = readApiError(e, 'Could not delete the user.')
+      return false
+    }
+  }
+
+  return { users, current, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, setRole, deleteUser }
 })

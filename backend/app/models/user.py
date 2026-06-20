@@ -62,6 +62,8 @@ def merged_preferences(user_doc):
 
 def create_indexes():
     mongo.db.users.create_index("email", unique=True)
+    # sparse=True: users without a username (null/missing) don't conflict with each other.
+    mongo.db.users.create_index("username", unique=True, sparse=True)
 
 
 def _oid(value):
@@ -102,6 +104,24 @@ def find_by_email(email):
     return mongo.db.users.find_one({"email": email.lower()})
 
 
+def find_by_username(username):
+    if not username:
+        return None
+    return mongo.db.users.find_one({"username": username.strip().lower()})
+
+
+def update_profile(user_id, data):
+    allowed = {k: v for k, v in data.items() if k in ("name", "lastname", "username", "avatar", "bio")}
+    if allowed:
+        mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": allowed})
+    return find_by_id(user_id)
+
+
+def update_pinned_badges(user_id, badge_ids):
+    pinned = [str(b) for b in badge_ids[:4]] if isinstance(badge_ids, list) else []
+    mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"pinned_badges": pinned}})
+
+
 def find_by_id(user_id):
     try:
         return mongo.db.users.find_one({"_id": _oid(user_id)})
@@ -115,6 +135,13 @@ def set_role(user_id, role):
         return result.matched_count > 0
     except Exception:
         return False
+
+
+def delete_user(user_id):
+    try:
+        mongo.db.users.delete_one({"_id": _oid(user_id)})
+    except Exception:
+        pass
 
 
 def all_users():

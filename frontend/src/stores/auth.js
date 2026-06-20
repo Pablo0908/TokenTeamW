@@ -25,7 +25,18 @@ export const useAuthStore = defineStore('auth', () => {
 
   function loadFromStorage() {
     token.value = localStorage.getItem('token')
-    role.value = localStorage.getItem('role')
+    // Decode role from the JWT payload — source of truth over the localStorage cache,
+    // so role changes issued by the server are picked up without re-login.
+    if (token.value) {
+      try {
+        const payload = JSON.parse(atob(token.value.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        role.value = payload.role ?? localStorage.getItem('role')
+      } catch {
+        role.value = localStorage.getItem('role')
+      }
+    } else {
+      role.value = null
+    }
     redirectAfterLogin.value = localStorage.getItem('redirectAfterLogin')
     const raw = localStorage.getItem('user')
     user.value = raw ? JSON.parse(raw) : null
@@ -91,6 +102,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithGoogle(credential) {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await api.post('/auth/google', { credential })
+      _applySession(data, data.user?.email)
+      const { useSettingsStore } = await import('@/stores/settings')
+      useSettingsStore().hydrate(data.user?.preferences)
+      return true
+    } catch (e) {
+      error.value = readApiError(e, t('errors.signIn'))
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function register(payload) {
     loading.value = true
     error.value = null
@@ -99,6 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
       return true
     } catch (e) {
       error.value = readApiError(e, t('errors.register'))
+      if (e?.response?.status === 409) return 'duplicate'
       return false
     } finally {
       loading.value = false
@@ -113,6 +142,44 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('token')
     localStorage.removeItem('role')
     localStorage.removeItem('user')
+  }
+
+  async function loadProfile() {
+    try {
+      const { data } = await api.get('/me/profile')
+      user.value = { ...user.value, ...data }
+      persist()
+    } catch {
+      // non-fatal — store keeps whatever it has from login
+    }
+  }
+
+  async function updateProfile(payload) {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await api.patch('/me/profile', payload)
+      user.value = { ...user.value, ...data }
+      persist()
+      return true
+    } catch (e) {
+      error.value = readApiError(e, 'Could not save profile.')
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updatePinnedBadges(badgeIds) {
+    try {
+      const { data } = await api.patch('/me/pinned-badges', { badge_ids: badgeIds })
+      if (user.value) {
+        user.value = { ...user.value, pinned_badges: data.pinned_badges }
+        persist()
+      }
+    } catch {
+      // ignore
+    }
   }
 
   function setRedirect(path) {
@@ -143,8 +210,12 @@ export const useAuthStore = defineStore('auth', () => {
     loadFromStorage,
     login,
     verify2fa,
+    loginWithGoogle,
     register,
     logout,
+    loadProfile,
+    updateProfile,
+    updatePinnedBadges,
     setRedirect,
     consumeRedirect,
   }

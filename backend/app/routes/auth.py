@@ -1,6 +1,8 @@
 import re
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 from app import limiter
 from app.models import user as user_model
@@ -79,6 +81,53 @@ def login():
         logging.getLogger(__name__).error("Failed to send OTP email to %s: %s", email, exc)
 
     return jsonify({"requires_2fa": True}), 200
+
+
+@auth_bp.route("/google", methods=["POST"])
+@limiter.limit("20 per minute")
+def google_auth():
+    body = request.get_json(silent=True) or {}
+    credential = body.get("credential", "")
+
+    if not credential:
+        return jsonify({"error": "Google credential is required."}), 400
+
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        return jsonify({"error": "Google OAuth is not configured."}), 503
+
+    try:
+        info = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+    except Exception:
+        return jsonify({"error": "Invalid Google token."}), 401
+
+    email = info.get("email", "").lower()
+    if not email or not info.get("email_verified"):
+        return jsonify({"error": "Google account email is not verified."}), 401
+
+    user = user_model.find_by_email(email)
+    if not user:
+        # First-time Google sign-in: create the account automatically.
+        given = info.get("given_name", "")
+        family = info.get("family_name", "")
+        user_id = user_model.create_user(given, family, email, hashed_password="", role="attendee")
+        user = user_model.find_by_email(email)
+
+    token = encode_token(str(user["_id"]), user["role"])
+    return jsonify(
+        {
+            "token": token,
+            "role": user["role"],
+            "user": {
+                "id": str(user["_id"]),
+                "name": user.get("name", ""),
+                "lastname": user.get("lastname", ""),
+                "email": user["email"],
+                "role": user["role"],
+                "preferences": user_model.merged_preferences(user),
+            },
+        }
+    ), 200
 
 
 @auth_bp.route("/verify-2fa", methods=["POST"])

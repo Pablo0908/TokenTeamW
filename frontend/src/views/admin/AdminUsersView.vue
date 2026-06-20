@@ -11,6 +11,8 @@ const auth = useAuthStore()
 const users = useUsersStore()
 
 const updatingId = ref(null)
+const deletingId = ref(null)
+const confirmUser = ref(null)   // user pending confirmation
 
 // Most-active attendees first so admins can see badge collection at a glance.
 const sorted = computed(() =>
@@ -25,6 +27,20 @@ const roleBadgeClass = (role) =>
   role === 'admin' ? 'badge-secondary' : role === 'assistant' ? 'badge-accent' : 'badge-ghost'
 
 // Admin-only: set any user to attendee / assistant / admin.
+function askDelete(u) {
+  confirmUser.value = u
+  document.getElementById('modal-delete-user').showModal()
+}
+
+async function confirmDelete() {
+  if (!confirmUser.value) return
+  deletingId.value = confirmUser.value.id
+  document.getElementById('modal-delete-user').close()
+  await users.deleteUser(confirmUser.value.id)
+  confirmUser.value = null
+  deletingId.value = null
+}
+
 async function changeRole(u, role) {
   if (role === u.role) return
   updatingId.value = u.id
@@ -46,6 +62,7 @@ onMounted(() => users.fetchUsers())
 </script>
 
 <template>
+  <div>
   <div class="space-y-5 px-4 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
@@ -109,7 +126,7 @@ onMounted(() => users.fetchUsers())
                 <path d="M9 5l7 7-7 7" />
               </svg>
             </RouterLink>
-            <!-- Admins can set any role; assistants view only (no control). -->
+            <!-- Admins can set any role and delete; assistants view only. -->
             <div v-if="auth.isAdmin && !isSelf(u)" class="flex items-center gap-2">
               <span v-if="updatingId === u.id" class="loading loading-spinner loading-xs text-primary" />
               <select
@@ -123,6 +140,17 @@ onMounted(() => users.fetchUsers())
                 <option value="assistant">Assistant</option>
                 <option value="admin">Admin</option>
               </select>
+              <button
+                class="btn btn-ghost btn-xs text-error tap-target"
+                :disabled="deletingId === u.id"
+                aria-label="Delete user"
+                @click="askDelete(u)"
+              >
+                <span v-if="deletingId === u.id" class="loading loading-spinner loading-xs" />
+                <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                </svg>
+              </button>
             </div>
             <span v-else-if="isSelf(u)" class="text-xs text-base-content/40">your account</span>
           </div>
@@ -133,5 +161,25 @@ onMounted(() => users.fetchUsers())
         No registered users yet.
       </div>
     </template>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <dialog id="modal-delete-user" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold text-error">Delete account</h3>
+      <p class="py-4 text-sm text-base-content/70">
+        Are you sure you want to permanently delete
+        <span class="font-semibold text-base-content">{{ confirmUser ? ([confirmUser.name, confirmUser.lastname].filter(Boolean).join(' ') || confirmUser.email) : '' }}</span>?
+        This action cannot be undone.
+      </p>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-ghost btn-sm">Cancel</button>
+        </form>
+        <button class="btn btn-error btn-sm" @click="confirmDelete">Delete</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
   </div>
 </template>
