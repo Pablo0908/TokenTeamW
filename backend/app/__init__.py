@@ -1,10 +1,20 @@
 import certifi
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from pymongo import MongoClient
 from werkzeug.exceptions import HTTPException
 
 from config import Config
+
+
+# Module-level so routes can import it with: from app import limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["300 per day", "60 per hour"],
+    storage_uri="memory://",
+)
 
 
 class _Mongo:
@@ -27,6 +37,8 @@ def create_app(config_class=Config):
 
     if not app.config.get("MONGO_URI"):
         raise RuntimeError("MONGO_URI is not set. Copy .env.example to .env and fill in your Atlas URI.")
+
+    limiter.init_app(app)
 
     # Mobile clients call from the browser — an explicit CORS allow-list is mandatory.
     CORS(
@@ -52,12 +64,13 @@ def create_app(config_class=Config):
     mongo.db = mongo.client[app.config["DB_NAME"]]
 
     # Indexes are created once at startup (not per-request).
-    from app.models import user, event, badge, redemption
+    from app.models import user, event, badge, redemption, otp
 
     user.create_indexes()
     event.create_indexes()
     badge.create_indexes()
     redemption.create_indexes()
+    otp.create_indexes()
 
     from app.routes.auth import auth_bp
     from app.routes.events import events_bp

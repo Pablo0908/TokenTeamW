@@ -14,7 +14,15 @@ const form = reactive({ name: '', lastname: '', email: '', password: '', confirm
 const touched = ref(false)
 
 const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-const passwordValid = computed(() => form.password.length >= 6)
+
+const pwdRules = computed(() => ({
+  len:     form.password.length >= 8,
+  upper:   /[A-Z]/.test(form.password),
+  lower:   /[a-z]/.test(form.password),
+  number:  /\d/.test(form.password),
+  special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]/.test(form.password),
+}))
+const passwordValid = computed(() => Object.values(pwdRules.value).every(Boolean))
 const match = computed(() => form.password === form.confirm)
 const valid = computed(() => form.name.trim() && emailValid.value && passwordValid.value && match.value)
 
@@ -30,7 +38,9 @@ async function submit() {
   if (!registered) return
   // Auto-login after self-registration to shorten the door flow.
   const loggedIn = await auth.login({ email: form.email.trim(), password: form.password })
-  if (!loggedIn) {
+  if (loggedIn !== true) {
+    // 'otp' means 2FA was triggered — LoginView will show the OTP screen.
+    // false means an error occurred — login page will show it.
     router.push('/login')
     return
   }
@@ -104,7 +114,16 @@ async function submit() {
           class="input input-bordered w-full bg-base-100/70"
           :class="{ 'input-error': touched && !passwordValid }"
         />
-        <span v-if="touched && !passwordValid" class="mt-1 text-xs text-error">{{ $t('auth.errPassword6') }}</span>
+        <!-- Password strength checklist — shown while the user is typing -->
+        <ul v-if="form.password || touched" class="mt-2 space-y-0.5">
+          <li v-for="[key, label] in [['len', $t('auth.pwdLen')], ['upper', $t('auth.pwdUpper')], ['lower', $t('auth.pwdLower')], ['number', $t('auth.pwdNumber')], ['special', $t('auth.pwdSpecial')]]" :key="key"
+              class="flex items-center gap-1.5 text-xs transition-colors"
+              :class="pwdRules[key] ? 'text-success' : 'text-base-content/50'">
+            <span>{{ pwdRules[key] ? '✓' : '○' }}</span>
+            <span>{{ label }}</span>
+          </li>
+        </ul>
+        <span v-if="touched && !passwordValid" class="mt-1 text-xs text-error">{{ $t('auth.errPasswordWeak') }}</span>
       </label>
 
       <label class="form-control w-full">

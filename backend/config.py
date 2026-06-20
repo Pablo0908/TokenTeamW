@@ -28,3 +28,10 @@ class Config:
 
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
     CORS_ORIGINS = _cors_origins()
+
+    # Email (2FA OTP). Leave blank in .env to log codes to the console instead of emailing.
+    MAIL_HOST = os.getenv("MAIL_HOST", "")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USER = os.getenv("MAIL_USER", "")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+    MAIL_FROM = os.getenv("MAIL_FROM", "")
