@@ -50,7 +50,8 @@ python run.py                     # dev server on http://localhost:5000
 curl http://localhost:5000/health
 ```
 
-Default admin (override in `.env`): **admin@lyfter.cc / Admin123!**
+Admin credentials are read from `.env` (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) — there is no
+default. `seed_admin.py` refuses to run until you set them in your local (gitignored) `.env`.
 
 The app starts with **no events and no badges** — admins create them in-app. Attendees
 self-register (role is always forced to `attendee` server-side).

@@ -14,7 +14,8 @@ dev-dist/
 .env.*.local
 .env.local
 
-# logs
+# logs (dev.log / build.log leak local paths, usernames and LAN IPs)
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

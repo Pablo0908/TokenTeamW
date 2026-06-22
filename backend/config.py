@@ -18,8 +18,10 @@ def _cors_origins():
 
 
 class Config:
-    JWT_SECRET = os.getenv("JWT_SECRET", "dev-insecure-change-me")
-    SECRET_KEY = os.getenv("SECRET_KEY", JWT_SECRET)
+    # No insecure fallback: an unset secret would let anyone forge admin JWTs.
+    # create_app() validates this and refuses to boot if it's missing.
+    JWT_SECRET = os.getenv("JWT_SECRET")
+    SECRET_KEY = os.getenv("SECRET_KEY") or JWT_SECRET
     JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "8"))
 
     # Atlas SRV URI. Accept ATLAS_URI as an alias for the team's older .env naming.
