@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { locale, setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -25,6 +25,11 @@ const fullName = computed(() =>
 onMounted(() => {
   if (!badges.loaded) badges.fetchMyBadges()
 })
+
+const openSection = ref(null)
+function toggle(key) {
+  openSection.value = openSection.value === key ? null : key
+}
 
 function logout() {
   auth.logout()
@@ -67,87 +72,116 @@ function logout() {
     </section>
 
     <!-- Configuration -->
-    <section class="space-y-3">
+    <section class="space-y-2">
       <h2 class="font-semibold">{{ $t('settings.title') }}</h2>
-      <div class="surface space-y-5 p-4">
-        <!-- Language -->
-        <div class="space-y-2">
-          <span class="text-sm font-medium">{{ $t('settings.language') }}</span>
-          <div class="surface-soft flex gap-2 p-1.5">
-            <button
-              type="button"
-              class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
-              :class="locale === 'en' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
-              @click="setLocale('en')"
-            >
-              English
+
+      <!-- Appearance group -->
+      <div class="surface overflow-hidden">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 p-4 tap-target transition-colors"
+          @click="toggle('appearance')"
+        >
+          <div class="flex items-center gap-3">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-primary/15 drop-shadow-[0_0_6px_rgba(45,212,191,0.3)]">
+              <svg class="h-4.5 w-4.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+              </svg>
+            </span>
+            <div class="text-left">
+              <p class="text-sm font-semibold">{{ $t('settings.appearance') }}</p>
+              <p class="text-xs text-base-content/50">{{ $t('settings.appearanceHint') }}</p>
+            </div>
+          </div>
+          <svg
+            class="h-4 w-4 shrink-0 text-base-content/40 transition-transform duration-300"
+            :class="openSection === 'appearance' ? 'rotate-180' : ''"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+          >
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <transition name="accordion">
+          <div v-if="openSection === 'appearance'" class="space-y-5 border-t border-base-300/60 px-4 pb-5 pt-4">
+            <label class="flex cursor-pointer items-center justify-between gap-3">
+              <span>
+                <span class="block text-sm font-medium">{{ $t('settings.lightMode') }}</span>
+                <span class="block text-xs text-base-content/55">{{ $t('settings.lightModeHint') }}</span>
+              </span>
+              <input v-model="settings.lightMode" type="checkbox" class="toggle toggle-primary" />
+            </label>
+            <label class="flex cursor-pointer items-center justify-between gap-3">
+              <span>
+                <span class="block text-sm font-medium">{{ $t('settings.effects') }}</span>
+                <span class="block text-xs text-base-content/55">{{ $t('settings.effectsHint') }}</span>
+              </span>
+              <input v-model="settings.effects" type="checkbox" class="toggle toggle-primary" />
+            </label>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">{{ $t('settings.saturation') }}</span>
+                <span class="text-xs tabular-nums text-base-content/55">{{ Math.round(settings.saturation * 100) }}%</span>
+              </div>
+              <input v-model.number="settings.saturation" type="range" class="range range-primary range-sm" :min="SATURATION_RANGE.min" :max="SATURATION_RANGE.max" :step="SATURATION_RANGE.step" />
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">{{ $t('settings.contrast') }}</span>
+                <span class="text-xs tabular-nums text-base-content/55">{{ Math.round(settings.contrast * 100) }}%</span>
+              </div>
+              <input v-model.number="settings.contrast" type="range" class="range range-primary range-sm" :min="CONTRAST_RANGE.min" :max="CONTRAST_RANGE.max" :step="CONTRAST_RANGE.step" />
+            </div>
+            <button type="button" class="btn btn-outline btn-primary btn-sm w-full tap-target" @click="settings.reset()">
+              {{ $t('settings.reset') }}
             </button>
-            <button
-              type="button"
-              class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
-              :class="locale === 'es' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
-              @click="setLocale('es')"
-            >
-              Español
-            </button>
           </div>
-        </div>
+        </transition>
+      </div>
 
-        <!-- Light mode -->
-        <label class="flex cursor-pointer items-center justify-between gap-3">
-          <span>
-            <span class="block text-sm font-medium">{{ $t('settings.lightMode') }}</span>
-            <span class="block text-xs text-base-content/55">{{ $t('settings.lightModeHint') }}</span>
-          </span>
-          <input v-model="settings.lightMode" type="checkbox" class="toggle toggle-primary" />
-        </label>
-
-        <!-- Extra effects -->
-        <label class="flex cursor-pointer items-center justify-between gap-3">
-          <span>
-            <span class="block text-sm font-medium">{{ $t('settings.effects') }}</span>
-            <span class="block text-xs text-base-content/55">{{ $t('settings.effectsHint') }}</span>
-          </span>
-          <input v-model="settings.effects" type="checkbox" class="toggle toggle-primary" />
-        </label>
-
-        <!-- Color saturation -->
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-medium">{{ $t('settings.saturation') }}</span>
-            <span class="text-xs tabular-nums text-base-content/55">{{ Math.round(settings.saturation * 100) }}%</span>
+      <!-- Language group -->
+      <div class="surface overflow-hidden">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 p-4 tap-target transition-colors"
+          @click="toggle('language')"
+        >
+          <div class="flex items-center gap-3">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-secondary/15 drop-shadow-[0_0_6px_rgba(167,139,250,0.3)]">
+              <svg class="h-4.5 w-4.5 text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+              </svg>
+            </span>
+            <div class="text-left">
+              <p class="text-sm font-semibold">{{ $t('settings.language') }}</p>
+              <p class="text-xs text-base-content/50">{{ locale === 'en' ? 'English' : 'Español' }}</p>
+            </div>
           </div>
-          <input
-            v-model.number="settings.saturation"
-            type="range"
-            class="range range-primary range-sm"
-            :min="SATURATION_RANGE.min"
-            :max="SATURATION_RANGE.max"
-            :step="SATURATION_RANGE.step"
-          />
-        </div>
-
-        <!-- Color contrast -->
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-medium">{{ $t('settings.contrast') }}</span>
-            <span class="text-xs tabular-nums text-base-content/55">{{ Math.round(settings.contrast * 100) }}%</span>
+          <svg
+            class="h-4 w-4 shrink-0 text-base-content/40 transition-transform duration-300"
+            :class="openSection === 'language' ? 'rotate-180' : ''"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+          >
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <transition name="accordion">
+          <div v-if="openSection === 'language'" class="border-t border-base-300/60 px-4 pb-4 pt-4">
+            <div class="surface-soft flex gap-2 p-1.5">
+              <button
+                type="button"
+                class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+                :class="locale === 'en' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
+                @click="setLocale('en')"
+              >English</button>
+              <button
+                type="button"
+                class="tap-target flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+                :class="locale === 'es' ? 'bg-primary text-primary-content' : 'text-base-content/60'"
+                @click="setLocale('es')"
+              >Español</button>
+            </div>
           </div>
-          <input
-            v-model.number="settings.contrast"
-            type="range"
-            class="range range-primary range-sm"
-            :min="CONTRAST_RANGE.min"
-            :max="CONTRAST_RANGE.max"
-            :step="CONTRAST_RANGE.step"
-          />
-        </div>
-
-        <div class="border-t border-base-300/60 pt-4">
-          <button type="button" class="btn btn-outline btn-primary w-full tap-target" @click="settings.reset()">
-            {{ $t('settings.reset') }}
-          </button>
-        </div>
+        </transition>
       </div>
     </section>
 

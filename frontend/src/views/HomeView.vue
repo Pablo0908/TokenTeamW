@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
@@ -47,6 +47,18 @@ const previewEvents = computed(() =>
 
 const loading = computed(() => badges.loading && !badges.loaded)
 
+const EMOJIS = ['🔥', '⚡', '🌟', '🚀', '💫', '🏆', '✨', '🎯', '👑', '🎉']
+const emojiIndex = ref(0)
+const currentEmoji = computed(() => EMOJIS[emojiIndex.value])
+
+let emojiTimer
+onMounted(() => {
+  emojiTimer = setInterval(() => {
+    emojiIndex.value = (emojiIndex.value + 1) % EMOJIS.length
+  }, 2200)
+})
+onUnmounted(() => clearInterval(emojiTimer))
+
 function goScan() {
   onboarding.dismissTip('scan')
   router.push('/scan')
@@ -66,7 +78,15 @@ function openEvent(id) {
     <!-- Header -->
     <header class="flex items-start justify-between">
       <div>
-        <h1 class="text-2xl font-bold">{{ $t('home.greeting', { name: auth.displayName }) }}</h1>
+        <h1 class="flex items-center gap-2 text-2xl font-bold">
+          {{ $t('home.greeting', { name: auth.displayName }) }}
+          <transition name="emoji" mode="out-in">
+            <span
+              :key="currentEmoji"
+              class="inline-block select-none drop-shadow-[0_0_10px_rgba(255,210,60,0.8)]"
+            >{{ currentEmoji }}</span>
+          </transition>
+        </h1>
         <p class="text-sm text-base-content/60">
           {{ newThisWeek === 1 ? $t('home.newBadgeOne', { n: newThisWeek }) : $t('home.newBadgeMany', { n: newThisWeek }) }}
         </p>

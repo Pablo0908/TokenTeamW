@@ -184,6 +184,7 @@ def list_users(current_user):
                 "lastname": u.get("lastname", ""),
                 "email": u.get("email", ""),
                 "role": u.get("role", "attendee"),
+                "disabled": bool(u.get("disabled", False)),
                 "badges_count": counts.get(uid, 0),
                 "created_at": event_model.fmt_date(u.get("created_at")),
             }
@@ -253,6 +254,37 @@ def set_user_role(current_user, user_id):
     user_model.set_role(user_id, role)
     audit_model.log(current_user["sub"], "user.role_change", f"{target.get('email', user_id)} → {role}")
     return jsonify({"id": user_id, "role": role}), 200
+
+
+@admin_bp.route("/users/<user_id>/disable", methods=["PATCH"])
+@admin_required
+def toggle_disable_user(current_user, user_id):
+    if user_id == current_user["sub"]:
+        return jsonify({"error": "You can't disable your own account."}), 400
+    target = user_model.find_by_id(user_id)
+    if not target:
+        return jsonify({"error": "User not found"}), 404
+
+    body = request.get_json(silent=True) or {}
+    disabled = bool(body.get("disabled", True))
+    user_model.set_disabled(user_id, disabled)
+    action = "user.disable" if disabled else "user.enable"
+    audit_model.log(current_user["sub"], action, target.get("email", user_id))
+    return jsonify({"id": user_id, "disabled": disabled}), 200
+
+
+@admin_bp.route("/users/<user_id>", methods=["DELETE"])
+@admin_required
+def delete_user(current_user, user_id):
+    if user_id == current_user["sub"]:
+        return jsonify({"error": "You can't delete your own account."}), 400
+    target = user_model.find_by_id(user_id)
+    if not target:
+        return jsonify({"error": "User not found"}), 404
+
+    user_model.delete_user(user_id)
+    audit_model.log(current_user["sub"], "user.delete", target.get("email", user_id))
+    return jsonify({"id": user_id, "deleted": True}), 200
 
 
 @admin_bp.route("/audit", methods=["GET"])

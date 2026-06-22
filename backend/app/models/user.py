@@ -117,6 +117,22 @@ def set_role(user_id, role):
         return False
 
 
+def set_disabled(user_id, disabled: bool):
+    try:
+        result = mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"disabled": disabled}})
+        return result.matched_count > 0
+    except Exception:
+        return False
+
+
+def delete_user(user_id):
+    try:
+        result = mongo.db.users.delete_one({"_id": _oid(user_id)})
+        return result.deleted_count > 0
+    except Exception:
+        return False
+
+
 def all_users():
     return list(mongo.db.users.find().sort("created_at", 1))
 

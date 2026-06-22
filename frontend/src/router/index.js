@@ -51,7 +51,7 @@ router.beforeEach((to) => {
 
   // Logged-in users shouldn't see auth screens — send them to their home surface.
   if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
-    return auth.isStaff ? { name: 'admin-events' } : { name: 'home' }
+    return { name: 'home' }
   }
 
   return true
