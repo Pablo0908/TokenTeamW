@@ -10,8 +10,14 @@ create events, mint badges, and watch live redemption counts.
 ```bash
 cd frontend
 npm install
-npm run dev          # http://localhost:5173
+npm run dev          # open http://127.0.0.1:5173
 ```
+
+> **Open `127.0.0.1`, not `localhost`.** On many Windows setups `localhost` resolves to
+> IPv6 (`::1`) first while the dev servers listen on IPv4, adding a ~200 ms stall to every
+> request (page assets *and* API calls). `VITE_API_URL` defaults to `127.0.0.1` for the same
+> reason. The dev server still binds all interfaces, so LAN/phone testing via the printed
+> Network URL keeps working.
 
 The app boots in **demo mode** (`VITE_USE_MOCK=true`) with built-in sample data, so every
 screen is fully previewable without the backend. Sign in with any password; use an email
@@ -21,7 +27,7 @@ containing `admin` (e.g. `admin@lyfter.cc`) to open the organizer panel.
 
 1. Copy `.env.example` to `.env` and set:
    ```bash
-   VITE_API_URL=http://localhost:5000   # or the Render API origin
+   VITE_API_URL=http://127.0.0.1:5000   # or the Render API origin
    VITE_USE_MOCK=false
    ```
 2. The API base URL is read only from `VITE_API_URL` — never hardcoded. The frontend talks

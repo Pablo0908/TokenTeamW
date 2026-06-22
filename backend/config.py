@@ -9,8 +9,9 @@ def _cors_origins():
     explicit = [o.strip() for o in raw.split(",") if o.strip()]
     if explicit:
         return explicit
-    # Fall back to local Vite + whatever FRONTEND_URL points at.
-    origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Fall back to local Vite + whatever FRONTEND_URL points at. 127.0.0.1 is listed
+    # first (preferred over "localhost" to avoid the IPv6/::1 stall on Windows).
+    origins = ["http://127.0.0.1:5173", "http://localhost:5173"]
     front = os.getenv("FRONTEND_URL", "").strip()
     if front and front not in origins:
         origins.append(front)
@@ -28,7 +29,7 @@ class Config:
     MONGO_URI = os.getenv("MONGO_URI") or os.getenv("ATLAS_URI")
     DB_NAME = os.getenv("DB_NAME", "beeworking")
 
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5173")
     CORS_ORIGINS = _cors_origins()
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
