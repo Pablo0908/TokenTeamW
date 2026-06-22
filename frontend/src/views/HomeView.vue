@@ -91,9 +91,9 @@ function openEvent(id) {
           {{ newThisWeek === 1 ? $t('home.newBadgeOne', { n: newThisWeek }) : $t('home.newBadgeMany', { n: newThisWeek }) }}
         </p>
       </div>
-      <span class="surface grid h-11 w-11 place-items-center rounded-2xl p-2">
+      <RouterLink to="/profile" class="surface grid h-11 w-11 place-items-center rounded-2xl p-2 active:scale-90 transition-transform">
         <BrandLogo :size="28" :show-wordmark="false" />
-      </span>
+      </RouterLink>
     </header>
 
     <AlertMessage type="warning" :message="badges.error || ''" />

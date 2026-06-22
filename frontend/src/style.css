@@ -54,22 +54,87 @@ h2,
   }
 }
 
-/* Settings accordion expand/collapse */
-.accordion-enter-active,
-.accordion-leave-active {
-  transition: max-height 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
-              opacity 0.25s ease;
-  overflow: hidden;
+/* ============================================================
+   ACCESSIBILITY SETTINGS
+   ============================================================ */
+
+/* Dyslexia-friendly font — Atkinson Hyperlegible loaded in index.html */
+html.dyslexia-font,
+html.dyslexia-font body,
+html.dyslexia-font input,
+html.dyslexia-font button,
+html.dyslexia-font select,
+html.dyslexia-font textarea {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif !important;
 }
-.accordion-enter-from,
-.accordion-leave-to {
-  max-height: 0;
-  opacity: 0;
+html.dyslexia-font h1,
+html.dyslexia-font h2,
+html.dyslexia-font .font-display {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
 }
-.accordion-enter-to,
-.accordion-leave-from {
-  max-height: 500px;
-  opacity: 1;
+
+/* Increased line spacing */
+html.line-spacing body,
+html.line-spacing p,
+html.line-spacing span,
+html.line-spacing label,
+html.line-spacing li {
+  line-height: 1.9 !important;
+}
+
+/* Bold text mode */
+html.bold-text body { font-weight: 600; }
+html.bold-text h1, html.bold-text h2 { font-weight: 800; }
+html.bold-text .font-medium { font-weight: 700 !important; }
+
+/* High contrast mode — remove blur, boost borders, full opacity on muted text */
+html.high-contrast .surface {
+  background: hsl(var(--b1)) !important;
+  border-color: hsl(var(--bc) / 0.7) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.high-contrast .surface-soft {
+  background: hsl(var(--b2)) !important;
+  border: 1px solid hsl(var(--bc) / 0.5) !important;
+}
+html.high-contrast [class*="text-base-content/"] {
+  opacity: 1 !important;
+  color: hsl(var(--bc)) !important;
+}
+html.high-contrast [class*="bg-base-100/"],
+html.high-contrast [class*="bg-base-200/"],
+html.high-contrast [class*="bg-base-300/"] {
+  background-color: hsl(var(--b2)) !important;
+}
+
+/* Color-blind safe palette — deuteranopia shift */
+html.color-blind body {
+  filter: hue-rotate(-20deg) saturate(1.4);
+}
+
+/* Large tap targets */
+html.large-targets .tap-target {
+  min-height: 3.75rem !important;
+  min-width:  3.75rem !important;
+}
+html.large-targets .btn { min-height: 3rem !important; }
+
+/* Focus highlight ring */
+html.focus-highlight *:focus-visible {
+  outline: 3px solid hsl(var(--p)) !important;
+  outline-offset: 3px !important;
+  border-radius: 6px !important;
+}
+
+
+/* Accordion reveal */
+@keyframes accReveal {
+  0%   { opacity: 0; transform: translateY(-18px) scaleY(0.85); filter: blur(8px); transform-origin: top; }
+  55%  { filter: blur(0); }
+  75%  { transform: translateY(4px) scaleY(1.02); transform-origin: top; }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); filter: blur(0); transform-origin: top; }
 }
 
 /* Greeting emoji swap */

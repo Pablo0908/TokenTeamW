@@ -14,6 +14,16 @@ DEFAULT_PREFERENCES = {
     "effects": True,
     "saturation": 1.0,
     "contrast": 1.0,
+    # Accessibility
+    "fontSize": 16,
+    "dyslexiaFont": False,
+    "lineSpacing": False,
+    "boldText": False,
+    "autoTheme": False,
+    "highContrast": False,
+    "colorBlind": False,
+    "largeTapTargets": False,
+    "focusHighlight": False,
 }
 
 _LANGUAGES = ("en", "es")
