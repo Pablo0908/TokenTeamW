@@ -183,10 +183,24 @@ html.focus-highlight *:focus-visible {
   50% { box-shadow: 0 0 0 12px rgba(113, 206, 255, 0); }
 }
 
+@keyframes floatY {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -7px, 0); }
+}
+
 .anim-screen-in { animation: screenIn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .anim-rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .anim-pop { animation: pop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .anim-pulse-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
+/* Gentle idle bob — used on the auth-screen logo. The lockup (isotipo + wordmark)
+   is promoted to its own GPU layer so it floats as one solid object: no per-frame
+   text re-rasterization, no subpixel shimmer or jitter. */
+.anim-float {
+  animation: floatY 3.2s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
 
 /* Respect users who prefer reduced motion. */
 @media (prefers-reduced-motion: reduce) {
@@ -199,7 +213,8 @@ html.focus-highlight *:focus-visible {
   .anim-screen-in,
   .anim-rise,
   .anim-pop,
-  .anim-pulse-glow {
+  .anim-pulse-glow,
+  .anim-float {
     animation: none;
   }
 }
@@ -212,6 +227,7 @@ html.fx-off .anim-screen-in,
 html.fx-off .anim-rise,
 html.fx-off .anim-pop,
 html.fx-off .anim-pulse-glow,
+html.fx-off .anim-float,
 html.fx-off .grid-pan,
 html.fx-off .orb,
 html.fx-off .glyph,
@@ -283,12 +299,56 @@ html.fx-off .confetti-piece {
   80%, 100% { transform: translateX(130%); }
 }
 
+/* Catchy periodic glare sweep for a call-to-action button (e.g. Sign in).
+   The button must clip the overlay; pointer-events stay on the button itself. */
+.btn-flash {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Wider, softer glint band reads as a smoother sweep. */
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+  transform: translateX(-160%);
+  /* Slower + gentler than the badge shine; the sweep eases over ~45% of the
+     cycle and rests off-screen the rest of the time. */
+  animation: btnFlash 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes btnFlash {
+  0%, 55% { transform: translateX(-160%); }
+  100% { transform: translateX(160%); }
+}
+
+/* Soft, breathing glow for text links — coloured from the DaisyUI primary token
+   (hsl(var(--p))) so it always matches the link's own text colour. */
+@keyframes linkGlow {
+  0%, 100% {
+    text-shadow: 0 0 5px hsl(var(--p) / 0.6), 0 0 10px hsl(var(--p) / 0.35);
+  }
+  50% {
+    text-shadow:
+      0 0 6px hsl(var(--p) / 1),
+      0 0 14px hsl(var(--p) / 0.9),
+      0 0 24px hsl(var(--p) / 0.65);
+  }
+}
+.link-glow { animation: linkGlow 2.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .badge-tilt,
   .flip-inner { transition: none; }
-  .badge-shine::after { animation: none; display: none; }
+  .badge-shine::after,
+  .btn-flash::after { animation: none; display: none; }
+  .link-glow { animation: none; text-shadow: none; }
 }
-html.fx-off .badge-shine::after { animation: none; display: none; }
+html.fx-off .badge-shine::after,
+html.fx-off .btn-flash::after { animation: none; display: none; }
+html.fx-off .link-glow { animation: none; text-shadow: none; }
 html.fx-off .flip-inner { transition: none; }
 
 /* --- Settings: light mode --- */
