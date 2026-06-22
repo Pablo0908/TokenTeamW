@@ -7,6 +7,7 @@ import { isMock } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
+import PasswordInput from '@/components/ui/PasswordInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -112,13 +113,10 @@ function backToCredentials() {
 
       <label class="form-control w-full">
         <span class="label-text mb-1 text-base-content/70">{{ $t('auth.password') }}</span>
-        <input
+        <PasswordInput
           v-model="form.password"
-          type="password"
           autocomplete="current-password"
-          placeholder="••••••••"
-          class="input input-bordered w-full bg-base-100/70"
-          :class="{ 'input-error': touched && !form.password }"
+          :input-class="touched && !form.password ? 'input-error' : ''"
         />
         <span v-if="touched && !form.password" class="mt-1 text-xs text-error">{{ $t('auth.errPasswordRequired') }}</span>
         <div class="mt-1 text-right">
