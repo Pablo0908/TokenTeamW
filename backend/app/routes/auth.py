@@ -1,14 +1,19 @@
 import re
+import secrets
+from datetime import datetime, timezone
 
 from flask import Blueprint, request, jsonify, current_app
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-from app import limiter
+from app import limiter, mongo
 from app.models import user as user_model
 from app.models import otp as otp_model
 from app.utils.auth import encode_token, hash_password, check_password
-from app.utils.email import send_otp
+from app.utils.email import send_otp, send_reset_email
+
+_RESET_TTL = 600
+_RESET_MAX_ATTEMPTS = 5
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -130,6 +135,70 @@ def google_auth():
             },
         }
     ), 200
+
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+@limiter.limit("5 per 15 minutes")
+def forgot_password():
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+
+    if not email or not EMAIL_RE.match(email):
+        return jsonify({"error": "Enter a valid email address."}), 400
+
+    user = user_model.find_by_email(email)
+    if user and not user.get("disabled"):
+        code = str(secrets.randbelow(1_000_000)).zfill(6)
+        mongo.db.reset_codes.replace_one(
+            {"email": email},
+            {"email": email, "code": code, "attempts": 0, "created_at": datetime.now(timezone.utc)},
+            upsert=True,
+        )
+        try:
+            send_reset_email(email, code)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error("Failed to send reset email to %s: %s", email, exc)
+
+    return jsonify({"message": "If that email is registered, a reset code has been sent."}), 200
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+@limiter.limit("10 per 15 minutes")
+def reset_password():
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    code = (body.get("code") or "").strip()
+    new_password = body.get("password") or ""
+
+    if not email or not code or not new_password:
+        return jsonify({"error": "Email, code and new password are required."}), 400
+
+    pwd_error = _validate_password(new_password)
+    if pwd_error:
+        return jsonify({"error": pwd_error}), 400
+
+    doc = mongo.db.reset_codes.find_one({"email": email})
+    if not doc:
+        return jsonify({"error": "Code expired or not found. Request a new one."}), 400
+
+    if doc.get("attempts", 0) >= _RESET_MAX_ATTEMPTS:
+        mongo.db.reset_codes.delete_one({"email": email})
+        return jsonify({"error": "Too many incorrect attempts. Request a new code."}), 400
+
+    if doc["code"] != code:
+        mongo.db.reset_codes.update_one({"email": email}, {"$inc": {"attempts": 1}})
+        left = _RESET_MAX_ATTEMPTS - doc.get("attempts", 0) - 1
+        return jsonify({"error": f"Incorrect code — {left} attempt(s) remaining."}), 400
+
+    mongo.db.reset_codes.delete_one({"email": email})
+
+    user = user_model.find_by_email(email)
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+
+    user_model.update_password(str(user["_id"]), hash_password(new_password))
+    return jsonify({"message": "Password updated successfully."}), 200
 
 
 @auth_bp.route("/verify-2fa", methods=["POST"])

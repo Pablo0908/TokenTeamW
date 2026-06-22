@@ -135,6 +135,10 @@ def set_disabled(user_id, disabled: bool):
         return False
 
 
+def update_password(user_id, hashed_password):
+    mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"hashed_password": hashed_password}})
+
+
 def delete_user(user_id):
     try:
         result = mongo.db.users.delete_one({"_id": _oid(user_id)})

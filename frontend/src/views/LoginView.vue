@@ -121,6 +121,9 @@ function backToCredentials() {
           :class="{ 'input-error': touched && !form.password }"
         />
         <span v-if="touched && !form.password" class="mt-1 text-xs text-error">{{ $t('auth.errPasswordRequired') }}</span>
+        <div class="mt-1 text-right">
+          <RouterLink to="/forgot-password" class="text-xs text-primary hover:underline">{{ $t('auth.forgotPassword') }}</RouterLink>
+        </div>
       </label>
 
       <button type="submit" class="btn btn-primary w-full tap-target btn-flash" :disabled="auth.loading">

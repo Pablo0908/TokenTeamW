@@ -79,6 +79,10 @@ def create_app(config_class=Config):
     redemption.create_indexes()
     otp.create_indexes()
     audit.create_indexes()
+    mongo.db.reset_codes.create_index("created_at", expireAfterSeconds=600)
+    mongo.db.reset_codes.create_index("email", unique=True)
+    mongo.db.change_pwd_codes.create_index("created_at", expireAfterSeconds=600)
+    mongo.db.change_pwd_codes.create_index("user_id", unique=True)
 
     from app.routes.auth import auth_bp
     from app.routes.events import events_bp

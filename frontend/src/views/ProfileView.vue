@@ -1,12 +1,14 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { locale, setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
 import { useSettingsStore, CONTRAST_RANGE, FONT_SIZE_RANGE } from '@/stores/settings'
+import { api } from '@/services/api'
 import StatTile from '@/components/domain/StatTile.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
+import AlertMessage from '@/components/ui/AlertMessage.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -28,7 +30,12 @@ onMounted(() => {
 
 const openSection = ref(null)
 function toggle(key) {
-  openSection.value = openSection.value === key ? null : key
+  if (openSection.value === key) {
+    openSection.value = null
+    if (key === 'password') resetPwdSection()
+  } else {
+    openSection.value = key
+  }
 }
 
 function accEnter(el) {
@@ -64,6 +71,76 @@ function accAfterLeave(el) {
 function logout() {
   auth.logout()
   router.push('/login')
+}
+
+// Change password (2-step: email verification → new password)
+const pwdStep = ref('email') // 'email' | 'code'
+const pwdForm = reactive({ email: '', code: '', newPwd: '', confirm: '' })
+const pwdEmailTouched = ref(false)
+const pwdCodeTouched = ref(false)
+const pwdLoading = ref(false)
+const pwdError = ref('')
+const pwdSuccess = ref(false)
+
+const pwdEmailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pwdForm.email))
+
+const newPwdRules = computed(() => [
+  { key: 'pwdLen',     ok: pwdForm.newPwd.length >= 8 },
+  { key: 'pwdUpper',  ok: /[A-Z]/.test(pwdForm.newPwd) },
+  { key: 'pwdLower',  ok: /[a-z]/.test(pwdForm.newPwd) },
+  { key: 'pwdNumber', ok: /\d/.test(pwdForm.newPwd) },
+  { key: 'pwdSpecial',ok: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]/.test(pwdForm.newPwd) },
+])
+const newPwdValid = computed(() => newPwdRules.value.every(r => r.ok))
+const pwdsMatch = computed(() => pwdForm.newPwd === pwdForm.confirm)
+
+function resetPwdSection() {
+  pwdStep.value = 'email'
+  pwdForm.email = ''
+  pwdForm.code = ''
+  pwdForm.newPwd = ''
+  pwdForm.confirm = ''
+  pwdEmailTouched.value = false
+  pwdCodeTouched.value = false
+  pwdError.value = ''
+  pwdSuccess.value = false
+}
+
+async function sendPwdCode() {
+  pwdEmailTouched.value = true
+  if (!pwdEmailValid.value) return
+  pwdLoading.value = true
+  pwdError.value = ''
+  try {
+    await api.post('/me/password/send-code', { email: pwdForm.email.trim().toLowerCase() })
+    pwdStep.value = 'code'
+  } catch (err) {
+    pwdError.value = err.response?.data?.error ?? 'Error inesperado'
+  } finally {
+    pwdLoading.value = false
+  }
+}
+
+async function submitPasswordChange() {
+  pwdCodeTouched.value = true
+  if (!pwdForm.code.trim() || !newPwdValid.value || !pwdsMatch.value) return
+  pwdLoading.value = true
+  pwdError.value = ''
+  pwdSuccess.value = false
+  try {
+    await api.put('/me/password', {
+      email: pwdForm.email.trim().toLowerCase(),
+      code: pwdForm.code.trim(),
+      new_password: pwdForm.newPwd,
+    })
+    pwdSuccess.value = true
+    resetPwdSection()
+    pwdSuccess.value = true
+  } catch (err) {
+    pwdError.value = err.response?.data?.error ?? 'Error inesperado'
+  } finally {
+    pwdLoading.value = false
+  }
 }
 </script>
 
@@ -150,6 +227,132 @@ function logout() {
           </div>
         </transition>
       </div>
+      <!-- Change password group -->
+      <div class="surface overflow-hidden">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 p-4 tap-target transition-colors"
+          @click="toggle('password')"
+        >
+          <div class="flex items-center gap-3">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-primary/15 drop-shadow-[0_0_6px_rgba(67,97,238,0.3)]">
+              <svg class="h-4.5 w-4.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+            </span>
+            <div class="text-left">
+              <p class="text-sm font-semibold">{{ $t('settings.changePassword') }}</p>
+              <p class="text-xs text-base-content/50">{{ $t('settings.changePasswordHint') }}</p>
+            </div>
+          </div>
+          <svg
+            class="h-4 w-4 shrink-0 text-base-content/40 transition-transform duration-300"
+            :class="openSection === 'password' ? 'rotate-180' : ''"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+          ><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <transition :css="false" @enter="accEnter" @after-enter="accAfterEnter" @leave="accLeave" @after-leave="accAfterLeave">
+          <div v-if="openSection === 'password'" class="border-t border-base-300/60 px-4 pb-5 pt-4">
+            <AlertMessage type="error" :message="pwdError" />
+            <AlertMessage v-if="pwdSuccess" type="success" :message="$t('settings.changePasswordSuccess')" />
+
+            <!-- Step 1: email -->
+            <form v-if="pwdStep === 'email'" class="mt-3 space-y-4" novalidate @submit.prevent="sendPwdCode">
+              <p class="text-sm text-base-content/60">{{ $t('settings.changePasswordEmailStep') }}</p>
+              <label class="form-control w-full">
+                <span class="label-text mb-1 text-base-content/70">{{ $t('auth.email') }}</span>
+                <input
+                  v-model="pwdForm.email"
+                  type="email"
+                  inputmode="email"
+                  autocomplete="email"
+                  placeholder="you@email.com"
+                  class="input input-bordered w-full bg-base-100/70"
+                  :class="{ 'input-error': pwdEmailTouched && !pwdEmailValid }"
+                />
+                <span v-if="pwdEmailTouched && !pwdEmailValid" class="mt-1 text-xs text-error">{{ $t('auth.errEmail') }}</span>
+              </label>
+              <button type="submit" class="btn btn-primary w-full tap-target" :disabled="pwdLoading">
+                <span v-if="pwdLoading" class="loading loading-spinner loading-sm" />
+                {{ pwdLoading ? $t('settings.changePasswordSending') : $t('settings.changePasswordSendCode') }}
+              </button>
+            </form>
+
+            <!-- Step 2: code + new password -->
+            <form v-else class="mt-3 space-y-4" novalidate @submit.prevent="submitPasswordChange">
+              <p class="text-sm text-base-content/60">
+                {{ $t('settings.changePasswordCodeSent').replace('{email}', pwdForm.email) }}
+              </p>
+
+              <label class="form-control w-full">
+                <span class="label-text mb-1 text-base-content/70">{{ $t('auth.resetCodeLabel') }}</span>
+                <input
+                  v-model="pwdForm.code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  placeholder="000000"
+                  class="input input-bordered w-full bg-base-100/70 text-center text-2xl tracking-[.3em] font-bold"
+                  :class="{ 'input-error': pwdCodeTouched && !pwdForm.code.trim() }"
+                />
+                <span v-if="pwdCodeTouched && !pwdForm.code.trim()" class="mt-1 text-xs text-error">{{ $t('auth.errOtpRequired') }}</span>
+              </label>
+
+              <label class="form-control w-full">
+                <span class="label-text mb-1 text-base-content/70">{{ $t('settings.newPassword') }}</span>
+                <input
+                  v-model="pwdForm.newPwd"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="••••••••"
+                  class="input input-bordered w-full bg-base-100/70"
+                  :class="{ 'input-error': pwdCodeTouched && !newPwdValid }"
+                />
+                <ul v-if="pwdForm.newPwd || pwdCodeTouched" class="mt-2 space-y-1">
+                  <li
+                    v-for="rule in newPwdRules"
+                    :key="rule.key"
+                    class="flex items-center gap-2 text-xs"
+                    :class="rule.ok ? 'text-success' : 'text-base-content/40'"
+                  >
+                    <span>{{ rule.ok ? '✓' : '○' }}</span>
+                    {{ $t('auth.' + rule.key) }}
+                  </li>
+                </ul>
+              </label>
+
+              <label class="form-control w-full">
+                <span class="label-text mb-1 text-base-content/70">{{ $t('auth.confirmPassword') }}</span>
+                <input
+                  v-model="pwdForm.confirm"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="••••••••"
+                  class="input input-bordered w-full bg-base-100/70"
+                  :class="{ 'input-error': pwdCodeTouched && !pwdsMatch }"
+                />
+                <span v-if="pwdCodeTouched && !pwdsMatch" class="mt-1 text-xs text-error">{{ $t('auth.errMatch') }}</span>
+              </label>
+
+              <button type="submit" class="btn btn-primary w-full tap-target" :disabled="pwdLoading">
+                <span v-if="pwdLoading" class="loading loading-spinner loading-sm" />
+                {{ pwdLoading ? $t('settings.changePasswordSubmitting') : $t('settings.changePasswordSubmit') }}
+              </button>
+
+              <div class="flex justify-between text-sm">
+                <button type="button" class="text-base-content/50 hover:text-base-content" @click="resetPwdSection">
+                  {{ $t('common.back') }}
+                </button>
+                <button type="button" class="text-primary" :disabled="pwdLoading" @click="sendPwdCode">
+                  {{ pwdLoading ? $t('auth.resending') : $t('auth.resendReset') }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </transition>
+      </div>
+
       <!-- Accessibility group -->
       <div class="surface overflow-hidden">
         <button
