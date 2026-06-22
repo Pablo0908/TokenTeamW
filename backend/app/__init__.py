@@ -38,6 +38,13 @@ def create_app(config_class=Config):
     if not app.config.get("MONGO_URI"):
         raise RuntimeError("MONGO_URI is not set. Copy .env.example to .env and fill in your Atlas URI.")
 
+    if not app.config.get("JWT_SECRET"):
+        raise RuntimeError(
+            "JWT_SECRET is not set. Generate one with "
+            '`python -c "import secrets; print(secrets.token_hex(32))"` and put it in .env. '
+            "Refusing to start with an insecure/blank signing key."
+        )
+
     limiter.init_app(app)
 
     # Mobile clients call from the browser — an explicit CORS allow-list is mandatory.
