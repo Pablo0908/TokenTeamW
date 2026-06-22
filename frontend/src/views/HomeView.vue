@@ -8,11 +8,13 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import StatTile from '@/components/domain/StatTile.vue'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import EventCard from '@/components/domain/EventCard.vue'
+import ShareSheet from '@/components/domain/ShareSheet.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 import LanguageModal from '@/components/ui/LanguageModal.vue'
 import Coachmark from '@/components/ui/Coachmark.vue'
+import { rarityMeta, rarityLabel } from '@/utils/rarity'
 
 const router = useRouter()
 const route = useRoute()
@@ -70,6 +72,44 @@ function goBadges() {
 function openEvent(id) {
   onboarding.dismissTip('events')
   router.push(`/events/${id}`)
+}
+
+// Badge detail modal
+const selected = ref(null)
+const flipped = ref(false)
+const downloading = ref(false)
+
+const rarity = computed(() => (selected.value?.badge?.earned ? rarityMeta(selected.value.badge.rarity) : null))
+
+const apiBase = import.meta.env.VITE_API_URL || ''
+const shareUrl = (id) => `${apiBase}/share/badge/${id}`
+const shareText = (badge, event) => `${badge.name}${event ? ' — ' + event : ''}. Join us at Lyfter!`
+
+function openBadge(badge) {
+  selected.value = { badge, event: badge.event }
+  flipped.value = false
+}
+function closeBadge() {
+  selected.value = null
+  flipped.value = false
+}
+
+async function downloadCard(badge) {
+  downloading.value = true
+  try {
+    const res = await fetch(`${shareUrl(badge.id)}/image.png`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${badge.name}-lyfter.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    window.open(`${shareUrl(badge.id)}/image.png`, '_blank', 'noopener')
+  } finally {
+    downloading.value = false
+  }
 }
 </script>
 
@@ -157,7 +197,7 @@ function openEvent(id) {
           </transition>
         </div>
         <div v-if="previewBadges.length" class="grid grid-cols-4 gap-2.5">
-          <BadgeCard v-for="b in previewBadges" :key="b.id" :badge="b" />
+          <BadgeCard v-for="b in previewBadges" :key="b.id" :badge="b" clickable @select="openBadge(b)" />
         </div>
         <p v-else class="text-sm text-base-content/50">{{ $t('home.noBadges') }}</p>
       </section>
@@ -201,5 +241,74 @@ function openEvent(id) {
 
     <!-- First-run greeting + language picker -->
     <LanguageModal v-if="onboarding.welcomeOpen" @choose="onboarding.chooseLanguage" />
+
+    <!-- Badge detail modal -->
+    <div
+      v-if="selected"
+      class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
+      @click.self="closeBadge"
+    >
+      <div class="surface w-full max-w-sm space-y-4 p-6 text-center">
+        <button
+          type="button"
+          class="flip-card mx-auto block h-24 w-24"
+          :class="{ flipped: flipped }"
+          :aria-label="$t('rarity.tapToFlip')"
+          @click="flipped = !flipped"
+        >
+          <div class="flip-inner">
+            <span
+              class="flip-front overflow-hidden text-5xl bg-gradient-to-br from-primary/30 to-secondary/20"
+              :class="[selected.badge.earned ? 'badge-shine' : 'grayscale blur-[1px]', rarity ? 'ring-2 ' + rarity.ring : '']"
+            >
+              <img v-if="selected.badge.image" :src="selected.badge.image" :alt="selected.badge.name" class="h-full w-full object-cover" />
+              <template v-else>{{ selected.badge.icon || '🏅' }}</template>
+            </span>
+            <span class="flip-back bg-base-300/80 px-2">
+              <span v-if="rarity" class="space-y-0.5">
+                <span class="block text-2xl">{{ rarity.emoji }}</span>
+                <span class="block text-sm font-semibold" :class="rarity.text">{{ rarityLabel(selected.badge.rarity) }}</span>
+                <span class="block text-[0.7rem] text-base-content/60">
+                  {{ selected.badge.redeemed_by === 1 ? $t('rarity.collectedOne') : $t('rarity.collectedMany', { n: selected.badge.redeemed_by ?? 0 }) }}
+                </span>
+              </span>
+              <span v-else class="px-2 text-xs text-base-content/70">{{ selected.badge.description || selected.badge.name }}</span>
+            </span>
+          </div>
+        </button>
+
+        <div>
+          <h3 class="text-xl font-bold">{{ selected.badge.name }}</h3>
+          <p class="text-sm text-base-content/60">{{ selected.event }}</p>
+          <div v-if="rarity" class="mt-2 flex items-center justify-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1 rounded-full bg-base-300/60 px-2 py-0.5 font-medium" :class="rarity.text">
+              {{ rarity.emoji }} {{ rarityLabel(selected.badge.rarity) }}
+            </span>
+            <span class="text-base-content/55">
+              {{ selected.badge.redeemed_by === 1 ? $t('rarity.collectedOne') : $t('rarity.collectedMany', { n: selected.badge.redeemed_by ?? 0 }) }}
+            </span>
+          </div>
+          <p v-if="selected.badge.description" class="mt-2 text-sm text-base-content/70">{{ selected.badge.description }}</p>
+          <p class="mt-1 text-[0.7rem] text-base-content/40">{{ $t('rarity.tapToFlip') }}</p>
+        </div>
+
+        <p v-if="!selected.badge.earned" class="rounded-xl bg-base-300/60 px-3 py-2 text-sm text-base-content/60">
+          {{ $t('badges.notEarned') }}
+        </p>
+
+        <ShareSheet
+          :url="shareUrl(selected.badge.id)"
+          :text="shareText(selected.badge, selected.event)"
+          :title="selected.badge.name"
+        />
+
+        <button class="btn btn-ghost btn-sm w-full gap-2 tap-target" :disabled="downloading" @click="downloadCard(selected.badge)">
+          <span v-if="downloading" class="loading loading-spinner loading-xs" />
+          {{ $t('badges.download') }}
+        </button>
+
+        <button class="btn btn-ghost btn-sm w-full tap-target" @click="closeBadge">{{ $t('common.close') }}</button>
+      </div>
+    </div>
   </div>
 </template>
