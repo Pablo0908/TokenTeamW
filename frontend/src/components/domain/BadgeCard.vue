@@ -43,13 +43,14 @@ const earnedDate = computed(() => {
   >
     <span class="relative">
       <span
-        class="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-b to-transparent text-2xl ring-1"
+        class="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-gradient-to-b to-transparent text-2xl ring-1"
         :class="[
           earned ? tint : 'text-base-content/40 ring-base-300 from-base-300/40',
           earned ? '' : 'grayscale blur-[2.5px]',
         ]"
       >
-        {{ badge.icon || '🏅' }}
+        <img v-if="badge.image" :src="badge.image" :alt="badge.name" class="h-full w-full object-cover" />
+        <template v-else>{{ badge.icon || '🏅' }}</template>
       </span>
       <!-- Lock glyph over the silhouette -->
       <span

@@ -70,6 +70,8 @@ def login():
     user = user_model.find_by_email(email)
     if not user or not check_password(password, user.get("hashed_password", "")):
         return jsonify({"error": "Invalid credentials"}), 401
+    if user.get("disabled"):
+        return jsonify({"error": "This account has been disabled."}), 403
 
     # Credentials are valid — generate and deliver a one-time code.
     code = otp_model.generate(email)

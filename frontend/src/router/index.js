@@ -22,6 +22,8 @@ const routes = [
   // /new must come before /:id so Vue Router doesn't treat "new" as an event ID.
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
+  // Viewing the audit log is admin-only.
+  { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
@@ -50,7 +52,7 @@ router.beforeEach((to) => {
 
   // Logged-in users shouldn't see auth screens — send them to their home surface.
   if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
-    return auth.isStaff ? { name: 'admin-events' } : { name: 'home' }
+    return { name: 'home' }
   }
 
   return true

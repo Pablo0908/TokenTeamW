@@ -144,44 +144,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  async function loadProfile() {
-    try {
-      const { data } = await api.get('/me/profile')
-      user.value = { ...user.value, ...data }
-      persist()
-    } catch {
-      // non-fatal — store keeps whatever it has from login
-    }
-  }
-
-  async function updateProfile(payload) {
-    loading.value = true
-    error.value = null
-    try {
-      const { data } = await api.patch('/me/profile', payload)
-      user.value = { ...user.value, ...data }
-      persist()
-      return true
-    } catch (e) {
-      error.value = readApiError(e, 'Could not save profile.')
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function updatePinnedBadges(badgeIds) {
-    try {
-      const { data } = await api.patch('/me/pinned-badges', { badge_ids: badgeIds })
-      if (user.value) {
-        user.value = { ...user.value, pinned_badges: data.pinned_badges }
-        persist()
-      }
-    } catch {
-      // ignore
-    }
-  }
-
   function setRedirect(path) {
     redirectAfterLogin.value = path
     localStorage.setItem('redirectAfterLogin', path)
@@ -213,9 +175,6 @@ export const useAuthStore = defineStore('auth', () => {
     loginWithGoogle,
     register,
     logout,
-    loadProfile,
-    updateProfile,
-    updatePinnedBadges,
     setRedirect,
     consumeRedirect,
   }

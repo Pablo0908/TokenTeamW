@@ -6,9 +6,12 @@ import ProgressBar from '@/components/domain/ProgressBar.vue'
 import ShareSheet from '@/components/domain/ShareSheet.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import PullToRefresh from '@/components/ui/PullToRefresh.vue'
 import { rarityMeta, rarityLabel } from '@/utils/rarity'
 
 const badges = useBadgesStore()
+
+const onRefresh = () => badges.fetchMyBadges()
 
 const selected = ref(null) // { badge, event }
 const flipped = ref(false)
@@ -59,6 +62,7 @@ async function downloadCard(badge) {
 
 <template>
   <div class="space-y-6 px-4 pb-4 pt-6">
+    <PullToRefresh :on-refresh="onRefresh" />
     <header>
       <h1 class="text-2xl font-bold">{{ $t('badges.title') }}</h1>
       <p class="text-sm text-base-content/60">
@@ -112,10 +116,11 @@ async function downloadCard(badge) {
         >
           <div class="flip-inner">
             <span
-              class="flip-front text-5xl bg-gradient-to-br from-primary/30 to-secondary/20"
+              class="flip-front overflow-hidden text-5xl bg-gradient-to-br from-primary/30 to-secondary/20"
               :class="[selected.badge.earned ? 'badge-shine' : 'grayscale blur-[1px]', rarity ? 'ring-2 ' + rarity.ring : '']"
             >
-              {{ selected.badge.icon || '🏅' }}
+              <img v-if="selected.badge.image" :src="selected.badge.image" :alt="selected.badge.name" class="h-full w-full object-cover" />
+              <template v-else>{{ selected.badge.icon || '🏅' }}</template>
             </span>
             <span class="flip-back bg-base-300/80 px-2">
               <span v-if="rarity" class="space-y-0.5">

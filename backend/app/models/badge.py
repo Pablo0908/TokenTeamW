@@ -75,6 +75,7 @@ def public_badge(badge, earned, redeemed_at=None, redeemed_by=None, total_attend
         "description": badge.get("description", ""),
         "icon": badge.get("icon", "🏅"),
         "color": badge.get("color", "primary"),
+        "image": badge.get("image", ""),
         "earned": bool(earned),
         "date": fmt_date(redeemed_at) if redeemed_at else None,
     }

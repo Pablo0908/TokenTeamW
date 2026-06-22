@@ -60,17 +60,30 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
+  async function disableUser(id, disabled) {
+    error.value = null
+    try {
+      await api.patch(`/admin/users/${id}/disable`, { disabled })
+      const u = users.value.find((x) => x.id === id)
+      if (u) u.disabled = disabled
+      return true
+    } catch (e) {
+      error.value = readApiError(e, 'Could not update the account status.')
+      throw e
+    }
+  }
+
   async function deleteUser(id) {
     error.value = null
     try {
       await api.delete(`/admin/users/${id}`)
-      users.value = users.value.filter((u) => u.id !== id)
+      users.value = users.value.filter((x) => x.id !== id)
       return true
     } catch (e) {
-      error.value = readApiError(e, 'Could not delete the user.')
-      return false
+      error.value = readApiError(e, 'Could not delete the account.')
+      throw e
     }
   }
 
-  return { users, current, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, setRole, deleteUser }
+  return { users, current, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, setRole, disableUser, deleteUser }
 })
