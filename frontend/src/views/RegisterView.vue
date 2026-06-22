@@ -73,7 +73,7 @@ async function submit() {
 <template>
   <div class="flex min-h-dvh flex-col justify-center px-6 py-10">
     <div class="mb-6 flex flex-col items-center gap-4 text-center">
-      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" />
+      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" :float="true" />
       <div>
         <h1 class="text-2xl font-bold">{{ $t('auth.registerTitle') }}</h1>
         <p class="text-sm text-base-content/60">{{ $t('auth.registerSubtitle') }}</p>
@@ -153,7 +153,7 @@ async function submit() {
         <span v-if="touched && !match" class="mt-1 text-xs text-error">{{ $t('auth.errMatch') }}</span>
       </label>
 
-      <button type="submit" class="btn btn-primary w-full tap-target" :disabled="auth.loading">
+      <button type="submit" class="btn btn-primary w-full tap-target btn-flash" :disabled="auth.loading">
         <span v-if="auth.loading" class="loading loading-spinner loading-sm" />
         {{ auth.loading ? $t('auth.creating') : $t('auth.create') }}
       </button>
@@ -170,7 +170,7 @@ async function submit() {
 
     <p class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.haveAccount') }}
-      <RouterLink to="/login" class="font-medium text-primary">{{ $t('auth.signInLink') }}</RouterLink>
+      <RouterLink to="/login" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
     </p>
   </div>
 </template>
