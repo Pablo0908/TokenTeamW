@@ -238,17 +238,6 @@ def user_badges(current_user, user_id):
     ), 200
 
 
-@admin_bp.route("/users/<user_id>", methods=["DELETE"])
-@admin_required
-def delete_user(current_user, user_id):
-    if user_id == current_user["sub"]:
-        return jsonify({"error": "You can't delete your own account."}), 400
-    if not user_model.find_by_id(user_id):
-        return jsonify({"error": "User not found"}), 404
-    user_model.delete_user(user_id)
-    return jsonify({"message": "User deleted"}), 200
-
-
 @admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
 @admin_required
 def set_user_role(current_user, user_id):
