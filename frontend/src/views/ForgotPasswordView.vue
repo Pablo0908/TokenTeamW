@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
+import PasswordInput from '@/components/ui/PasswordInput.vue'
 
 const router = useRouter()
 
@@ -144,13 +145,10 @@ async function submitReset() {
 
       <label class="form-control w-full">
         <span class="label-text mb-1 text-base-content/70">{{ $t('auth.newPasswordLabel') }}</span>
-        <input
+        <PasswordInput
           v-model="reset.password"
-          type="password"
           autocomplete="new-password"
-          placeholder="••••••••"
-          class="input input-bordered w-full bg-base-100/70"
-          :class="{ 'input-error': resetTouched && !passwordValid }"
+          :input-class="resetTouched && !passwordValid ? 'input-error' : ''"
         />
         <ul v-if="reset.password || resetTouched" class="mt-2 space-y-1">
           <li
@@ -167,13 +165,10 @@ async function submitReset() {
 
       <label class="form-control w-full">
         <span class="label-text mb-1 text-base-content/70">{{ $t('auth.confirmPassword') }}</span>
-        <input
+        <PasswordInput
           v-model="reset.confirmPassword"
-          type="password"
           autocomplete="new-password"
-          placeholder="••••••••"
-          class="input input-bordered w-full bg-base-100/70"
-          :class="{ 'input-error': resetTouched && !passwordsMatch }"
+          :input-class="resetTouched && !passwordsMatch ? 'input-error' : ''"
         />
         <span v-if="resetTouched && !passwordsMatch" class="mt-1 text-xs text-error">{{ $t('auth.errMatch') }}</span>
       </label>

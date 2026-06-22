@@ -9,6 +9,7 @@ import { api } from '@/services/api'
 import StatTile from '@/components/domain/StatTile.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import PasswordInput from '@/components/ui/PasswordInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -301,13 +302,10 @@ async function submitPasswordChange() {
 
               <label class="form-control w-full">
                 <span class="label-text mb-1 text-base-content/70">{{ $t('settings.newPassword') }}</span>
-                <input
+                <PasswordInput
                   v-model="pwdForm.newPwd"
-                  type="password"
                   autocomplete="new-password"
-                  placeholder="••••••••"
-                  class="input input-bordered w-full bg-base-100/70"
-                  :class="{ 'input-error': pwdCodeTouched && !newPwdValid }"
+                  :input-class="pwdCodeTouched && !newPwdValid ? 'input-error' : ''"
                 />
                 <ul v-if="pwdForm.newPwd || pwdCodeTouched" class="mt-2 space-y-1">
                   <li
@@ -324,13 +322,10 @@ async function submitPasswordChange() {
 
               <label class="form-control w-full">
                 <span class="label-text mb-1 text-base-content/70">{{ $t('auth.confirmPassword') }}</span>
-                <input
+                <PasswordInput
                   v-model="pwdForm.confirm"
-                  type="password"
                   autocomplete="new-password"
-                  placeholder="••••••••"
-                  class="input input-bordered w-full bg-base-100/70"
-                  :class="{ 'input-error': pwdCodeTouched && !pwdsMatch }"
+                  :input-class="pwdCodeTouched && !pwdsMatch ? 'input-error' : ''"
                 />
                 <span v-if="pwdCodeTouched && !pwdsMatch" class="mt-1 text-xs text-error">{{ $t('auth.errMatch') }}</span>
               </label>
