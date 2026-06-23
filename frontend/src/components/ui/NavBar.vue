@@ -1,7 +1,14 @@
 <script setup>
+import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAnnouncementsStore } from '@/stores/announcements'
 
 const route = useRoute()
+const anns = useAnnouncementsStore()
+
+onMounted(() => {
+  if (!anns.loaded) anns.fetchAnnouncements()
+})
 
 const items = [
   { name: 'home', label: 'Home', paths: ['M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25'] },
@@ -32,18 +39,26 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
             class="absolute inset-0 rounded-2xl bg-primary/10"
             aria-hidden="true"
           />
-          <svg
-            class="relative h-6 w-6"
-            :class="{ 'drop-shadow-[0_0_8px_rgba(45,212,191,0.55)]': isActive(item.name) }"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path v-for="(d, i) in item.paths" :key="i" :d="d" />
-          </svg>
+          <span class="relative inline-flex">
+            <svg
+              class="relative h-6 w-6"
+              :class="{ 'drop-shadow-[0_0_8px_rgba(45,212,191,0.55)]': isActive(item.name) }"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path v-for="(d, i) in item.paths" :key="i" :d="d" />
+            </svg>
+            <!-- Unseen-announcements dot — only on the Home tab -->
+            <span
+              v-if="item.name === 'home' && anns.unseenCount > 0"
+              class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-error ring-2 ring-base-100"
+              aria-hidden="true"
+            />
+          </span>
           <span class="relative text-[0.625rem] font-medium leading-none">{{ $t('nav.' + item.name) }}</span>
         </RouterLink>
       </div>

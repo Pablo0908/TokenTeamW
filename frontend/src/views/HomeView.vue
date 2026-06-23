@@ -25,28 +25,14 @@ const events = useEventsStore()
 const onboarding = useOnboardingStore()
 const anns = useAnnouncementsStore()
 
-// Track which announcement IDs the user has already seen (persisted in localStorage).
-// Unseen announcements show a ringing bell; after ~3 s on-page the bell settles and IDs are saved.
-const SEEN_KEY = 'lyfter_seen_anns'
-const seenIds = ref(new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')))
-
-function isSeen(id) {
-  return seenIds.value.has(id)
-}
-
+// After 3.5 s on page, mark all visible announcements as seen (bell animation runs ~2.4 s first).
 let seenTimer = null
-
 watch(
   () => anns.announcements.length,
   (len) => {
-    if (!len) return
-    if (!anns.announcements.some((a) => !seenIds.value.has(a.id))) return
+    if (!len || !anns.unseenCount) return
     clearTimeout(seenTimer)
-    seenTimer = setTimeout(() => {
-      const updated = new Set([...seenIds.value, ...anns.announcements.map((a) => a.id)])
-      seenIds.value = updated
-      localStorage.setItem(SEEN_KEY, JSON.stringify([...updated]))
-    }, 3500)
+    seenTimer = setTimeout(() => anns.markAllSeen(), 3500)
   },
 )
 
@@ -183,8 +169,8 @@ async function downloadCard(badge) {
         <div v-for="ann in anns.announcements" :key="ann.id" class="surface relative space-y-2 p-4">
           <!-- Bell: only shown while unseen; rings for ~2.4 s then settles still -->
           <svg
-            v-if="!isSeen(ann.id)"
-            class="ann-bell absolute right-3 top-3 h-4 w-4 text-primary"
+            v-if="!anns.isSeen(ann.id)"
+            class="ann-bell absolute right-3 top-3 h-6 w-6 text-primary"
             viewBox="0 0 24 24"
             fill="currentColor"
             aria-hidden="true"

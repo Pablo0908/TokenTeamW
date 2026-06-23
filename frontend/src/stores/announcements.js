@@ -1,12 +1,31 @@
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
 import { api, readApiError } from '@/services/api'
+
+const SEEN_KEY = 'lyfter_seen_anns'
 
 export const useAnnouncementsStore = defineStore('announcements', () => {
   const announcements = ref([])
   const error = ref(null)
   const loading = ref(false)
   const loaded = ref(false)
+
+  // Seen-announcement IDs persisted in localStorage.
+  const seenIds = ref(new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')))
+
+  const unseenCount = computed(
+    () => announcements.value.filter((a) => !seenIds.value.has(a.id)).length,
+  )
+
+  function isSeen(id) {
+    return seenIds.value.has(id)
+  }
+
+  function markAllSeen() {
+    const updated = new Set([...seenIds.value, ...announcements.value.map((a) => a.id)])
+    seenIds.value = updated
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...updated]))
+  }
 
   async function fetchAnnouncements() {
     loading.value = true
@@ -45,6 +64,9 @@ export const useAnnouncementsStore = defineStore('announcements', () => {
     error,
     loading,
     loaded,
+    unseenCount,
+    isSeen,
+    markAllSeen,
     fetchAnnouncements,
     createAnnouncement,
     updateAnnouncement,
