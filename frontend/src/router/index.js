@@ -18,15 +18,17 @@ const routes = [
   // Public QR landing — redirects to login then back (handled inside the view).
   { path: '/redeem/:eventId/:token', name: 'redeem', component: () => import('@/views/RedeemView.vue'), meta: { public: true } },
 
-  // Staff (admin + assistant) can view these; assistant is read-only (enforced in-view + by the API).
-  { path: '/admin/events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
-  { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
-  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
+  // Platform panel — super-admin only (global events/users/audit across all orgs).
+  { path: '/admin/events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // /new must come before /:id so Vue Router doesn't treat "new" as an event ID.
-  { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresStaff: true } },
-  // Viewing the audit log is admin-only.
-  { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+
+  // Org-scoped panel — any member of the active org (tabs gate by role in-view).
+  { path: '/org/:tab(events|members|participants|audit|settings)?', name: 'org-panel', component: () => import('@/views/OrgPanelView.vue'), meta: { requiresAuth: true, requiresOrgMember: true } },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
@@ -56,16 +58,12 @@ router.beforeEach(async (to) => {
     const org = useOrgContextStore()
     await org.ensureLoaded()
     if (to.meta.requiresSuperAdmin && !org.isSuperAdmin) {
-      return org.isOrgMember ? { name: 'org-events' } : { name: 'home' }
+      return org.isOrgMember ? { name: 'org-panel' } : { name: 'home' }
     }
     if (to.meta.requiresOrgMember && !org.isOrgMember && !org.isSuperAdmin) {
       return { name: 'home' }
     }
   }
-
-  // Legacy guards (kept until the panel routes flip): admin/staff by global role.
-  if (to.meta.requiresAdmin && !auth.isAdmin) return { name: 'home' }
-  if (to.meta.requiresStaff && !auth.isStaff) return { name: 'home' }
 
   return true
 })

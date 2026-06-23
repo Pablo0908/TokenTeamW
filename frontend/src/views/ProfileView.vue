@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { locale, setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useOrgContextStore } from '@/stores/orgContext'
 import { useBadgesStore } from '@/stores/badges'
 import { useSettingsStore, CONTRAST_RANGE, FONT_SIZE_RANGE } from '@/stores/settings'
 import { api } from '@/services/api'
@@ -13,6 +14,7 @@ import PasswordInput from '@/components/ui/PasswordInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const orgContext = useOrgContextStore()
 const badges = useBadgesStore()
 const settings = useSettingsStore()
 
@@ -544,8 +546,14 @@ async function submitPasswordChange() {
       </div>
     </section>
 
-    <RouterLink v-if="auth.isStaff" to="/admin/events" class="btn btn-outline w-full tap-target">
+    <RouterLink v-if="orgContext.isSuperAdmin" to="/admin/events" class="btn btn-outline w-full tap-target">
       {{ $t('profile.openAdmin') }}
+    </RouterLink>
+    <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
+      Manage organization
+    </RouterLink>
+    <RouterLink to="/invites" class="btn btn-ghost w-full tap-target">
+      Invitations
     </RouterLink>
 
     <button class="btn btn-ghost w-full text-error tap-target" @click="logout">{{ $t('common.logout') }}</button>
