@@ -55,6 +55,29 @@ def redeemed_badge_map(user_id, event_id):
     return {str(doc["badge_id"]): doc.get("redeemed_at") for doc in cursor}
 
 
+def favorite_event_type(user_id, org_ids=None):
+    """The event_type this user has redeemed most (mode over their redemptions joined
+    to events). `org_ids` (strings) scopes to a tenant set for an org admin; None = all.
+    Returns {event_type, count, tie} or None when the user has no redemptions."""
+    match = {"user_id": _oid(user_id)}
+    if org_ids is not None:
+        match["org_id"] = {"$in": [_oid(o) for o in org_ids]}
+    pipeline = [
+        {"$match": match},
+        {"$lookup": {"from": "events", "localField": "event_id", "foreignField": "_id", "as": "ev"}},
+        {"$unwind": "$ev"},
+        {"$group": {"_id": "$ev.event_type", "count": {"$sum": 1}}},
+        # Highest count first; name as a stable tiebreak so the result is deterministic.
+        {"$sort": {"count": -1, "_id": 1}},
+    ]
+    results = list(mongo.db.redemptions.aggregate(pipeline))
+    if not results:
+        return None
+    top = results[0]
+    tie = len(results) > 1 and results[1]["count"] == top["count"]
+    return {"event_type": top["_id"] or "uncategorized", "count": top["count"], "tie": tie}
+
+
 def counts_by_user(org_id=None):
     """Return {user_id_str: total_badges_redeemed}. Across all events by default;
     scoped to one tenant when org_id is given (one aggregation either way)."""

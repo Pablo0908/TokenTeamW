@@ -262,6 +262,43 @@ def user_badges(current_user, user_id):
     ), 200
 
 
+@admin_bp.route("/users/<user_id>/analytics", methods=["GET"])
+@jwt_required
+def user_analytics(current_user, user_id):
+    # Admin-tier analytics surface, under the same tier rules as the audit: a
+    # super_admin sees the user's full activity; an org owner/admin sees only the
+    # portion within their org(s); staff/attendees are refused.
+    actor = user_model.find_by_id(current_user["sub"])
+    is_super = user_model.is_super_admin(actor)
+    org_ids = None
+    if not is_super:
+        org_ids = membership_model.admin_orgs_for_user(current_user["sub"])
+        if not org_ids:
+            return jsonify({"error": "Admin access required."}), 403
+
+    if not user_model.find_by_id(user_id):
+        return jsonify({"error": "User not found"}), 404
+
+    period = request.args.get("period", "day")
+    if period not in ("day", "week", "month"):
+        period = "day"
+
+    # Audit org_id is stored as a string; redemptions store an ObjectId — each helper
+    # handles its own collection's type.
+    audit_scope = None if is_super else {"org_id": {"$in": org_ids}}
+    payload = {
+        "user_id": user_id,
+        "period": period,
+        "activity": audit_model.activity_buckets(user_id, period, audit_scope),
+        "favorite_event_type": redemption_model.favorite_event_type(user_id, org_ids),
+    }
+    # login_count is a platform-level metric — surfaced to super_admin only, since an
+    # org admin must not gain cross-org visibility into a user.
+    if is_super:
+        payload["login_count"] = audit_model.login_count(user_id)
+    return jsonify(payload), 200
+
+
 @admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
 @admin_required
 def set_user_role(current_user, user_id):
