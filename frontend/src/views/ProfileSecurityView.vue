@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { api } from '@/services/api'
+import { api, readApiError } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import PasswordInput from '@/components/ui/PasswordInput.vue'
 
@@ -76,7 +76,7 @@ async function submitEditProfile() {
     editSuccess.value = true
     setTimeout(() => { editSuccess.value = false }, 3000)
   } catch (err) {
-    editError.value = err.response?.data?.error ?? 'Unexpected error'
+    editError.value = readApiError(err, 'Something went wrong. Please try again.')
   } finally {
     editLoading.value = false
   }
@@ -111,7 +111,7 @@ async function sendEmailCode() {
     await api.post('/me/email/send-code', { new_email: emailForm.newEmail.trim().toLowerCase() })
     emailStep.value = 'code'
   } catch (err) {
-    emailError.value = err.response?.data?.error ?? 'Unexpected error'
+    emailError.value = readApiError(err, 'Something went wrong. Please try again.')
   } finally {
     emailLoading.value = false
   }
@@ -129,7 +129,7 @@ async function submitEmailChange() {
     resetEmailSection()
     emailSuccess.value = true
   } catch (err) {
-    emailError.value = err.response?.data?.error ?? 'Unexpected error'
+    emailError.value = readApiError(err, 'Something went wrong. Please try again.')
   } finally {
     emailLoading.value = false
   }
@@ -175,7 +175,7 @@ async function sendPwdCode() {
     await api.post('/me/password/send-code', { email: pwdForm.email.trim().toLowerCase() })
     pwdStep.value = 'code'
   } catch (err) {
-    pwdError.value = err.response?.data?.error ?? 'Unexpected error'
+    pwdError.value = readApiError(err, 'Something went wrong. Please try again.')
   } finally {
     pwdLoading.value = false
   }
@@ -197,7 +197,7 @@ async function submitPasswordChange() {
     resetPwdSection()
     pwdSuccess.value = true
   } catch (err) {
-    pwdError.value = err.response?.data?.error ?? 'Unexpected error'
+    pwdError.value = readApiError(err, 'Something went wrong. Please try again.')
   } finally {
     pwdLoading.value = false
   }

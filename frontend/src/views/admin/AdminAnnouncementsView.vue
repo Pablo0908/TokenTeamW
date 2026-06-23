@@ -6,6 +6,7 @@ import { useEventsStore } from '@/stores/events'
 import { useAnnouncementsStore } from '@/stores/announcements'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+import { readApiError } from '@/services/api'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -38,7 +39,7 @@ async function submitCreate() {
     createForm.event_id = ''
     showForm.value = false
   } catch (err) {
-    createError.value = err.response?.data?.error ?? 'Unexpected error'
+    createError.value = readApiError(err, 'Could not publish announcement.')
   } finally {
     creating.value = false
   }
@@ -75,7 +76,7 @@ async function submitEdit(id) {
     })
     editingId.value = null
   } catch (err) {
-    editError.value = err.response?.data?.error ?? 'Unexpected error'
+    editError.value = readApiError(err, 'Could not save changes.')
   } finally {
     editLoading.value = false
   }
@@ -123,6 +124,8 @@ function fmtDate(iso) {
       <RouterLink v-if="auth.isAdmin" to="/admin/announcements" role="tab" class="tab tab-active">Announcements</RouterLink>
       <RouterLink v-if="auth.isAdmin" to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
     </div>
+
+    <AlertMessage type="error" :message="anns.error || ''" />
 
     <!-- Make Announcement toggle -->
     <button
@@ -257,7 +260,7 @@ function fmtDate(iso) {
       </div>
     </div>
 
-    <div v-else-if="anns.loaded" class="surface p-8 text-center text-sm text-base-content/60">
+    <div v-else-if="!anns.loading && !anns.error" class="surface p-8 text-center text-sm text-base-content/60">
       No announcements yet. Create one to start engaging attendees.
     </div>
   </div>
