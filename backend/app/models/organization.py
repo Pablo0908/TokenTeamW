@@ -44,6 +44,15 @@ def find_by_id(org_id):
         return None
 
 
+def update_org(org_id, fields):
+    """Patch whitelisted org fields (name/description). Returns matched count > 0."""
+    allowed = {k: v for k, v in fields.items() if k in ("name", "description", "status", "theme")}
+    if not allowed:
+        return False
+    res = mongo.db.organizations.update_one({"_id": _oid(org_id)}, {"$set": allowed})
+    return res.matched_count > 0
+
+
 def find_by_slug(slug):
     return mongo.db.organizations.find_one({"slug": slug})
 
