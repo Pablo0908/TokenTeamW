@@ -26,6 +26,7 @@ const routes = [
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/org-invites', name: 'admin-org-invites', component: () => import('@/views/admin/AdminOrgInvitesView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
 
   // Org-scoped panel — any member of the active org (tabs gate by role in-view).
   { path: '/org/:tab(events|members|participants|audit|settings)?', name: 'org-panel', component: () => import('@/views/OrgPanelView.vue'), meta: { requiresAuth: true, requiresOrgMember: true } },
