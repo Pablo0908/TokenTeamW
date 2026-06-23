@@ -3,6 +3,7 @@ import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
+import { useOrgContextStore } from '@/stores/orgContext'
 import QRDisplay from '@/components/domain/QRDisplay.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
@@ -13,7 +14,16 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const events = useEventsStore()
+const orgContext = useOrgContextStore()
 const id = route.params.id
+
+// This view is shared by the platform panel (/admin/events/:id) and the org panel
+// (/org/events/:id). In org mode it operates against the active org's scoped badge
+// endpoints and authorizes on the org role; otherwise it keeps the legacy /admin path.
+const isOrgMode = computed(() => route.meta.orgScoped === true)
+const orgId = computed(() => (isOrgMode.value ? orgContext.activeOrgId : null))
+const canManage = computed(() => (isOrgMode.value ? orgContext.isActiveAdmin : auth.isAdmin))
+const backTo = computed(() => (isOrgMode.value ? '/org/events' : '/admin/events'))
 
 const showForm = ref(false)
 const creating = ref(false)
@@ -57,7 +67,7 @@ const attendees = computed(() => list.value[0]?.total_attendees ?? 0)
 let poll = null
 
 async function refresh() {
-  await Promise.all([events.fetchEvent(id), events.fetchAdminBadges(id)])
+  await Promise.all([events.fetchEvent(id), events.fetchAdminBadges(id, orgId.value)])
 }
 
 async function addBadge() {
@@ -65,7 +75,7 @@ async function addBadge() {
   if (!form.name.trim()) return
   creating.value = true
   try {
-    const created = await events.addBadge(id, { ...form, name: form.name.trim() })
+    const created = await events.addBadge(id, { ...form, name: form.name.trim() }, orgId.value)
     lastCreated.value = created
     expanded.value = created.id
     await refresh()
@@ -89,7 +99,7 @@ async function addBulk() {
   bulkResult.value = ''
   try {
     const list = names.map((name) => ({ name, icon: bulkIcon.value, color: bulkColor.value, image: bulkImage.value.trim() }))
-    const res = await events.addBadgesBulk(id, list)
+    const res = await events.addBadgesBulk(id, list, orgId.value)
     await refresh()
     bulkResult.value = `✓ Created ${res.count} badge${res.count === 1 ? '' : 's'}`
     bulkText.value = ''
@@ -114,14 +124,14 @@ async function exportSheet() {
 onMounted(async () => {
   await refresh()
   // Near-real-time redemption counts (PRD §4.2 dashboard polling).
-  poll = setInterval(() => events.fetchAdminBadges(id), 4000)
+  poll = setInterval(() => events.fetchAdminBadges(id, orgId.value), 4000)
 })
 onBeforeUnmount(() => clearInterval(poll))
 </script>
 
 <template>
   <div class="space-y-5 px-4 pb-10 pt-6">
-    <button class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70" @click="router.push('/admin/events')">
+    <button class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70" @click="router.push(backTo)">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
       </svg>
@@ -158,8 +168,8 @@ onBeforeUnmount(() => clearInterval(poll))
         Live — counts refresh automatically
       </p>
 
-      <!-- Add badge (admin only) -->
-      <div v-if="auth.isAdmin" class="surface p-4">
+      <!-- Add badge (managers only: platform admin, or org owner/admin) -->
+      <div v-if="canManage" class="surface p-4">
         <button class="flex w-full items-center justify-between tap-target" :aria-expanded="showForm" @click="showForm = !showForm">
           <span class="font-semibold">Add badge</span>
           <span class="text-xl text-primary">{{ showForm ? '−' : '+' }}</span>
@@ -206,8 +216,8 @@ onBeforeUnmount(() => clearInterval(poll))
         </form>
       </div>
 
-      <!-- Bulk add (admin only) -->
-      <div v-if="auth.isAdmin" class="surface p-4">
+      <!-- Bulk add (managers only: platform admin, or org owner/admin) -->
+      <div v-if="canManage" class="surface p-4">
         <button class="flex w-full items-center justify-between tap-target" :aria-expanded="showBulk" @click="showBulk = !showBulk">
           <span class="font-semibold">Bulk add badges</span>
           <span class="text-xl text-primary">{{ showBulk ? '−' : '+' }}</span>

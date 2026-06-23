@@ -31,6 +31,9 @@ const routes = [
 
   // Org-scoped panel — any member of the active org (tabs gate by role in-view).
   { path: '/org/:tab(events|members|participants|audit|settings)?', name: 'org-panel', component: () => import('@/views/OrgPanelView.vue'), meta: { requiresAuth: true, requiresOrgMember: true } },
+  // Org event detail — reuses the platform event-detail view in org-scoped mode
+  // (same badge management: single, bulk, QR sheet) against the active org.
+  { path: '/org/events/:id', name: 'org-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresOrgMember: true, orgScoped: true } },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]

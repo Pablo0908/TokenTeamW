@@ -148,11 +148,20 @@ onMounted(loadTab)
           </select>
           <button class="btn btn-primary btn-sm w-full" @click="createEvent">Create event</button>
         </div>
-        <div v-for="ev in events" :key="ev.id" class="surface flex items-center justify-between p-4">
+        <button
+          v-for="ev in events"
+          :key="ev.id"
+          type="button"
+          class="surface flex w-full items-center justify-between p-4 text-left transition-transform active:scale-[0.98]"
+          @click="router.push(`/org/events/${ev.id}`)"
+        >
           <div class="min-w-0"><p class="truncate font-medium">{{ ev.name }}</p>
             <p class="text-[0.7rem] text-base-content/45 capitalize">{{ ev.event_type }} · {{ ev.badges_total }} badges</p></div>
-          <span class="badge badge-sm" :class="ev.status === 'active' ? 'badge-primary' : 'badge-ghost'">{{ ev.status }}</span>
-        </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <span class="badge badge-sm" :class="ev.status === 'active' ? 'badge-primary' : 'badge-ghost'">{{ ev.status }}</span>
+            <svg class="h-4 w-4 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>
+          </div>
+        </button>
         <p v-if="!events.length" class="surface p-6 text-center text-sm text-base-content/50">No events yet.</p>
       </section>
 

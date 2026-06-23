@@ -57,10 +57,16 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
-  async function addBadge(eventId, payload) {
+  // Event/badge management hits the platform /admin path by default. Passing an
+  // orgId routes to the org-scoped endpoints instead, so the same management UI
+  // works for org owners/admins (who may not hold the legacy global admin role).
+  const badgeBase = (eventId, orgId) =>
+    orgId ? `/orgs/${orgId}/events/${eventId}` : `/admin/events/${eventId}`
+
+  async function addBadge(eventId, payload, orgId = null) {
     error.value = null
     try {
-      const { data } = await api.post(`/admin/events/${eventId}/badge`, payload)
+      const { data } = await api.post(`${badgeBase(eventId, orgId)}/badge`, payload)
       return data
     } catch (e) {
       error.value = readApiError(e, 'Could not create the badge.')
@@ -69,10 +75,10 @@ export const useEventsStore = defineStore('events', () => {
   }
 
   // Create many badges at once. `badges` is an array of { name, description?, icon?, color? }.
-  async function addBadgesBulk(eventId, badgesList) {
+  async function addBadgesBulk(eventId, badgesList, orgId = null) {
     error.value = null
     try {
-      const { data } = await api.post(`/admin/events/${eventId}/badges/bulk`, { badges: badgesList })
+      const { data } = await api.post(`${badgeBase(eventId, orgId)}/badges/bulk`, { badges: badgesList })
       return data // { created: [...], count }
     } catch (e) {
       error.value = readApiError(e, 'Could not create the badges.')
@@ -80,10 +86,10 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
-  async function fetchAdminBadges(eventId) {
+  async function fetchAdminBadges(eventId, orgId = null) {
     error.value = null
     try {
-      const { data } = await api.get(`/admin/events/${eventId}/badges`)
+      const { data } = await api.get(`${badgeBase(eventId, orgId)}/badges`)
       adminBadges.value = Array.isArray(data) ? data : []
       return adminBadges.value
     } catch (e) {
