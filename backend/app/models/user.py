@@ -139,6 +139,14 @@ def update_password(user_id, hashed_password):
     mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"hashed_password": hashed_password}})
 
 
+def update_name(user_id, name, lastname):
+    mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"name": name, "lastname": lastname}})
+
+
+def update_email(user_id, new_email):
+    mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"email": new_email.lower()}})
+
+
 def delete_user(user_id):
     try:
         result = mongo.db.users.delete_one({"_id": _oid(user_id)})

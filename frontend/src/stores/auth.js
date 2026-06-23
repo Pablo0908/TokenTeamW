@@ -134,6 +134,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function patchUser(fields) {
+    user.value = { ...user.value, ...fields }
+    persist()
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -175,6 +180,7 @@ export const useAuthStore = defineStore('auth', () => {
     loginWithGoogle,
     register,
     logout,
+    patchUser,
     setRedirect,
     consumeRedirect,
   }

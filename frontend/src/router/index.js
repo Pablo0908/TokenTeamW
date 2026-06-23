@@ -12,6 +12,7 @@ const routes = [
   { path: '/events', name: 'events', component: () => import('@/views/EventsView.vue'), meta: { requiresAuth: true } },
   { path: '/events/:id', name: 'event-detail', component: () => import('@/views/EventDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/security', name: 'profile-security', component: () => import('@/views/ProfileSecurityView.vue'), meta: { requiresAuth: true } },
 
   // Public QR landing — redirects to login then back (handled inside the view).
   { path: '/redeem/:eventId/:token', name: 'redeem', component: () => import('@/views/RedeemView.vue'), meta: { public: true } },

@@ -26,6 +26,12 @@ def send_otp(to_email: str, code: str) -> None:
     msg["From"] = from_addr
     msg["To"] = to_email
 
+    plain = (
+        f"Lyfter verification\n\n"
+        f"Enter this code to complete your sign-in. It expires in 10 minutes.\n\n"
+        f"  {code}\n\n"
+        f"If you didn't request this, you can safely ignore this email."
+    )
     html = f"""
     <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px">
       <h2 style="color:#4361EE;margin-bottom:8px">Lyfter verification</h2>
@@ -42,6 +48,7 @@ def send_otp(to_email: str, code: str) -> None:
       </p>
     </div>
     """
+    msg.attach(MIMEText(plain, "plain"))
     msg.attach(MIMEText(html, "html"))
 
     ctx = ssl.create_default_context()
@@ -69,6 +76,12 @@ def send_reset_email(to_email: str, code: str) -> None:
     msg["From"] = from_addr
     msg["To"] = to_email
 
+    plain = (
+        f"Lyfter password reset\n\n"
+        f"Use this code to reset your password. It expires in 10 minutes.\n\n"
+        f"  {code}\n\n"
+        f"If you didn't request this, you can safely ignore this email."
+    )
     html = f"""
     <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px">
       <h2 style="color:#4361EE;margin-bottom:8px">Lyfter password reset</h2>
@@ -85,6 +98,7 @@ def send_reset_email(to_email: str, code: str) -> None:
       </p>
     </div>
     """
+    msg.attach(MIMEText(plain, "plain"))
     msg.attach(MIMEText(html, "html"))
 
     ctx = ssl.create_default_context()
