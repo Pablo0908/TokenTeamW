@@ -78,3 +78,50 @@ def staff_required(f):
         return f(*args, current_user=current_user, **kwargs)
 
     return decorated
+
+
+def org_role_required(*roles):
+    """Authorize against an org-scoped membership (the multi-tenant authority model).
+
+    The JWT deliberately carries NO org claim (a user may belong to many orgs), so the
+    target org is resolved per request from the route: an explicit `org_id` kwarg, else
+    the org of the `event_id` / `badge_id` the route addresses. A platform `super_admin`
+    (looked up fresh — also not in the JWT) passes any check; otherwise the caller must
+    hold one of `roles` ("owner" / "admin" / "staff") in the resolved org.
+
+    Defined now for the org-scoped routes that land in later phases. Existing routes
+    keep using jwt_required / staff_required / admin_required unchanged.
+    """
+    def decorator(f):
+        @jwt_required
+        @wraps(f)
+        def decorated(*args, current_user, **kwargs):
+            # Imported lazily to avoid any import-order coupling between utils and models.
+            from app.models import user as user_model
+            from app.models import event as event_model
+            from app.models import badge as badge_model
+            from app.models import membership as membership_model
+
+            actor = user_model.find_by_id(current_user["sub"])
+            if user_model.is_super_admin(actor):
+                return f(*args, current_user=current_user, **kwargs)
+
+            org_id = kwargs.get("org_id")
+            if not org_id and kwargs.get("event_id"):
+                ev = event_model.find_by_id(kwargs["event_id"])
+                org_id = str(ev["org_id"]) if ev and ev.get("org_id") else None
+            if not org_id and kwargs.get("badge_id"):
+                badge = badge_model.find_by_id(kwargs["badge_id"])
+                org_id = str(badge["org_id"]) if badge and badge.get("org_id") else None
+
+            if not org_id:
+                return jsonify({"error": "Organization could not be resolved for this request."}), 403
+
+            if membership_model.role_in_org(current_user["sub"], org_id) not in roles:
+                return jsonify({"error": "You don't have access to this organization."}), 403
+
+            return f(*args, current_user=current_user, **kwargs)
+
+        return decorated
+
+    return decorator
