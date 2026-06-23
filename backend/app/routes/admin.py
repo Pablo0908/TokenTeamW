@@ -161,6 +161,25 @@ def create_badges_bulk(current_user, event_id):
     return jsonify({"created": created, "count": len(created)}), 201
 
 
+@admin_bp.route("/events/<event_id>/status", methods=["PATCH"])
+@admin_required
+def set_event_status(current_user, event_id):
+    """Start/stop an event: a manual activation override that forces the event active
+    (scannable now) or reverts it to its date-derived status. Reduces human error
+    around date windows."""
+    ev = event_model.find_by_id(event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    started = bool((request.get_json(silent=True) or {}).get("started", True))
+    event_model.set_started(event_id, started)
+    audit_model.log(
+        current_user["sub"], "event.start" if started else "event.stop",
+        ev.get("name", ""), org_id=ev.get("org_id"), event_id=str(ev["_id"]),
+    )
+    status = event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=started)
+    return jsonify({"id": event_id, "started": started, "status": status}), 200
+
+
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
 @staff_required
 def list_badges(current_user, event_id):
@@ -235,7 +254,7 @@ def user_badges(current_user, user_id):
                 "event_id": str(ev["_id"]),
                 "event": ev.get("name", ""),
                 "date": event_model.fmt_date(ev.get("start_date")),
-                "status": event_model.compute_status(ev.get("start_date"), ev.get("end_date")),
+                "status": event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=ev.get("started", False)),
                 "prize": ev.get("prize", ""),
                 "badges_total": total,
                 "badges_earned": earned,

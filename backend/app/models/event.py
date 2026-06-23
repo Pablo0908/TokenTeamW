@@ -48,12 +48,20 @@ def fmt_date(value):
         return ""
 
 
-def compute_status(start, end, now=None):
+def compute_status(start, end, now=None, started=False):
     """Derive the lifecycle status from the date window.
 
     No dates -> 'active' (an unscheduled event is treated as happening now, so a
     freshly-created demo event is immediately scannable). Redemption requires 'active'.
+
+    `started` is a manual activation override: when a manager explicitly "starts" an
+    event it is forced 'active' (scannable now) regardless of its dates. This exists
+    to reduce human error — e.g. announcing an event whose start date is still in the
+    future would otherwise leave it unscannable. "Stop" clears the override and the
+    status reverts to being date-derived.
     """
+    if started:
+        return "active"
     now = now or datetime.now(timezone.utc)
     today = now.date()
     start_d = start.date() if isinstance(start, datetime) else None
@@ -81,6 +89,9 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             # Authoritative tenant pointer. Optional at the model layer so existing
             # callers don't break; the admin route resolves and passes it.
             "org_id": _oid(org_id) if org_id else None,
+            # Manual activation override (see compute_status). False = status follows
+            # the date window; True = forced active/scannable now.
+            "started": False,
             "created_by": _oid(created_by),
             "created_at": datetime.now(timezone.utc),
         }
@@ -93,6 +104,15 @@ def find_by_id(event_id):
         return mongo.db.events.find_one({"_id": _oid(event_id)})
     except Exception:
         return None
+
+
+def set_started(event_id, started: bool):
+    """Flip the manual activation override. Returns matched count > 0."""
+    try:
+        res = mongo.db.events.update_one({"_id": _oid(event_id)}, {"$set": {"started": bool(started)}})
+        return res.matched_count > 0
+    except Exception:
+        return False
 
 
 def all_events(org_id=None):
@@ -116,7 +136,9 @@ def event_summary(event, badges_total, badges_earned, org=None):
         "endDate": fmt_date(event.get("end_date")),
         "location": event.get("location", ""),
         "prize": event.get("prize", ""),
-        "status": compute_status(event.get("start_date"), event.get("end_date")),
+        "status": compute_status(event.get("start_date"), event.get("end_date"),
+                                 started=event.get("started", False)),
+        "started": bool(event.get("started", False)),
         "badges_total": badges_total,
         "badges_earned": badges_earned,
         "completed": badges_total > 0 and badges_earned >= badges_total,

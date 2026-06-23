@@ -24,7 +24,8 @@ def redeem(current_user, event_id, token):
     if not badge:
         return jsonify({"error": "This QR code is not a Lyfter badge."}), 403
 
-    if event_model.compute_status(ev.get("start_date"), ev.get("end_date")) != "active":
+    if event_model.compute_status(ev.get("start_date"), ev.get("end_date"),
+                                  started=ev.get("started", False)) != "active":
         return jsonify({"error": "This event isn’t active right now."}), 403
 
     try:

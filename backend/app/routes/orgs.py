@@ -351,6 +351,22 @@ def org_list_badges(current_user, org_id, event_id):
     return jsonify(out), 200
 
 
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>/status", methods=["PATCH"])
+@org_role_required("owner", "admin")
+def org_set_event_status(current_user, org_id, event_id):
+    """Start/stop an org event — same manual activation override as the platform
+    path, scoped to events that belong to this org."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    started = bool((request.get_json(silent=True) or {}).get("started", True))
+    event_model.set_started(event_id, started)
+    audit_model.log(current_user["sub"], "event.start" if started else "event.stop",
+                    ev.get("name", ""), org_id=org_id, event_id=str(ev["_id"]))
+    status = event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=started)
+    return jsonify({"id": event_id, "started": started, "status": status}), 200
+
+
 @orgs_bp.route("/orgs/<org_id>/participants", methods=["GET"])
 @org_role_required("owner", "admin", "staff")
 def org_participants(current_user, org_id):

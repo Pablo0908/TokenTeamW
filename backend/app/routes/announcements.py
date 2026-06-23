@@ -60,6 +60,19 @@ def _resolve_event_id(raw):
     return raw, None
 
 
+def _maybe_enable_event(actor_id, event_id, enable_event):
+    """When the 'enable event' box is ticked and an event is linked, force-start that
+    event so it is scannable now. No-op otherwise. Logged for the audit trail."""
+    if not (event_id and enable_event):
+        return
+    ev = event_model.find_by_id(event_id)
+    if not ev or ev.get("started"):
+        return
+    event_model.set_started(event_id, True)
+    audit_model.log(actor_id, "event.start", f'{ev.get("name", "")} (via announcement)',
+                    org_id=ev.get("org_id"), event_id=str(ev["_id"]))
+
+
 @announcements_bp.route("", methods=["POST"])
 @announcements_bp.route("/", methods=["POST"])
 @super_admin_required
@@ -81,6 +94,9 @@ def create_announcement(current_user):
         current_user["sub"], "announcement.create",
         detail=f'Posted announcement "{title}"', event_id=event_id,
     )
+    # Optional convenience: enabling the linked event in the same step so an announced
+    # event is immediately scannable (reduces "announced but not started" mistakes).
+    _maybe_enable_event(current_user["sub"], event_id, body.get("enable_event"))
     doc = announcement_model.find_by_id(new_id)
     ev = event_model.find_by_id(event_id) if event_id else None
     return jsonify(announcement_model.public(doc, event=ev)), 201
@@ -119,6 +135,10 @@ def update_announcement(current_user, announcement_id):
         detail=f"Edited announcement", event_id=fields.get("event_id"),
     )
     doc = announcement_model.find_by_id(announcement_id)
+    # Honor the enable-event box on edit too (against the resulting linked event).
+    effective_event = fields.get("event_id") if "event_id" in fields else \
+        (str(doc["event_id"]) if doc.get("event_id") else None)
+    _maybe_enable_event(current_user["sub"], effective_event, body.get("enable_event"))
     ev = event_model.find_by_id(doc["event_id"]) if doc.get("event_id") else None
     return jsonify(announcement_model.public(doc, event=ev)), 200
 

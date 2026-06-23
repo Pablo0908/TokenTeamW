@@ -27,7 +27,7 @@ def my_badges(current_user):
                 "event_id": str(ev["_id"]),
                 "event": ev.get("name", ""),
                 "date": event_model.fmt_date(ev.get("start_date")),
-                "status": event_model.compute_status(ev.get("start_date"), ev.get("end_date")),
+                "status": event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=ev.get("started", False)),
                 "prize": ev.get("prize", ""),
                 "badges_total": total,
                 "badges_earned": earned,
