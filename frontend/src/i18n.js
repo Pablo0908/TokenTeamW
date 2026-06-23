@@ -56,6 +56,7 @@ const en = {
     scanTitle: 'Scan a QR code', scanSub: 'Point at any event badge station',
     badges: 'Badges', events: 'Events', streak: 'Streak',
     noBadges: 'No badges yet — scan your first one!', loading: 'Loading your badges…',
+    announcements: 'Announcements', noAnnouncements: 'No announcements yet.', newTag: 'NEW',
   },
   badges: {
     title: 'Badges & Events',
@@ -238,6 +239,7 @@ const es = {
     scanTitle: 'Escanea un código QR', scanSub: 'Apunta a cualquier estación de insignias del evento',
     badges: 'Insignias', events: 'Eventos', streak: 'Racha',
     noBadges: 'Aún no tienes insignias, ¡escanea la primera!', loading: 'Cargando tus insignias…',
+    announcements: 'Anuncios', noAnnouncements: 'Aún no hay anuncios.', newTag: 'NUEVO',
   },
   badges: {
     title: 'Insignias y Eventos',

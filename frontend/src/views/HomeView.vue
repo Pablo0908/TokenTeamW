@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
 import { useEventsStore } from '@/stores/events'
+import { useAnnouncementsStore } from '@/stores/announcements'
 import { useOnboardingStore } from '@/stores/onboarding'
 import StatTile from '@/components/domain/StatTile.vue'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
@@ -21,14 +22,23 @@ const route = useRoute()
 const auth = useAuthStore()
 const badges = useBadgesStore()
 const events = useEventsStore()
+const announcements = useAnnouncementsStore()
 const onboarding = useOnboardingStore()
 
-onMounted(() => {
+onMounted(async () => {
   if (!badges.loaded) badges.fetchMyBadges()
   if (!events.loaded) events.fetchEvents()
+  // Load announcements, then mark them seen shortly after so the unread markers are
+  // visible on arrival but clear for the next visit.
+  await announcements.fetchAnnouncements()
+  if (announcements.hasUnread) setTimeout(() => announcements.markSeen(), 2500)
   // Replay the first-run greeting + tutorial on demand (e.g. for a demo/test).
   if (route.query.welcome === '1') onboarding.forceStart(auth.user?.id)
 })
+
+function openAnnouncement(a) {
+  if (a.event_id) router.push(`/events/${a.event_id}`)
+}
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const newThisWeek = computed(
@@ -175,6 +185,48 @@ async function downloadCard(badge) {
         />
       </transition>
     </div>
+
+    <!-- Announcements — platform-wide, visible to all; unread items flagged -->
+    <section v-if="announcements.items.length" class="space-y-3">
+      <div class="flex items-center gap-2">
+        <h2 class="font-semibold">{{ $t('home.announcements') }}</h2>
+        <span
+          v-if="announcements.unreadCount"
+          class="badge badge-primary badge-sm font-semibold"
+          aria-label="Unread announcements"
+        >{{ announcements.unreadCount }}</span>
+      </div>
+      <div class="space-y-2">
+        <component
+          :is="a.event_id ? 'button' : 'div'"
+          v-for="a in announcements.items"
+          :key="a.id"
+          type="button"
+          class="surface relative w-full p-4 text-left"
+          :class="[
+            a.event_id ? 'transition-transform active:scale-[0.98]' : '',
+            a.unread ? 'ring-1 ring-primary/50' : '',
+          ]"
+          @click="openAnnouncement(a)"
+        >
+          <!-- Unread dot -->
+          <span
+            v-if="a.unread"
+            class="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(255,210,60,0.8)]"
+            aria-hidden="true"
+          />
+          <div class="flex items-center gap-2 pr-4">
+            <p class="truncate font-semibold">{{ a.title }}</p>
+            <span v-if="a.unread" class="badge badge-primary badge-xs font-bold">{{ $t('home.newTag') }}</span>
+          </div>
+          <p class="mt-1 line-clamp-2 text-sm text-base-content/70">{{ a.body }}</p>
+          <p v-if="a.event && a.event.name" class="mt-2 flex items-center gap-1 text-xs font-medium text-primary">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>
+            {{ a.event.name }}
+          </p>
+        </component>
+      </div>
+    </section>
 
     <LoadingSpinner v-if="loading" :label="$t('home.loading')" />
 

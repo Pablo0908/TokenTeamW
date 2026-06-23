@@ -32,6 +32,9 @@ const ACTIONS = {
   'user.disable': { label: 'User disabled', cls: 'badge-warning' },
   'user.enable': { label: 'User enabled', cls: 'badge-ghost' },
   'user.delete': { label: 'User deleted', cls: 'badge-error' },
+  'announcement.create': { label: 'Announcement posted', cls: 'badge-info' },
+  'announcement.update': { label: 'Announcement edited', cls: 'badge-ghost' },
+  'announcement.delete': { label: 'Announcement deleted', cls: 'badge-error' },
 }
 
 const actionMeta = (action) => ACTIONS[action] || { label: action, cls: 'badge-ghost' }
