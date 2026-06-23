@@ -59,7 +59,27 @@ def register():
         return jsonify({"error": "That email is already registered."}), 409
 
     user_id = user_model.create_user(name, lastname, email, hash_password(password), role="attendee")
-    return jsonify({"message": "Account created", "user_id": user_id}), 201
+
+    # Sign the new account in immediately (no separate login / 2FA step on sign-up),
+    # mirroring the Google flow. Returns the same session shape as verify-2fa/google.
+    user = user_model.find_by_id(user_id)
+    token = encode_token(user_id, "attendee")
+    return jsonify(
+        {
+            "message": "Account created",
+            "user_id": user_id,
+            "token": token,
+            "role": "attendee",
+            "user": {
+                "id": user_id,
+                "name": user.get("name", ""),
+                "lastname": user.get("lastname", ""),
+                "email": user["email"],
+                "role": "attendee",
+                "preferences": user_model.merged_preferences(user),
+            },
+        }
+    ), 201
 
 
 @auth_bp.route("/login", methods=["POST"])

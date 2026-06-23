@@ -123,7 +123,11 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      await api.post('/auth/register', payload)
+      const { data } = await api.post('/auth/register', payload)
+      // Registration now returns a session token — sign in immediately.
+      _applySession(data, payload.email)
+      const { useSettingsStore } = await import('@/stores/settings')
+      useSettingsStore().hydrate(data.user?.preferences)
       return true
     } catch (e) {
       error.value = readApiError(e, t('errors.register'))

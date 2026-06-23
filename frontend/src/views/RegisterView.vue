@@ -49,14 +49,8 @@ async function submit() {
   })
   if (registered === 'duplicate') { emailTaken.value = true; return }
   if (!registered) return
-  // Auto-login after self-registration to shorten the door flow.
-  const loggedIn = await auth.login({ email: form.email.trim(), password: form.password })
-  if (loggedIn !== true) {
-    // 'otp' means 2FA was triggered — LoginView will show the OTP screen.
-    // false means an error occurred — login page will show it.
-    router.push('/login')
-    return
-  }
+  // Registration signs the user in directly (token returned by /auth/register),
+  // so we land them in the app instead of bouncing through the login/2FA screen.
   const target = auth.consumeRedirect()
   // A QR deep link takes priority; otherwise land on home and run the first-run
   // greeting + language picker + tutorial (note: a saved redirect of "/" is common,
