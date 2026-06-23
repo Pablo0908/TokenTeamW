@@ -69,10 +69,6 @@ function goLogin() {
         <p class="hero-sub">Llegás a una sesión, escaneás el QR de la sala y el badge aparece en tu perfil al instante. Sin apps extra, sin fricción.</p>
 
         <button type="button" class="cta-btn" @click="goRegister">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
-          </svg>
           Crear cuenta gratis
         </button>
         <p class="hero-signin">
@@ -83,9 +79,7 @@ function goLogin() {
 
       <!-- ── Badges de ejemplo ── -->
       <section class="info-section">
-        <span class="section-title">Así se ven los badges</span>
-        <p class="section-body">Cada evento tiene sus propios badges. Este es un ejemplo de cómo lucen los desbloqueados — los demás se revelan cuando escaneás.</p>
-
+        <span class="section-title">Badges del evento</span>
         <div class="badge-row">
           <div class="badge-sample" style="animation:rise .4s both .04s">
             <div class="badge-circle" style="border-color:#71ceff;background:rgba(113,206,255,.11);box-shadow:0 0 16px -5px #71ceff">
@@ -124,8 +118,8 @@ function goLogin() {
             </svg>
           </div>
           <div>
-            <span class="prize-title">Hay un premio esperándote</span>
-            <p class="prize-desc">El organizador preparó una recompensa para quienes completen todos los badges. Se revela automáticamente al obtener el último.</p>
+            <span class="prize-title">Premio al completar</span>
+            <p class="prize-desc">Completá todos los badges para revelar la recompensa del evento.</p>
           </div>
         </div>
       </section>
@@ -151,14 +145,13 @@ function goLogin() {
 
       <!-- ── Footer CTA ── -->
       <section class="footer-cta">
-        <p class="footer-text">El registro es gratuito<br>y tarda menos de un minuto.</p>
         <button type="button" class="cta-btn" style="margin-bottom:0" @click="goRegister">
           Empezar a coleccionar
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
           </svg>
         </button>
-        <p class="footer-note">Sin descarga · Solo tu celular</p>
+        <p class="footer-note">Gratis · Sin descarga · Solo tu celular</p>
       </section>
 
     </div>
@@ -219,7 +212,7 @@ function goLogin() {
 
 /* ── Hero ── */
 .hero-section {
-  position:relative;padding:32px 22px 32px;
+  position:relative;padding:36px 22px 40px;
   background:radial-gradient(120% 70% at 0% 0%,rgba(113,206,255,.16),transparent 52%),
              radial-gradient(120% 80% at 100% 100%,rgba(215,152,231,.16),transparent 55%),
              #0c0e14;
@@ -242,8 +235,8 @@ function goLogin() {
 .live-dot  { width:5px;height:5px;border-radius:50%;background:#71ceff;animation:pulse 2s ease-in-out infinite; }
 .live-label{ font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:500;color:#71ceff; }
 
-.hero-title { font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:23px;line-height:1.12;color:#fff;margin-bottom:10px;letter-spacing:-.02em; }
-.hero-sub   { font-family:'Montserrat',sans-serif;font-size:12px;color:rgba(255,255,255,.52);line-height:1.7;margin-bottom:22px; }
+.hero-title { font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:28px;line-height:1.1;color:#fff;margin-bottom:12px;letter-spacing:-.025em; }
+.hero-sub   { font-family:'Montserrat',sans-serif;font-size:12.5px;color:rgba(255,255,255,.52);line-height:1.6;margin-bottom:24px; }
 
 .cta-btn {
   display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
@@ -261,8 +254,7 @@ function goLogin() {
 .prize-section { padding:28px 22px;background:radial-gradient(120% 70% at 100% 0%,rgba(215,152,231,.1),transparent 54%),#0c0b13;border-top:2px solid rgba(255,255,255,.05); }
 .footer-cta { padding:32px 22px 36px;background:#0c0e14;border-top:2px solid rgba(255,255,255,.05);text-align:center; }
 
-.section-title { font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;color:#fff;display:block;margin-bottom:8px; }
-.section-body  { font-family:'Montserrat',sans-serif;font-size:12px;color:rgba(255,255,255,.45);line-height:1.7;margin-bottom:22px; }
+.section-title { font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;color:#fff;display:block;margin-bottom:18px; }
 
 /* ── Badge row ── */
 .badge-row { display:flex;gap:14px;align-items:flex-start; }
@@ -288,12 +280,12 @@ function goLogin() {
 .prize-desc  { font-family:'Montserrat',sans-serif;font-size:12px;color:rgba(255,255,255,.48);line-height:1.7; }
 
 /* ── FAQ ── */
+.faq-section { padding:32px 22px 28px;background:#0b0d13;border-top:2px solid rgba(255,255,255,.05); }
 .faq-list { display:flex;flex-direction:column;gap:14px;margin-top:18px; }
 .faq-item { padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px; }
 .faq-q { font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;color:#fff;margin-bottom:4px; }
 .faq-a { font-family:'Montserrat',sans-serif;font-size:11.5px;color:rgba(255,255,255,.48);line-height:1.65; }
 
 /* ── Footer ── */
-.footer-text { font-family:'Montserrat',sans-serif;font-size:11.5px;color:rgba(255,255,255,.38);line-height:1.7;margin-bottom:16px; }
-.footer-note { font-family:'Montserrat',sans-serif;font-size:10px;color:rgba(255,255,255,.2);margin-top:10px; }
+.footer-note { font-family:'Montserrat',sans-serif;font-size:10.5px;color:rgba(255,255,255,.25);margin-top:12px; }
 </style>
