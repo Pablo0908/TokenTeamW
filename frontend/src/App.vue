@@ -5,11 +5,25 @@ import NavBar from '@/components/ui/NavBar.vue'
 import BrandBackground from '@/components/ui/BrandBackground.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useRedeemQueueStore } from '@/stores/redeemQueue'
+import { useAuthStore } from '@/stores/auth'
+import { useOrgContextStore } from '@/stores/orgContext'
 
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
 const redeemQueue = useRedeemQueueStore()
+const auth = useAuthStore()
+const orgContext = useOrgContextStore()
+
+// Load the platform/org context whenever the user is authenticated; clear on logout.
+watch(
+  () => auth.isAuthenticated,
+  (authed) => {
+    if (authed) { if (!orgContext.loaded) orgContext.load() }
+    else orgContext.reset()
+  },
+  { immediate: true },
+)
 
 // Auto-dismiss the offline-sync toast a few seconds after it appears.
 watch(
@@ -19,14 +33,13 @@ watch(
   },
 )
 
-// Bottom tab bar shows only on authenticated participant screens (not the staff/admin area).
-const showNav = computed(
-  () => route.meta.requiresAuth && !route.meta.requiresAdmin && !route.meta.requiresStaff,
+// The admin/org panels hide the bottom bar and show a "Back to app" button instead.
+const isPanel = computed(
+  () => route.meta.requiresSuperAdmin || route.meta.requiresStaff || route.meta.requiresAdmin || route.meta.requiresOrgMember,
 )
-
-const showAdminClose = computed(
-  () => route.meta.requiresAdmin || route.meta.requiresStaff,
-)
+// Bottom tab bar shows only on authenticated participant screens (not the panel area).
+const showNav = computed(() => route.meta.requiresAuth && !isPanel.value)
+const showAdminClose = computed(() => isPanel.value)
 
 // Global colour adjustment (Settings → saturation/contrast). A fixed, click-through
 // backdrop-filter layer re-renders everything behind it — applying `filter` to an

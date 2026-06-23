@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useOrgContextStore } from '@/stores/orgContext'
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
@@ -12,6 +13,7 @@ const routes = [
   { path: '/events', name: 'events', component: () => import('@/views/EventsView.vue'), meta: { requiresAuth: true } },
   { path: '/events/:id', name: 'event-detail', component: () => import('@/views/EventDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
+  { path: '/invites', name: 'invites', component: () => import('@/views/InvitesView.vue'), meta: { requiresAuth: true } },
 
   // Public QR landing — redirects to login then back (handled inside the view).
   { path: '/redeem/:eventId/:token', name: 'redeem', component: () => import('@/views/RedeemView.vue'), meta: { public: true } },
@@ -35,7 +37,7 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
@@ -43,18 +45,27 @@ router.beforeEach((to) => {
     return { name: 'login' }
   }
 
-  if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return { name: 'home' }
-  }
-
-  if (to.meta.requiresStaff && !auth.isStaff) {
-    return { name: 'home' }
-  }
-
   // Logged-in users shouldn't see auth screens — send them to their home surface.
   if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
     return { name: 'home' }
   }
+
+  // Platform (super-admin) and org-scoped panels authorize on the org context, not the
+  // legacy global role — so an org owner who is a platform attendee still gets in.
+  if (to.meta.requiresSuperAdmin || to.meta.requiresOrgMember) {
+    const org = useOrgContextStore()
+    await org.ensureLoaded()
+    if (to.meta.requiresSuperAdmin && !org.isSuperAdmin) {
+      return org.isOrgMember ? { name: 'org-events' } : { name: 'home' }
+    }
+    if (to.meta.requiresOrgMember && !org.isOrgMember && !org.isSuperAdmin) {
+      return { name: 'home' }
+    }
+  }
+
+  // Legacy guards (kept until the panel routes flip): admin/staff by global role.
+  if (to.meta.requiresAdmin && !auth.isAdmin) return { name: 'home' }
+  if (to.meta.requiresStaff && !auth.isStaff) return { name: 'home' }
 
   return true
 })
