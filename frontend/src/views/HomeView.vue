@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
@@ -24,6 +24,31 @@ const badges = useBadgesStore()
 const events = useEventsStore()
 const onboarding = useOnboardingStore()
 const anns = useAnnouncementsStore()
+
+// Track which announcement IDs the user has already seen (persisted in localStorage).
+// Unseen announcements show a ringing bell; after ~3 s on-page the bell settles and IDs are saved.
+const SEEN_KEY = 'lyfter_seen_anns'
+const seenIds = ref(new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')))
+
+function isSeen(id) {
+  return seenIds.value.has(id)
+}
+
+let seenTimer = null
+
+watch(
+  () => anns.announcements.length,
+  (len) => {
+    if (!len) return
+    if (!anns.announcements.some((a) => !seenIds.value.has(a.id))) return
+    clearTimeout(seenTimer)
+    seenTimer = setTimeout(() => {
+      const updated = new Set([...seenIds.value, ...anns.announcements.map((a) => a.id)])
+      seenIds.value = updated
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...updated]))
+    }, 3500)
+  },
+)
 
 onMounted(() => {
   if (!badges.loaded) badges.fetchMyBadges()
@@ -62,7 +87,10 @@ onMounted(() => {
     emojiIndex.value = (emojiIndex.value + 1) % EMOJIS.length
   }, 2200)
 })
-onUnmounted(() => clearInterval(emojiTimer))
+onUnmounted(() => {
+  clearInterval(emojiTimer)
+  clearTimeout(seenTimer)
+})
 
 function goScan() {
   onboarding.dismissTip('scan')
@@ -152,8 +180,18 @@ async function downloadCard(badge) {
     <section v-if="anns.announcements.length" class="space-y-3">
       <h2 class="font-semibold">{{ $t('announcements.title') }}</h2>
       <div class="space-y-3">
-        <div v-for="ann in anns.announcements" :key="ann.id" class="surface space-y-2 p-4">
-          <p class="font-semibold leading-snug">{{ ann.title }}</p>
+        <div v-for="ann in anns.announcements" :key="ann.id" class="surface relative space-y-2 p-4">
+          <!-- Bell: only shown while unseen; rings for ~2.4 s then settles still -->
+          <svg
+            v-if="!isSeen(ann.id)"
+            class="ann-bell absolute right-3 top-3 h-4 w-4 text-primary"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+          </svg>
+          <p class="font-semibold leading-snug pr-6">{{ ann.title }}</p>
           <p v-if="ann.body" class="whitespace-pre-line text-sm text-base-content/70">{{ ann.body }}</p>
           <RouterLink
             v-if="ann.event_id"
@@ -336,3 +374,24 @@ async function downloadCard(badge) {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes ring-bell {
+  0%,  100% { transform: rotate(0deg); }
+  10%       { transform: rotate(-22deg); }
+  20%       { transform: rotate(22deg); }
+  30%       { transform: rotate(-16deg); }
+  40%       { transform: rotate(16deg); }
+  50%       { transform: rotate(-10deg); }
+  60%       { transform: rotate(10deg); }
+  70%       { transform: rotate(-5deg); }
+  80%       { transform: rotate(5deg); }
+  90%       { transform: rotate(-2deg); }
+}
+
+.ann-bell {
+  transform-origin: top center;
+  animation: ring-bell 0.8s ease-in-out 3;
+  animation-fill-mode: forwards;
+}
+</style>
