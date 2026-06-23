@@ -63,6 +63,7 @@ onMounted(load)
       <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab tab-active">Orgs</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
     </div>
 
     <p class="text-xs text-base-content/55">

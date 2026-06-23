@@ -35,6 +35,7 @@ function logout() {
       <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
       <RouterLink v-if="auth.isAdmin" to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab">Orgs</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
     </div>
 
     <RouterLink v-if="auth.isAdmin" to="/admin/events/new" class="btn btn-primary w-full tap-target">

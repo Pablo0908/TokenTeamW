@@ -109,6 +109,7 @@ onMounted(load)
       <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab tab-active">Audit</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab">Orgs</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
     </div>
 
     <!-- Search by user (email/name) or event (name) -->
