@@ -23,6 +23,8 @@ const hasMore = ref(false)
 // Human-readable label + accent per audit action emitted by the backend.
 const ACTIONS = {
   'event.create': { label: 'Event created', cls: 'badge-primary' },
+  'event.start': { label: 'Event started', cls: 'badge-success' },
+  'event.stop': { label: 'Event stopped', cls: 'badge-ghost' },
   'badge.create': { label: 'Badge minted', cls: 'badge-secondary' },
   'badge.bulk_create': { label: 'Badges minted', cls: 'badge-secondary' },
   'badge.redeem': { label: 'Badge scanned', cls: 'badge-success' },

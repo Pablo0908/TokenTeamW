@@ -86,6 +86,18 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
+  // Start/stop an event (manual activation override). orgId routes to the org path.
+  async function setEventStarted(eventId, started, orgId = null) {
+    error.value = null
+    try {
+      const { data } = await api.patch(`${badgeBase(eventId, orgId)}/status`, { started })
+      return data // { id, started, status }
+    } catch (e) {
+      error.value = readApiError(e, 'Could not update the event status.')
+      throw e
+    }
+  }
+
   async function fetchAdminBadges(eventId, orgId = null) {
     error.value = null
     try {
@@ -112,6 +124,7 @@ export const useEventsStore = defineStore('events', () => {
     createEvent,
     addBadge,
     addBadgesBulk,
+    setEventStarted,
     fetchAdminBadges,
   }
 })

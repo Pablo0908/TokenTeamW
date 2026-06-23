@@ -70,6 +70,20 @@ async function refresh() {
   await Promise.all([events.fetchEvent(id), events.fetchAdminBadges(id, orgId.value)])
 }
 
+const togglingStart = ref(false)
+async function toggleStarted() {
+  if (!ev.value) return
+  togglingStart.value = true
+  try {
+    await events.setEventStarted(id, !ev.value.started, orgId.value)
+    await events.fetchEvent(id)
+  } catch {
+    /* error surfaced via store */
+  } finally {
+    togglingStart.value = false
+  }
+}
+
 async function addBadge() {
   badgeTouched.value = true
   if (!form.name.trim()) return
@@ -146,6 +160,33 @@ onBeforeUnmount(() => clearInterval(poll))
         <h1 class="text-2xl font-bold">{{ ev.name }}</h1>
         <p v-if="ev.description" class="text-sm text-base-content/65">{{ ev.description }}</p>
       </header>
+
+      <!-- Status + manual start/stop (managers only) -->
+      <div class="surface flex items-center justify-between gap-3 p-4">
+        <div class="min-w-0">
+          <p class="flex items-center gap-2">
+            <span
+              class="badge badge-sm capitalize"
+              :class="ev.status === 'active' ? 'badge-success' : ev.status === 'upcoming' ? 'badge-warning' : 'badge-ghost'"
+            >{{ ev.status }}</span>
+            <span v-if="ev.started" class="text-[0.7rem] font-medium text-success">● started manually</span>
+          </p>
+          <p class="mt-1 text-[0.7rem] text-base-content/50">
+            {{ ev.status === 'active' ? 'Attendees can scan this event now.' : 'Attendees cannot scan this event yet.' }}
+          </p>
+        </div>
+        <button
+          v-if="canManage"
+          type="button"
+          class="btn btn-sm shrink-0 tap-target"
+          :class="ev.started ? 'btn-outline btn-warning' : 'btn-success'"
+          :disabled="togglingStart"
+          @click="toggleStarted"
+        >
+          <span v-if="togglingStart" class="loading loading-spinner loading-xs" />
+          {{ ev.started ? 'Stop event' : 'Start event' }}
+        </button>
+      </div>
 
       <!-- Live summary -->
       <section class="grid grid-cols-3 gap-3">

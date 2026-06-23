@@ -14,7 +14,7 @@ const events = useEventsStore()
 
 // editingId === null + form empty => creating; otherwise editing that announcement.
 const editingId = ref(null)
-const form = reactive({ title: '', body: '', event_id: '' })
+const form = reactive({ title: '', body: '', event_id: '', enable_event: false })
 const touched = ref(false)
 const submitting = ref(false)
 const deletingId = ref(null)
@@ -33,6 +33,7 @@ function resetForm() {
   form.title = ''
   form.body = ''
   form.event_id = ''
+  form.enable_event = false
   touched.value = false
 }
 
@@ -41,6 +42,7 @@ function startEdit(a) {
   form.title = a.title
   form.body = a.body
   form.event_id = a.event_id || ''
+  form.enable_event = false
   touched.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -50,7 +52,12 @@ async function submit() {
   if (!valid.value) return
   submitting.value = true
   try {
-    const payload = { title: form.title.trim(), body: form.body.trim(), event_id: form.event_id || null }
+    const payload = {
+      title: form.title.trim(),
+      body: form.body.trim(),
+      event_id: form.event_id || null,
+      enable_event: !!(form.event_id && form.enable_event),
+    }
     if (editingId.value) await announcements.update(editingId.value, payload)
     else await announcements.create(payload)
     resetForm()
@@ -146,6 +153,15 @@ onMounted(() => {
           <option value="">No linked event</option>
           <option v-for="ev in events.events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
         </select>
+      </label>
+
+      <!-- Auto-enable the linked event so an announced event is scannable right away -->
+      <label v-if="form.event_id" class="flex cursor-pointer items-start gap-2 rounded-xl bg-base-100/50 p-3">
+        <input v-model="form.enable_event" type="checkbox" class="checkbox checkbox-sm checkbox-primary mt-0.5" />
+        <span class="text-sm">
+          Start the linked event now
+          <span class="block text-[0.7rem] text-base-content/55">Forces it active so attendees can scan immediately — no need to set it live separately.</span>
+        </span>
       </label>
 
       <button type="submit" class="btn btn-primary btn-sm w-full tap-target" :disabled="submitting">
