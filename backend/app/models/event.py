@@ -7,6 +7,7 @@ from app import mongo
 
 def create_indexes():
     mongo.db.events.create_index("created_by")
+    mongo.db.events.create_index("org_id")
 
 
 def _oid(value):
@@ -56,7 +57,7 @@ def compute_status(start, end, now=None):
     return "active"
 
 
-def create_event(name, description, start_date, end_date, location, prize, created_by):
+def create_event(name, description, start_date, end_date, location, prize, created_by, org_id=None):
     result = mongo.db.events.insert_one(
         {
             "name": name,
@@ -65,6 +66,9 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             "end_date": end_date,
             "location": location,
             "prize": prize,
+            # Authoritative tenant pointer. Optional at the model layer so existing
+            # callers don't break; the admin route resolves and passes it.
+            "org_id": _oid(org_id) if org_id else None,
             "created_by": _oid(created_by),
             "created_at": datetime.now(timezone.utc),
         }
@@ -79,13 +83,20 @@ def find_by_id(event_id):
         return None
 
 
-def all_events():
-    return list(mongo.db.events.find().sort("created_at", -1))
+def all_events(org_id=None):
+    """All events, newest first. When org_id is given, scope to that tenant;
+    omitted = current global behavior, unchanged."""
+    query = {"org_id": _oid(org_id)} if org_id else {}
+    return list(mongo.db.events.find(query).sort("created_at", -1))
 
 
-def event_summary(event, badges_total, badges_earned):
-    """The shape every event-list/detail endpoint shares (matches the frontend contract)."""
-    return {
+def event_summary(event, badges_total, badges_earned, org=None):
+    """The shape every event-list/detail endpoint shares (matches the frontend contract).
+
+    `org_id` and (when the org document is passed) minimal `org` metadata are added
+    additively — existing clients ignore unknown fields, so behavior is unchanged.
+    """
+    summary = {
         "id": str(event["_id"]),
         "name": event.get("name", ""),
         "description": event.get("description", ""),
@@ -97,4 +108,12 @@ def event_summary(event, badges_total, badges_earned):
         "badges_total": badges_total,
         "badges_earned": badges_earned,
         "completed": badges_total > 0 and badges_earned >= badges_total,
+        "org_id": str(event["org_id"]) if event.get("org_id") else None,
     }
+    if org is not None:
+        summary["org"] = {
+            "id": str(org["_id"]),
+            "name": org.get("name", ""),
+            "slug": org.get("slug", ""),
+        }
+    return summary

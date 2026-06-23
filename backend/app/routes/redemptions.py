@@ -27,7 +27,7 @@ def redeem(current_user, event_id, token):
         return jsonify({"error": "This event isn’t active right now."}), 403
 
     try:
-        redeemed_at = redemption_model.redeem(badge["_id"], ev["_id"], uid)
+        redeemed_at = redemption_model.redeem(badge["_id"], ev["_id"], uid, org_id=ev.get("org_id"))
     except DuplicateKeyError:
         return jsonify({"error": "You already have this badge."}), 409
 

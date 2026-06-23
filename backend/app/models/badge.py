@@ -9,16 +9,20 @@ from app.models.event import fmt_date
 def create_indexes():
     mongo.db.badges.create_index("event_id")
     mongo.db.badges.create_index("token", unique=True)
+    mongo.db.badges.create_index("org_id")
 
 
 def _oid(value):
     return value if isinstance(value, ObjectId) else ObjectId(value)
 
 
-def create_badge(event_id, name, description, token, qr_image, icon="🏅", color="primary", image=""):
+def create_badge(event_id, name, description, token, qr_image, icon="🏅", color="primary", image="", org_id=None):
     result = mongo.db.badges.insert_one(
         {
             "event_id": _oid(event_id),
+            # Denormalized from the parent event so badge queries can scope by tenant
+            # without a join. Always set from the event's org_id at the call site.
+            "org_id": _oid(org_id) if org_id else None,
             "name": name,
             "description": description,
             "icon": icon,
@@ -32,8 +36,13 @@ def create_badge(event_id, name, description, token, qr_image, icon="🏅", colo
     return str(result.inserted_id)
 
 
-def find_by_event(event_id):
-    return list(mongo.db.badges.find({"event_id": _oid(event_id)}).sort("created_at", 1))
+def find_by_event(event_id, org_id=None):
+    """Badges for an event. An optional org_id adds a defense-in-depth tenant guard
+    (the event_id already implies the tenant); omitted = unchanged behavior."""
+    query = {"event_id": _oid(event_id)}
+    if org_id:
+        query["org_id"] = _oid(org_id)
+    return list(mongo.db.badges.find(query).sort("created_at", 1))
 
 
 def find_by_token(event_id, token):
