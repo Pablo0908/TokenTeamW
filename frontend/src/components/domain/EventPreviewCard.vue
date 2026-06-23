@@ -219,7 +219,7 @@ function goLogin() {
 
 /* ── Hero ── */
 .hero-section {
-  position:relative;padding:28px 22px 26px;
+  position:relative;padding:32px 22px 32px;
   background:radial-gradient(120% 70% at 0% 0%,rgba(113,206,255,.16),transparent 52%),
              radial-gradient(120% 80% at 100% 100%,rgba(215,152,231,.16),transparent 55%),
              #0c0e14;
@@ -257,12 +257,12 @@ function goLogin() {
 
 /* ── Shared section base ── */
 .info-section,
-.faq-section { padding:22px 20px 20px;background:#0b0d13;border-top:1px solid rgba(255,255,255,.06); }
-.prize-section { padding:20px;background:radial-gradient(120% 70% at 100% 0%,rgba(215,152,231,.1),transparent 54%),#0c0b13;border-top:1px solid rgba(255,255,255,.06); }
-.footer-cta { padding:20px 20px 28px;background:#0c0e14;border-top:1px solid rgba(255,255,255,.06);text-align:center; }
+.faq-section { padding:32px 22px 28px;background:#0b0d13;border-top:2px solid rgba(255,255,255,.05); }
+.prize-section { padding:28px 22px;background:radial-gradient(120% 70% at 100% 0%,rgba(215,152,231,.1),transparent 54%),#0c0b13;border-top:2px solid rgba(255,255,255,.05); }
+.footer-cta { padding:32px 22px 36px;background:#0c0e14;border-top:2px solid rgba(255,255,255,.05);text-align:center; }
 
-.section-title { font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;color:#fff;display:block;margin-bottom:6px; }
-.section-body  { font-family:'Montserrat',sans-serif;font-size:12px;color:rgba(255,255,255,.45);line-height:1.7;margin-bottom:18px; }
+.section-title { font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;color:#fff;display:block;margin-bottom:8px; }
+.section-body  { font-family:'Montserrat',sans-serif;font-size:12px;color:rgba(255,255,255,.45);line-height:1.7;margin-bottom:22px; }
 
 /* ── Badge row ── */
 .badge-row { display:flex;gap:14px;align-items:flex-start; }
@@ -288,7 +288,7 @@ function goLogin() {
 .prize-desc  { font-family:'Montserrat',sans-serif;font-size:12px;color:rgba(255,255,255,.48);line-height:1.7; }
 
 /* ── FAQ ── */
-.faq-list { display:flex;flex-direction:column;gap:12px;margin-top:16px; }
+.faq-list { display:flex;flex-direction:column;gap:14px;margin-top:18px; }
 .faq-item { padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px; }
 .faq-q { font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;color:#fff;margin-bottom:4px; }
 .faq-a { font-family:'Montserrat',sans-serif;font-size:11.5px;color:rgba(255,255,255,.48);line-height:1.65; }
