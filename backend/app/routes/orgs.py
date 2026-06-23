@@ -236,27 +236,119 @@ def org_create_event(current_user, org_id):
     return jsonify({"id": event_id, "name": name}), 201
 
 
+def _org_event_or_404(org_id, event_id):
+    """Resolve an event that genuinely belongs to this org, else None."""
+    ev = event_model.find_by_id(event_id)
+    return ev if ev and str(ev.get("org_id")) == str(org_id) else None
+
+
 @orgs_bp.route("/orgs/<org_id>/events/<event_id>/badge", methods=["POST"])
 @org_role_required("owner", "admin")
 def org_create_badge(current_user, org_id, event_id):
-    ev = event_model.find_by_id(event_id)
-    if not ev or str(ev.get("org_id")) != str(org_id):
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
         return jsonify({"error": "Event not found"}), 404
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
     if not name:
         return jsonify({"error": "Badge name is required."}), 400
+    # Server generates token + QR (same contract as the platform /admin path).
     token = generate_badge_token()
     qr_url = build_redeem_url(str(ev["_id"]), token)
+    qr_image = generate_qr_data_url(qr_url)
     badge_id = badge_model.create_badge(
         event_id=ev["_id"], name=name, description=(body.get("description") or "").strip(),
-        token=token, qr_image=generate_qr_data_url(qr_url),
+        token=token, qr_image=qr_image,
         icon=(body.get("icon") or "🏅"), color=(body.get("color") or "primary"),
         image=(body.get("image") or "").strip(), org_id=ev.get("org_id"),
     )
     audit_model.log(current_user["sub"], "badge.create", f"{name} · {ev.get('name', '')}",
                     org_id=org_id, event_id=str(ev["_id"]))
-    return jsonify({"id": badge_id, "name": name, "token": token, "qr_url": qr_url}), 201
+    return jsonify({
+        "id": badge_id, "name": name, "token": token, "qr_url": qr_url,
+        "redeem_path": f"/redeem/{str(ev['_id'])}/{token}", "qr_image": qr_image,
+    }), 201
+
+
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>/badges/bulk", methods=["POST"])
+@org_role_required("owner", "admin")
+def org_create_badges_bulk(current_user, org_id, event_id):
+    """Create many badges at once for an org event — same contract as the platform
+    /admin bulk route: either an explicit `badges` list, or a `count` + `name_prefix`."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+
+    body = request.get_json(silent=True) or {}
+    specs = body.get("badges")
+    if not isinstance(specs, list):
+        count = body.get("count")
+        prefix = (body.get("name_prefix") or body.get("name") or "").strip()
+        shared = {"icon": body.get("icon", "🏅"), "color": body.get("color", "primary")}
+        if isinstance(count, int) and count > 0 and prefix:
+            specs = [{"name": f"{prefix} {i}", **shared} for i in range(1, count + 1)]
+        else:
+            return jsonify({"error": "Provide a 'badges' list, or a 'count' plus a 'name_prefix'."}), 400
+
+    cleaned = []
+    for s in specs:
+        if not isinstance(s, dict):
+            continue
+        name = (s.get("name") or "").strip()
+        if name:
+            cleaned.append({**s, "name": name})
+
+    if not cleaned:
+        return jsonify({"error": "No valid badge names were provided."}), 400
+    if len(cleaned) > 100:
+        return jsonify({"error": "You can create at most 100 badges at once."}), 400
+
+    created = []
+    for s in cleaned:
+        token = generate_badge_token()
+        qr_url = build_redeem_url(str(ev["_id"]), token)
+        badge_id = badge_model.create_badge(
+            event_id=ev["_id"], name=s["name"], description=(s.get("description") or "").strip(),
+            token=token, qr_image=generate_qr_data_url(qr_url),
+            icon=(s.get("icon") or "🏅"), color=(s.get("color") or "primary"),
+            image=(s.get("image") or "").strip(), org_id=ev.get("org_id"),
+        )
+        created.append({
+            "id": badge_id, "name": s["name"], "token": token, "qr_url": qr_url,
+            "redeem_path": f"/redeem/{str(ev['_id'])}/{token}",
+        })
+    audit_model.log(current_user["sub"], "badge.bulk_create", f"{len(created)} badges · {ev.get('name', '')}",
+                    org_id=org_id, event_id=str(ev["_id"]))
+    return jsonify({"created": created, "count": len(created)}), 201
+
+
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>/badges", methods=["GET"])
+@org_role_required("owner", "admin", "staff")
+def org_list_badges(current_user, org_id, event_id):
+    """Org event's badges with live redemption counts + QR data — same shape the
+    platform panel consumes, so the management UI is identical. Staff may read."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+
+    total_attendees = user_model.count_attendees()
+    out = []
+    for b in badge_model.find_by_event(ev["_id"]):
+        token = b.get("token", "")
+        out.append({
+            "id": str(b["_id"]),
+            "name": b.get("name", ""),
+            "description": b.get("description", ""),
+            "icon": b.get("icon", "🏅"),
+            "color": b.get("color", "primary"),
+            "image": b.get("image", ""),
+            "token": token,
+            "qr_url": build_redeem_url(str(ev["_id"]), token),
+            "redeem_path": f"/redeem/{str(ev['_id'])}/{token}",
+            "redeemed_by": redemption_model.count_for_badge(b["_id"]),
+            "total_attendees": total_attendees,
+        })
+    return jsonify(out), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/participants", methods=["GET"])
