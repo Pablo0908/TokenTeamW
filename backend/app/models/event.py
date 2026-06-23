@@ -48,18 +48,25 @@ def fmt_date(value):
         return ""
 
 
-def compute_status(start, end, now=None, started=False):
-    """Derive the lifecycle status from the date window.
+def compute_status(start, end, now=None, started=False, paused=False, ended=False):
+    """Derive the lifecycle status from the date window plus moderation overrides.
 
     No dates -> 'active' (an unscheduled event is treated as happening now, so a
     freshly-created demo event is immediately scannable). Redemption requires 'active'.
 
-    `started` is a manual activation override: when a manager explicitly "starts" an
-    event it is forced 'active' (scannable now) regardless of its dates. This exists
-    to reduce human error — e.g. announcing an event whose start date is still in the
-    future would otherwise leave it unscannable. "Stop" clears the override and the
-    status reverts to being date-derived.
+    Moderation overrides take precedence over the date window, in this order:
+      - `ended`  -> 'past'    (terminal moderation: appears in past events, not
+                               scannable; reversible only by super admin / owner)
+      - `paused` -> 'locked'  (temporary moderation lock: attendees still see earned
+                               badges but cannot scan; reversible)
+      - `started`-> 'active'  (manual activation: forced scannable regardless of dates)
+    Only one applies — ended wins over paused wins over started. None set => the
+    status follows the dates exactly as before.
     """
+    if ended:
+        return "past"
+    if paused:
+        return "locked"
     if started:
         return "active"
     now = now or datetime.now(timezone.utc)
@@ -71,6 +78,17 @@ def compute_status(start, end, now=None, started=False):
     if end_d and today > end_d:
         return "past"
     return "active"
+
+
+def status_of(event, now=None):
+    """Status for an event document, applying its moderation overrides. The single
+    source of truth used by the feed, the redeem gate and the summary payload."""
+    return compute_status(
+        event.get("start_date"), event.get("end_date"), now=now,
+        started=event.get("started", False),
+        paused=event.get("paused", False),
+        ended=event.get("ended", False),
+    )
 
 
 def create_event(name, description, start_date, end_date, location, prize, created_by,
@@ -92,6 +110,10 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             # Manual activation override (see compute_status). False = status follows
             # the date window; True = forced active/scannable now.
             "started": False,
+            # Moderation overrides: paused = temporary lock (status 'locked'), ended =
+            # terminal (status 'past'). Both block redemption while set.
+            "paused": False,
+            "ended": False,
             "created_by": _oid(created_by),
             "created_at": datetime.now(timezone.utc),
         }
@@ -108,8 +130,22 @@ def find_by_id(event_id):
 
 def set_started(event_id, started: bool):
     """Flip the manual activation override. Returns matched count > 0."""
+    return _set_flag(event_id, "started", started)
+
+
+def set_paused(event_id, paused: bool):
+    """Flip the temporary moderation lock ('locked'). Returns matched count > 0."""
+    return _set_flag(event_id, "paused", paused)
+
+
+def set_ended(event_id, ended: bool):
+    """Flip the terminal moderation state ('past'). Returns matched count > 0."""
+    return _set_flag(event_id, "ended", ended)
+
+
+def _set_flag(event_id, field, value):
     try:
-        res = mongo.db.events.update_one({"_id": _oid(event_id)}, {"$set": {"started": bool(started)}})
+        res = mongo.db.events.update_one({"_id": _oid(event_id)}, {"$set": {field: bool(value)}})
         return res.matched_count > 0
     except Exception:
         return False
@@ -136,9 +172,10 @@ def event_summary(event, badges_total, badges_earned, org=None):
         "endDate": fmt_date(event.get("end_date")),
         "location": event.get("location", ""),
         "prize": event.get("prize", ""),
-        "status": compute_status(event.get("start_date"), event.get("end_date"),
-                                 started=event.get("started", False)),
+        "status": status_of(event),
         "started": bool(event.get("started", False)),
+        "paused": bool(event.get("paused", False)),
+        "ended": bool(event.get("ended", False)),
         "badges_total": badges_total,
         "badges_earned": badges_earned,
         "completed": badges_total > 0 and badges_earned >= badges_total,

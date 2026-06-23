@@ -176,8 +176,40 @@ def set_event_status(current_user, event_id):
         current_user["sub"], "event.start" if started else "event.stop",
         ev.get("name", ""), org_id=ev.get("org_id"), event_id=str(ev["_id"]),
     )
-    status = event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=started)
-    return jsonify({"id": event_id, "started": started, "status": status}), 200
+    ev["started"] = started
+    return jsonify({"id": event_id, "started": started, "status": event_model.status_of(ev)}), 200
+
+
+@admin_bp.route("/events/<event_id>/pause", methods=["PATCH"])
+@admin_required
+def pause_event(current_user, event_id):
+    """Temporary moderation lock: attendees keep seeing earned badges but cannot scan.
+    Reversible (paused=false unlocks)."""
+    ev = event_model.find_by_id(event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    paused = bool((request.get_json(silent=True) or {}).get("paused", True))
+    event_model.set_paused(event_id, paused)
+    audit_model.log(current_user["sub"], "event.pause" if paused else "event.unpause",
+                    ev.get("name", ""), org_id=ev.get("org_id"), event_id=str(ev["_id"]))
+    ev["paused"] = paused
+    return jsonify({"id": event_id, "paused": paused, "status": event_model.status_of(ev)}), 200
+
+
+@admin_bp.route("/events/<event_id>/end", methods=["PATCH"])
+@admin_required
+def end_event(current_user, event_id):
+    """Terminal moderation: moves the event to past events and blocks scanning.
+    Reversible by a super admin (ended=false reopens)."""
+    ev = event_model.find_by_id(event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    ended = bool((request.get_json(silent=True) or {}).get("ended", True))
+    event_model.set_ended(event_id, ended)
+    audit_model.log(current_user["sub"], "event.end" if ended else "event.reopen",
+                    ev.get("name", ""), org_id=ev.get("org_id"), event_id=str(ev["_id"]))
+    ev["ended"] = ended
+    return jsonify({"id": event_id, "ended": ended, "status": event_model.status_of(ev)}), 200
 
 
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
@@ -254,7 +286,7 @@ def user_badges(current_user, user_id):
                 "event_id": str(ev["_id"]),
                 "event": ev.get("name", ""),
                 "date": event_model.fmt_date(ev.get("start_date")),
-                "status": event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=ev.get("started", False)),
+                "status": event_model.status_of(ev),
                 "prize": ev.get("prize", ""),
                 "badges_total": total,
                 "badges_earned": earned,

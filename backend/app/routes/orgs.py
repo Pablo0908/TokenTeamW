@@ -363,8 +363,40 @@ def org_set_event_status(current_user, org_id, event_id):
     event_model.set_started(event_id, started)
     audit_model.log(current_user["sub"], "event.start" if started else "event.stop",
                     ev.get("name", ""), org_id=org_id, event_id=str(ev["_id"]))
-    status = event_model.compute_status(ev.get("start_date"), ev.get("end_date"), started=started)
-    return jsonify({"id": event_id, "started": started, "status": status}), 200
+    ev["started"] = started
+    return jsonify({"id": event_id, "started": started, "status": event_model.status_of(ev)}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>/pause", methods=["PATCH"])
+@org_role_required("owner", "admin")
+def org_pause_event(current_user, org_id, event_id):
+    """Temporary moderation lock on an org event (owner/admin). Attendees keep seeing
+    earned badges but cannot scan until unpaused."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    paused = bool((request.get_json(silent=True) or {}).get("paused", True))
+    event_model.set_paused(event_id, paused)
+    audit_model.log(current_user["sub"], "event.pause" if paused else "event.unpause",
+                    ev.get("name", ""), org_id=org_id, event_id=str(ev["_id"]))
+    ev["paused"] = paused
+    return jsonify({"id": event_id, "paused": paused, "status": event_model.status_of(ev)}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>/end", methods=["PATCH"])
+@org_role_required("owner")
+def org_end_event(current_user, org_id, event_id):
+    """End/reopen an org event — owner-only (super_admin passes org_role_required).
+    Ending moves it to past events and blocks scanning; reversible."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    ended = bool((request.get_json(silent=True) or {}).get("ended", True))
+    event_model.set_ended(event_id, ended)
+    audit_model.log(current_user["sub"], "event.end" if ended else "event.reopen",
+                    ev.get("name", ""), org_id=org_id, event_id=str(ev["_id"]))
+    ev["ended"] = ended
+    return jsonify({"id": event_id, "ended": ended, "status": event_model.status_of(ev)}), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/participants", methods=["GET"])
