@@ -80,6 +80,20 @@ def staff_required(f):
     return decorated
 
 
+def super_admin_required(f):
+    """Platform tier. Gates platform-wide actions (e.g. issuing org-creation invites)
+    on `platform_role == "super_admin"`, looked up fresh (not carried in the JWT)."""
+    @jwt_required
+    @wraps(f)
+    def decorated(*args, current_user, **kwargs):
+        from app.models import user as user_model
+        if not user_model.is_super_admin(user_model.find_by_id(current_user["sub"])):
+            return jsonify({"error": "Super admin access required."}), 403
+        return f(*args, current_user=current_user, **kwargs)
+
+    return decorated
+
+
 def org_role_required(*roles):
     """Authorize against an org-scoped membership (the multi-tenant authority model).
 

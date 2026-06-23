@@ -5,6 +5,8 @@ from flask import Blueprint, request, jsonify
 
 from app import mongo
 from app.models import user as user_model
+from app.models import membership as membership_model
+from app.models import organization as org_model
 from app.utils.auth import jwt_required, hash_password
 from app.utils.email import send_reset_email
 from app.routes.auth import _validate_password
@@ -14,6 +16,29 @@ _CODE_MAX_ATTEMPTS = 5
 
 # Current-user endpoints. /me/badges lives in badges.py; this owns /me/settings.
 me_bp = Blueprint("me", __name__, url_prefix="/me")
+
+
+@me_bp.route("/orgs", methods=["GET"])
+@jwt_required
+def my_orgs(current_user):
+    """The caller's platform tier + the orgs they belong to (with their role in each).
+    Drives the client's platform-vs-org panel split and the active-org switcher."""
+    actor = user_model.find_by_id(current_user["sub"])
+    orgs = []
+    for m in membership_model.list_for_user(current_user["sub"]):
+        org = org_model.find_by_id(m["org_id"])
+        if org:
+            orgs.append({
+                "id": str(org["_id"]),
+                "name": org.get("name", ""),
+                "slug": org.get("slug", ""),
+                "status": org.get("status", "active"),
+                "role": m.get("role"),
+            })
+    return jsonify({
+        "platform_role": actor.get("platform_role") if actor else None,
+        "orgs": orgs,
+    }), 200
 
 
 @me_bp.route("/settings", methods=["GET"])

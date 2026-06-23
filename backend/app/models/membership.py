@@ -62,6 +62,23 @@ def orgs_for_user(user_id):
     return [str(doc["org_id"]) for doc in cursor]
 
 
+def list_for_user(user_id):
+    """All membership docs for a user (role + org_id), for building their org list."""
+    try:
+        return list(mongo.db.memberships.find({"user_id": _oid(user_id)}))
+    except Exception:
+        return []
+
+
+def members_of(org_id):
+    """All membership docs in an org (for the member list)."""
+    return list(mongo.db.memberships.find({"org_id": _oid(org_id)}))
+
+
+def remove(user_id, org_id):
+    mongo.db.memberships.delete_one({"user_id": _oid(user_id), "org_id": _oid(org_id)})
+
+
 def admin_orgs_for_user(user_id):
     """org_id strings where the user is an org owner or admin (admin-tier authority).
     Used to scope admin-only reads like the audit to the orgs they administer."""
