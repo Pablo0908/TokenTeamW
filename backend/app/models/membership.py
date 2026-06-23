@@ -60,3 +60,15 @@ def orgs_for_user(user_id):
     except Exception:
         return []
     return [str(doc["org_id"]) for doc in cursor]
+
+
+def admin_orgs_for_user(user_id):
+    """org_id strings where the user is an org owner or admin (admin-tier authority).
+    Used to scope admin-only reads like the audit to the orgs they administer."""
+    try:
+        cursor = mongo.db.memberships.find(
+            {"user_id": _oid(user_id), "role": {"$in": ["owner", "admin"]}}, {"org_id": 1}
+        )
+    except Exception:
+        return []
+    return [str(doc["org_id"]) for doc in cursor]
