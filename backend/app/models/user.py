@@ -1,8 +1,19 @@
+import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
 
 from app import mongo
+
+
+def search_ids(q):
+    """User ids (as strings) whose email, name or lastname matches `q` (case-insensitive).
+    Used to resolve an audit search term to actors over indexed identity fields."""
+    rx = {"$regex": re.escape(q), "$options": "i"}
+    cursor = mongo.db.users.find(
+        {"$or": [{"email": rx}, {"name": rx}, {"lastname": rx}]}, {"_id": 1}
+    )
+    return [str(doc["_id"]) for doc in cursor]
 
 
 # --- Appearance/behaviour preferences (synced to the frontend Settings panel) ---

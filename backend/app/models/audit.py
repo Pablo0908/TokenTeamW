@@ -2,12 +2,15 @@ from datetime import datetime, timezone
 
 from app import mongo
 
+PAGE_SIZE = 50  # server-side audit page size
+
 
 def create_indexes():
     mongo.db.audit_log.create_index([("ts", -1)])
     mongo.db.audit_log.create_index([("actor_id", 1)])
     mongo.db.audit_log.create_index("org_id")
     mongo.db.audit_log.create_index("event_id")
+    mongo.db.audit_log.create_index("actor_email")  # search-by-user filter path
     # Serves the tier-scoped read: filter org_id ∈ orgs, sorted ts desc.
     mongo.db.audit_log.create_index([("org_id", 1), ("ts", -1)])
 
@@ -41,17 +44,41 @@ def log(actor_id, action, detail="", org_id=None, event_id=None, actor_role=None
     )
 
 
-def recent(limit=150):
-    cursor = mongo.db.audit_log.find({}, {"_id": 0}).sort("ts", -1).limit(limit)
-    return [{**doc, "ts": doc["ts"].isoformat()} for doc in cursor]
-
-
-def recent_for_orgs(org_ids, limit=150):
-    """Audit entries for the given orgs (org_id is stored as a string), newest first.
-    Used to scope an org admin to their own org(s)."""
+def query(filter=None, page=1, page_size=PAGE_SIZE):
+    """Paginated, ts-desc audit read. `filter` is a fully-built Mongo query (the route
+    composes the tier scope and any search clause). Returns (entries, total)."""
+    filter = filter or {}
+    total = mongo.db.audit_log.count_documents(filter)
+    skip = max(0, (page - 1) * page_size)
     cursor = (
-        mongo.db.audit_log.find({"org_id": {"$in": list(org_ids)}}, {"_id": 0})
+        mongo.db.audit_log.find(filter, {"_id": 0})
         .sort("ts", -1)
-        .limit(limit)
+        .skip(skip)
+        .limit(page_size)
     )
-    return [{**doc, "ts": doc["ts"].isoformat()} for doc in cursor]
+    entries = [{**doc, "ts": doc["ts"].isoformat()} for doc in cursor]
+    return entries, total
+
+
+def activity_buckets(actor_id, period, scope_filter=None):
+    """Per-period counts of one actor's interaction entries, oldest→newest.
+    `period` is 'day' | 'week' | 'month'; `scope_filter` narrows by tenant (org admin)."""
+    unit = {"day": "day", "week": "week", "month": "month"}.get(period, "day")
+    match = {"actor_id": str(actor_id)}
+    if scope_filter:
+        match.update(scope_filter)
+    pipeline = [
+        {"$match": match},
+        {"$group": {"_id": {"$dateTrunc": {"date": "$ts", "unit": unit}}, "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+    ]
+    out = []
+    for doc in mongo.db.audit_log.aggregate(pipeline):
+        bucket = doc["_id"]
+        out.append({"bucket": bucket.isoformat() if bucket else None, "count": doc["count"]})
+    return out
+
+
+def login_count(actor_id):
+    """Total successful logins for a user (platform-level metric)."""
+    return mongo.db.audit_log.count_documents({"actor_id": str(actor_id), "action": "auth.login"})

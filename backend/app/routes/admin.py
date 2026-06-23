@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, request, jsonify
 
 from app.models import event as event_model
@@ -317,10 +319,36 @@ def audit_log(current_user):
     # (Guarded by membership/platform, not the legacy global role, so it stays correct
     # for org admins introduced by self-service in P4.)
     actor = user_model.find_by_id(current_user["sub"])
-    if user_model.is_super_admin(actor):
-        return jsonify({"entries": audit_model.recent(150)}), 200
+    is_super = user_model.is_super_admin(actor)
 
-    org_ids = membership_model.admin_orgs_for_user(current_user["sub"])
-    if not org_ids:
-        return jsonify({"error": "Admin access required."}), 403
-    return jsonify({"entries": audit_model.recent_for_orgs(org_ids, 150)}), 200
+    clauses = []
+    if not is_super:
+        org_ids = membership_model.admin_orgs_for_user(current_user["sub"])
+        if not org_ids:
+            return jsonify({"error": "Admin access required."}), 403
+        clauses.append({"org_id": {"$in": org_ids}})
+
+    # Search by USER (email/name -> actor) or EVENT (name -> event_id), server-side
+    # over indexed fields; actor_email regex also matches entries whose user is gone.
+    q = (request.args.get("q") or "").strip()
+    if q:
+        clauses.append({"$or": [
+            {"actor_id": {"$in": user_model.search_ids(q)}},
+            {"event_id": {"$in": event_model.search_ids(q)}},
+            {"actor_email": {"$regex": re.escape(q), "$options": "i"}},
+        ]})
+
+    filt = {"$and": clauses} if clauses else {}
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+
+    entries, total = audit_model.query(filt, page, audit_model.PAGE_SIZE)
+    return jsonify({
+        "entries": entries,
+        "page": page,
+        "page_size": audit_model.PAGE_SIZE,
+        "total": total,
+        "has_more": page * audit_model.PAGE_SIZE < total,
+    }), 200

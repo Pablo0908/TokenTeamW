@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -12,6 +13,13 @@ def create_indexes():
 
 def _oid(value):
     return value if isinstance(value, ObjectId) else ObjectId(value)
+
+
+def search_ids(q):
+    """Event ids (as strings) whose name matches `q` (case-insensitive). Used to
+    resolve an audit search term to events."""
+    rx = {"$regex": re.escape(q), "$options": "i"}
+    return [str(doc["_id"]) for doc in mongo.db.events.find({"name": rx}, {"_id": 1})]
 
 
 def parse_date(value):
