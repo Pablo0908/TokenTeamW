@@ -7,9 +7,11 @@ import AlertMessage from '@/components/ui/AlertMessage.vue'
 const router = useRouter()
 const events = useEventsStore()
 
-const form = reactive({ name: '', description: '', date: '', end_date: '', location: '', prize: '' })
+const form = reactive({ name: '', description: '', event_type: 'conference', date: '', end_date: '', location: '', prize: '' })
 const touched = ref(false)
 const submitting = ref(false)
+
+const EVENT_TYPES = ['conference', 'workshop', 'meetup', 'hackathon', 'networking', 'other']
 
 const valid = computed(() => form.name.trim().length > 0)
 
@@ -66,6 +68,13 @@ async function submit() {
           class="textarea textarea-bordered w-full bg-base-100/70"
           placeholder="What is this event about?"
         />
+      </label>
+
+      <label class="form-control w-full">
+        <span class="label-text mb-1 text-base-content/70">Type</span>
+        <select v-model="form.event_type" class="select select-bordered w-full bg-base-100/70 capitalize">
+          <option v-for="t in EVENT_TYPES" :key="t" :value="t" class="capitalize">{{ t }}</option>
+        </select>
       </label>
 
       <div class="flex gap-3">

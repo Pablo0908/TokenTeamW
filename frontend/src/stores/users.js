@@ -7,6 +7,7 @@ import { api, readApiError } from '@/services/api'
 export const useUsersStore = defineStore('users', () => {
   const users = ref([])
   const current = ref(null) // { user, events } for the user being inspected
+  const analytics = ref(null) // { activity, favorite_event_type, login_count? } for that user
   const error = ref(null)
   const loading = ref(false)
   const loaded = ref(false)
@@ -43,6 +44,19 @@ export const useUsersStore = defineStore('users', () => {
       return null
     } finally {
       loading.value = false
+    }
+  }
+
+  // Per-user analytics (activity graph, favorite event type, login count). Tier-scoped
+  // server-side. Supplementary — failures don't disrupt the rest of the detail view.
+  async function fetchUserAnalytics(id, period = 'day') {
+    try {
+      const { data } = await api.get(`/admin/users/${id}/analytics`, { params: { period } })
+      analytics.value = data
+      return data
+    } catch {
+      analytics.value = null
+      return null
     }
   }
 
@@ -85,5 +99,5 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
-  return { users, current, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, setRole, disableUser, deleteUser }
+  return { users, current, analytics, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, fetchUserAnalytics, setRole, disableUser, deleteUser }
 })

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUsersStore } from '@/stores/users'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
@@ -24,7 +24,34 @@ const claimed = computed(() =>
   events.value.flatMap((ev) => ev.badges.filter((b) => b.earned).map((b) => ({ ...b, event: ev.event }))),
 )
 
-onMounted(() => users.fetchUserBadges(id))
+// --- Analytics (activity graph + favorite type + login count) ---
+const PERIODS = ['day', 'week', 'month']
+const period = ref('day')
+const analytics = computed(() => users.analytics)
+const activity = computed(() => analytics.value?.activity ?? [])
+const maxCount = computed(() => activity.value.reduce((m, b) => Math.max(m, b.count), 0))
+const favorite = computed(() => analytics.value?.favorite_event_type || null)
+
+function barLabel(bucket) {
+  if (!bucket) return ''
+  const d = new Date(bucket)
+  if (Number.isNaN(d.getTime())) return ''
+  if (period.value === 'month') return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+function barHeight(count) {
+  return maxCount.value > 0 ? `${Math.max(6, (count / maxCount.value) * 100)}%` : '6%'
+}
+function setPeriod(p) {
+  if (p === period.value) return
+  period.value = p
+  users.fetchUserAnalytics(id, p)
+}
+
+onMounted(() => {
+  users.fetchUserBadges(id)
+  users.fetchUserAnalytics(id, period.value)
+})
 </script>
 
 <template>
@@ -59,6 +86,54 @@ onMounted(() => users.fetchUserBadges(id))
           <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">badges</p>
         </div>
       </header>
+
+      <!-- Analytics -->
+      <section v-if="analytics" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Activity</h2>
+          <div role="tablist" class="tabs tabs-boxed tabs-xs bg-base-300/40">
+            <button
+              v-for="p in PERIODS"
+              :key="p"
+              role="tab"
+              class="tab capitalize"
+              :class="{ 'tab-active': period === p }"
+              @click="setPeriod(p)"
+            >{{ p }}</button>
+          </div>
+        </div>
+
+        <div class="surface p-4">
+          <div v-if="activity.length" class="flex h-32 items-end gap-1">
+            <div
+              v-for="b in activity"
+              :key="b.bucket"
+              class="group relative flex-1 rounded-t bg-primary/70 transition-colors hover:bg-primary"
+              :style="{ height: barHeight(b.count) }"
+              :title="`${barLabel(b.bucket)}: ${b.count}`"
+            />
+          </div>
+          <p v-else class="py-8 text-center text-sm text-base-content/50">No activity in range.</p>
+          <div v-if="activity.length" class="mt-2 flex justify-between text-[0.65rem] text-base-content/45">
+            <span>{{ barLabel(activity[0].bucket) }}</span>
+            <span>{{ barLabel(activity[activity.length - 1].bucket) }}</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="surface p-4">
+            <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">Favorite type</p>
+            <p class="mt-1 truncate font-semibold capitalize">
+              {{ favorite ? favorite.event_type : '—' }}
+              <span v-if="favorite?.tie" class="text-[0.6rem] font-normal text-base-content/45">(tie)</span>
+            </p>
+          </div>
+          <div v-if="'login_count' in analytics" class="surface p-4">
+            <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">Logins</p>
+            <p class="mt-1 font-semibold">{{ analytics.login_count }}</p>
+          </div>
+        </div>
+      </section>
 
       <!-- Progress per event -->
       <section class="space-y-3">
