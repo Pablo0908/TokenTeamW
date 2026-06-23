@@ -184,6 +184,9 @@ const en = {
     eventsTitle: 'Events', eventsBody: 'Browse events and track your progress toward each prize.',
     gotIt: 'Got it',
   },
+  announcements: {
+    title: 'Announcements',
+  },
   errors: {
     signIn: 'Could not sign in. Check your credentials.',
     verify2fa: 'Incorrect or expired code. Try again.',
@@ -374,6 +377,9 @@ const es = {
     badgesTitle: 'Tus insignias', badgesBody: 'Las insignias que ganes aparecen aquí: toca una para verla o compartirla.',
     eventsTitle: 'Eventos', eventsBody: 'Explora los eventos y sigue tu progreso hacia cada premio.',
     gotIt: 'Entendido',
+  },
+  announcements: {
+    title: 'Anuncios',
   },
   errors: {
     signIn: 'No se pudo iniciar sesión. Revisa tus credenciales.',

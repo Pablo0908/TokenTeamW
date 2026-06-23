@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useBadgesStore } from '@/stores/badges'
 import { useEventsStore } from '@/stores/events'
 import { useOnboardingStore } from '@/stores/onboarding'
+import { useAnnouncementsStore } from '@/stores/announcements'
 import StatTile from '@/components/domain/StatTile.vue'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import EventCard from '@/components/domain/EventCard.vue'
@@ -22,10 +23,12 @@ const auth = useAuthStore()
 const badges = useBadgesStore()
 const events = useEventsStore()
 const onboarding = useOnboardingStore()
+const anns = useAnnouncementsStore()
 
 onMounted(() => {
   if (!badges.loaded) badges.fetchMyBadges()
   if (!events.loaded) events.fetchEvents()
+  if (!anns.loaded) anns.fetchAnnouncements()
   // Replay the first-run greeting + tutorial on demand (e.g. for a demo/test).
   if (route.query.welcome === '1') onboarding.forceStart(auth.user?.id)
 })
@@ -143,6 +146,27 @@ async function downloadCard(badge) {
       <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" :label="$t('home.badges')" tone="primary" />
       <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" :label="$t('home.events')" tone="secondary" />
       <StatTile class="anim-rise" style="animation-delay: 0.19s" :value="streak" :label="$t('home.streak')" tone="accent" />
+    </section>
+
+    <!-- Announcements -->
+    <section v-if="anns.announcements.length" class="space-y-3">
+      <h2 class="font-semibold">{{ $t('announcements.title') }}</h2>
+      <div class="space-y-3">
+        <div v-for="ann in anns.announcements" :key="ann.id" class="surface space-y-2 p-4">
+          <p class="font-semibold leading-snug">{{ ann.title }}</p>
+          <p v-if="ann.body" class="whitespace-pre-line text-sm text-base-content/70">{{ ann.body }}</p>
+          <RouterLink
+            v-if="ann.event_id"
+            :to="`/events/${ann.event_id}`"
+            class="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary tap-target"
+          >
+            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {{ ann.event_name }}
+          </RouterLink>
+        </div>
+      </div>
     </section>
 
     <!-- Scan CTA -->
