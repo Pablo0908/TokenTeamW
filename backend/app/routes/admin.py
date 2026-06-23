@@ -5,11 +5,22 @@ from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import user as user_model
 from app.models import audit as audit_model
+from app.models import organization as org_model
+from app.models import membership as membership_model
 from app.utils.auth import admin_required, staff_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
 # All admin operations live here: event/badge creation, badge stats, and user management.
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+def _resolve_org_for_creator(user_id):
+    """Pick the org a newly created event belongs to. Today every staffer belongs to
+    exactly one org, so this resolves from their membership; the bootstrap (earliest)
+    org is a deterministic fallback for a membership-less super_admin. Explicit org
+    selection on create arrives with org self-service (P4) — no brand is hardcoded."""
+    orgs = membership_model.orgs_for_user(user_id)
+    return orgs[0] if orgs else org_model.bootstrap_org_id()
 
 
 @admin_bp.route("/event", methods=["POST"])
@@ -20,6 +31,7 @@ def create_event(current_user):
     if not name:
         return jsonify({"error": "Event name is required."}), 400
 
+    org_id = _resolve_org_for_creator(current_user["sub"])
     event_id = event_model.create_event(
         name=name,
         description=(body.get("description") or "").strip(),
@@ -28,8 +40,9 @@ def create_event(current_user):
         location=(body.get("location") or "").strip(),
         prize=(body.get("prize") or "").strip(),
         created_by=current_user["sub"],
+        org_id=org_id,
     )
-    audit_model.log(current_user["sub"], "event.create", name)
+    audit_model.log(current_user["sub"], "event.create", name, org_id=org_id, event_id=event_id)
     return jsonify({"id": event_id, "name": name}), 201
 
 
@@ -58,8 +71,12 @@ def create_badge(current_user, event_id):
         icon=(body.get("icon") or "🏅"),
         color=(body.get("color") or "primary"),
         image=(body.get("image") or "").strip(),
+        org_id=ev.get("org_id"),
     )
-    audit_model.log(current_user["sub"], "badge.create", f"{name} · {ev.get('name', '')}")
+    audit_model.log(
+        current_user["sub"], "badge.create", f"{name} · {ev.get('name', '')}",
+        org_id=ev.get("org_id"), event_id=str(ev["_id"]),
+    )
     return jsonify(
         {
             "id": badge_id,
@@ -123,6 +140,7 @@ def create_badges_bulk(current_user, event_id):
             icon=(s.get("icon") or "🏅"),
             color=(s.get("color") or "primary"),
             image=(s.get("image") or "").strip(),
+            org_id=ev.get("org_id"),
         )
         created.append(
             {
@@ -133,7 +151,10 @@ def create_badges_bulk(current_user, event_id):
                 "redeem_path": f"/redeem/{str(ev['_id'])}/{token}",
             }
         )
-    audit_model.log(current_user["sub"], "badge.bulk_create", f"{len(created)} badges · {ev.get('name', '')}")
+    audit_model.log(
+        current_user["sub"], "badge.bulk_create", f"{len(created)} badges · {ev.get('name', '')}",
+        org_id=ev.get("org_id"), event_id=str(ev["_id"]),
+    )
     return jsonify({"created": created, "count": len(created)}), 201
 
 
