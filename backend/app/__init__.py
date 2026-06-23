@@ -71,7 +71,7 @@ def create_app(config_class=Config):
     mongo.db = mongo.client[app.config["DB_NAME"]]
 
     # Indexes are created once at startup (not per-request).
-    from app.models import user, event, badge, redemption, otp, audit, organization, membership, invite
+    from app.models import user, event, badge, redemption, otp, audit, organization, membership, invite, announcement
 
     user.create_indexes()
     event.create_indexes()
@@ -82,6 +82,7 @@ def create_app(config_class=Config):
     organization.create_indexes()
     membership.create_indexes()
     invite.create_indexes()
+    announcement.create_indexes()
     mongo.db.reset_codes.create_index("created_at", expireAfterSeconds=600)
     mongo.db.reset_codes.create_index("email", unique=True)
     mongo.db.change_pwd_codes.create_index("created_at", expireAfterSeconds=600)
@@ -95,8 +96,9 @@ def create_app(config_class=Config):
     from app.routes.share import share_bp
     from app.routes.me import me_bp
     from app.routes.orgs import orgs_bp
+    from app.routes.announcements import announcements_bp
 
-    for blueprint in (auth_bp, events_bp, badges_bp, redemptions_bp, admin_bp, share_bp, me_bp, orgs_bp):
+    for blueprint in (auth_bp, events_bp, badges_bp, redemptions_bp, admin_bp, share_bp, me_bp, orgs_bp, announcements_bp):
         app.register_blueprint(blueprint)
 
     @app.route("/health")

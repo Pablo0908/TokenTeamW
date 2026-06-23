@@ -157,6 +157,19 @@ def is_super_admin(user_doc):
     return bool(user_doc) and user_doc.get("platform_role") == "super_admin"
 
 
+def mark_announcements_seen(user_id):
+    """Stamp now as the user's announcements last-seen time. Anything created after
+    this is "unread" for them. Cross-device because it lives on the account."""
+    try:
+        mongo.db.users.update_one(
+            {"_id": _oid(user_id)},
+            {"$set": {"announcements_seen_at": datetime.now(timezone.utc)}},
+        )
+        return True
+    except Exception:
+        return False
+
+
 def set_disabled(user_id, disabled: bool):
     try:
         result = mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"disabled": disabled}})
