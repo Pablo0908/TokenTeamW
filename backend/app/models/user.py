@@ -86,6 +86,10 @@ def create_user(name, lastname, email, password_hash, role="attendee"):
             "email": email.lower(),
             "hashed_password": password_hash,
             "role": role,
+            # Platform tier, separate from the org-level `role` above. None for normal
+            # accounts; "super_admin" grants global authority (set deliberately, never
+            # at self-registration). Kept on every new doc for shape consistency.
+            "platform_role": None,
             "preferences": dict(DEFAULT_PREFERENCES),
             "created_at": datetime.now(timezone.utc),
         }
@@ -125,6 +129,21 @@ def set_role(user_id, role):
         return result.matched_count > 0
     except Exception:
         return False
+
+
+def set_platform_role(user_id, platform_role):
+    """Set the platform tier ("super_admin" or None). Org-level `role` is untouched."""
+    try:
+        result = mongo.db.users.update_one(
+            {"_id": _oid(user_id)}, {"$set": {"platform_role": platform_role}}
+        )
+        return result.matched_count > 0
+    except Exception:
+        return False
+
+
+def is_super_admin(user_doc):
+    return bool(user_doc) and user_doc.get("platform_role") == "super_admin"
 
 
 def set_disabled(user_id, disabled: bool):
