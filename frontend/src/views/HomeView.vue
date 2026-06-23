@@ -25,15 +25,17 @@ const events = useEventsStore()
 const onboarding = useOnboardingStore()
 const anns = useAnnouncementsStore()
 
-// After 3.5 s on page, mark all visible announcements as seen (bell animation runs ~2.4 s first).
+// Mark announcements as seen once the bell animation finishes (~2.4 s = 3 cycles × 0.8 s).
+// immediate:true handles the case where announcements are already in the store on mount.
 let seenTimer = null
 watch(
   () => anns.announcements.length,
   (len) => {
     if (!len || !anns.unseenCount) return
     clearTimeout(seenTimer)
-    seenTimer = setTimeout(() => anns.markAllSeen(), 3500)
+    seenTimer = setTimeout(() => anns.markAllSeen(), 2500)
   },
+  { immediate: true },
 )
 
 onMounted(() => {
