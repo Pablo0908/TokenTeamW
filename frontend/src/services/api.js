@@ -47,3 +47,13 @@ function createRealApi() {
 }
 
 export const api = isMock ? mockApi : createRealApi()
+
+const _apiBase = import.meta.env.VITE_API_URL || ''
+if (!_apiBase && import.meta.env.DEV) {
+  console.warn('[Lyfter] VITE_API_URL is not set — share links will be broken.')
+}
+
+/** Public URL for a badge's share page (served by the Flask backend). */
+export function badgeShareUrl(badgeId) {
+  return `${_apiBase}/share/badge/${badgeId}`
+}

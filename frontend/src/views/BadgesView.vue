@@ -7,6 +7,7 @@ import ShareSheet from '@/components/domain/ShareSheet.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import PullToRefresh from '@/components/ui/PullToRefresh.vue'
+import { badgeShareUrl } from '@/services/api'
 import { rarityMeta, rarityLabel } from '@/utils/rarity'
 
 const badges = useBadgesStore()
@@ -20,9 +21,7 @@ const downloading = ref(false)
 // Rarity tier of the open badge (only meaningful once earned).
 const rarity = computed(() => (selected.value?.badge?.earned ? rarityMeta(selected.value.badge.rarity) : null))
 
-// Public share link — the backend serves an Open Graph preview card for it.
-const apiBase = import.meta.env.VITE_API_URL || ''
-const shareUrl = (id) => `${apiBase}/share/badge/${id}`
+const shareUrl = badgeShareUrl
 const shareText = (badge, event) => `${badge.name}${event ? ' — ' + event : ''}. Join us at Lyfter!`
 
 onMounted(() => {

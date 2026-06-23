@@ -15,6 +15,7 @@ import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 import LanguageModal from '@/components/ui/LanguageModal.vue'
 import Coachmark from '@/components/ui/Coachmark.vue'
+import { badgeShareUrl } from '@/services/api'
 import { rarityMeta, rarityLabel } from '@/utils/rarity'
 
 const router = useRouter()
@@ -100,8 +101,7 @@ const downloading = ref(false)
 
 const rarity = computed(() => (selected.value?.badge?.earned ? rarityMeta(selected.value.badge.rarity) : null))
 
-const apiBase = import.meta.env.VITE_API_URL || ''
-const shareUrl = (id) => `${apiBase}/share/badge/${id}`
+const shareUrl = badgeShareUrl
 const shareText = (badge, event) => `${badge.name}${event ? ' — ' + event : ''}. Join us at Lyfter!`
 
 function openBadge(badge) {

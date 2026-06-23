@@ -58,10 +58,8 @@ async function submit() {
     return
   }
   const target = auth.consumeRedirect()
-  // A QR deep link takes priority; otherwise land on home and run the first-run
-  // greeting + language picker + tutorial (note: a saved redirect of "/" is common,
-  // so we don't treat its mere presence as a reason to skip onboarding).
-  if (target && target.startsWith('/redeem')) {
+  // QR redeem and event preview deep links take priority; otherwise run onboarding.
+  if (target && (target.startsWith('/redeem') || target.startsWith('/event/'))) {
     router.push(target)
   } else {
     onboarding.maybeStart(auth.user?.id)

@@ -36,7 +36,10 @@ const filterCss = computed(() => `saturate(${settings.saturation}) contrast(${se
 </script>
 
 <template>
-  <div class="min-h-dvh w-full">
+  <!-- Full-page routes (event preview) bypass the app shell entirely -->
+  <RouterView v-if="route.meta.fullPage" />
+
+  <div v-else class="min-h-dvh w-full">
     <div
       v-if="filterActive"
       class="pointer-events-none fixed inset-0 z-[45]"
