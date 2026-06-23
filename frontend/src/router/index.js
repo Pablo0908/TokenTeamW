@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
+  { path: '/welcome', name: 'welcome', component: () => import('@/views/WelcomeView.vue'), meta: { public: true, fullPage: true } },
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
   { path: '/event/:eventId/preview', name: 'event-preview', component: () => import('@/views/EventPreviewView.vue'), meta: { public: true, fullPage: true } },
   { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { public: true } },
@@ -43,7 +44,7 @@ router.beforeEach((to) => {
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     auth.setRedirect(to.fullPath)
-    return { name: 'login' }
+    return { name: 'welcome' }
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
@@ -54,8 +55,8 @@ router.beforeEach((to) => {
     return { name: 'home' }
   }
 
-  // Logged-in users shouldn't see auth screens — send them to their home surface.
-  if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
+  // Logged-in users shouldn't see auth/landing screens — send them to their home surface.
+  if ((to.name === 'login' || to.name === 'register' || to.name === 'welcome') && auth.isAuthenticated) {
     return { name: 'home' }
   }
 

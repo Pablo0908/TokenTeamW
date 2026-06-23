@@ -14,11 +14,13 @@ defineProps({
 defineEmits(['register', 'login'])
 
 function goRegister() {
-  auth.setRedirect(route.fullPath)
+  // Only overwrite redirect when on an event-specific preview (worth returning to).
+  // On the generic welcome, the router guard already saved the original destination.
+  if (route.params.eventId) auth.setRedirect(route.fullPath)
   router.push({ name: 'register' })
 }
 function goLogin() {
-  auth.setRedirect(route.fullPath)
+  if (route.params.eventId) auth.setRedirect(route.fullPath)
   router.push({ name: 'login' })
 }
 </script>
