@@ -58,7 +58,7 @@ def _ensure_org_one():
         return existing["_id"]
     first_admin = mongo.db.users.find_one({"role": "admin"}, sort=[("created_at", 1)])
     created_by = str(first_admin["_id"]) if first_admin else None
-    org_id = org_model.create_org(ORG_NAME, ORG_SLUG, created_by=created_by)
+    org_id = org_model.create_org(ORG_NAME, ORG_SLUG, created_by=created_by, description="")
     print(f"  created org #1: {ORG_SLUG} ({org_id}) created_by={created_by}")
     return ObjectId(org_id)
 
@@ -69,6 +69,12 @@ def forward(promote_superadmins):
 
     # 1) Organization #1
     org_oid = _ensure_org_one()
+
+    # 1b) description shape — backfill orgs created before the field existed.
+    r = mongo.db.organizations.update_many(
+        {"description": {"$exists": False}}, {"$set": {"description": ""}}
+    )
+    print(f"  organizations: set description shape on {r.modified_count}")
 
     # 2) events.org_id — every existing event belongs to the single existing brand.
     r = mongo.db.events.update_many(
@@ -141,12 +147,22 @@ def forward(promote_superadmins):
         membership_model.add_membership(u["_id"], org_oid, "staff")
     print(f"  memberships: ensured org #1 admin x{len(admins)}, staff x{len(assistants)}")
 
+    # 8b) Drop memberships whose user no longer exists. The app's delete_user does
+    #     not yet cascade memberships, so account deletions during normal use can
+    #     leave orphans; clean them so "nothing orphaned" holds (idempotent).
+    user_ids = {u["_id"] for u in mongo.db.users.find({}, {"_id": 1})}
+    orphan_ids = [m["_id"] for m in mongo.db.memberships.find({}, {"user_id": 1})
+                  if m["user_id"] not in user_ids]
+    if orphan_ids:
+        mongo.db.memberships.delete_many({"_id": {"$in": orphan_ids}})
+    print(f"  memberships: removed {len(orphan_ids)} orphaned (deleted user)")
+
     _counts("after")
-    _assert_integrity(org_oid, expected_memberships=len(admins) + len(assistants))
+    _assert_integrity(org_oid)
     print("=== FORWARD complete; integrity assertions passed ===\n")
 
 
-def _assert_integrity(org_oid, expected_memberships):
+def _assert_integrity(org_oid):
     db = mongo.db
     no_org = {"$or": [{"org_id": {"$exists": False}}, {"org_id": None}]}
     e = db.events.count_documents(no_org)
@@ -165,10 +181,26 @@ def _assert_integrity(org_oid, expected_memberships):
                 mismatches += 1
     assert mismatches == 0, f"{mismatches} badge/redemption org_id != parent event org_id"
 
+    # Coverage: every current admin/assistant must hold its org #1 membership. (We
+    # check coverage, not an exact count, so role changes made via the live app
+    # don't make a re-run spuriously fail.)
+    missing = 0
+    for u in db.users.find({"role": "admin"}, {"_id": 1}):
+        if not db.memberships.count_documents({"user_id": u["_id"], "org_id": org_oid, "role": "admin"}):
+            missing += 1
+    for u in db.users.find({"role": "assistant"}, {"_id": 1}):
+        if not db.memberships.count_documents({"user_id": u["_id"], "org_id": org_oid, "role": "staff"}):
+            missing += 1
+    assert missing == 0, f"{missing} admin/assistant user(s) missing their org #1 membership"
+
+    # No orphaned memberships (user deleted) remain.
+    user_ids = {u["_id"] for u in db.users.find({}, {"_id": 1})}
+    orphans = sum(1 for m in db.memberships.find({}, {"user_id": 1}) if m["user_id"] not in user_ids)
+    assert orphans == 0, f"{orphans} orphaned membership(s) remain"
+
     mem = db.memberships.count_documents({"org_id": org_oid})
-    assert mem == expected_memberships, f"memberships {mem} != expected {expected_memberships}"
-    print(f"  integrity: events/badges/redemptions all carry org_id; denormalization consistent; "
-          f"memberships={mem}")
+    print(f"  integrity: events/badges/redemptions carry org_id; denormalization consistent; "
+          f"all admins/assistants covered; 0 orphans; memberships={mem}")
 
 
 def rollback():

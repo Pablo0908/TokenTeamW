@@ -22,11 +22,12 @@ def _oid(value):
     return value if isinstance(value, ObjectId) else ObjectId(value)
 
 
-def create_org(name, slug, created_by=None, theme=None, status="active"):
+def create_org(name, slug, created_by=None, description="", theme=None, status="active"):
     result = mongo.db.organizations.insert_one(
         {
             "name": name,
             "slug": slug,
+            "description": description or "",
             "theme": dict(theme) if isinstance(theme, dict) else dict(_THEME_SHAPE),
             "status": status,
             "created_by": _oid(created_by) if created_by else None,

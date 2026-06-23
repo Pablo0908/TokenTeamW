@@ -36,9 +36,16 @@ def main():
 
     client = app.test_client()
 
-    attendee = mongo.db.users.find_one({"role": "attendee"})
+    # Self-contained fixtures: create a throwaway attendee (cleaned up below) instead
+    # of depending on the DB already having one. An admin must exist (org #1 admin).
+    from app.models import user as user_model
+    from app.utils.auth import hash_password
+    ATT_EMAIL = "verify_phase1_attendee@example.invalid"
+    mongo.db.users.delete_one({"email": ATT_EMAIL})
+    att_id = user_model.create_user("Verify", "Attendee", ATT_EMAIL, hash_password("TestPass1!"), role="attendee")
+    attendee = user_model.find_by_id(att_id)
     admin = mongo.db.users.find_one({"role": "admin"})
-    assert attendee and admin, "need at least one attendee and one admin in the DB"
+    assert attendee and admin, "need at least one admin in the DB"
 
     with app.app_context():
         attendee_tok = encode_token(str(attendee["_id"]), attendee["role"])
@@ -116,6 +123,8 @@ def main():
             mongo.db.badges.delete_many({"event_id": oid})
             mongo.db.events.delete_one({"_id": oid})
             print(f"\n  cleaned up throwaway event {created_event_id} (+ its badge/redemptions)")
+        mongo.db.users.delete_one({"email": ATT_EMAIL})
+        print("  cleaned up throwaway attendee")
 
     fails = [l for s, l in results if s == FAIL]
     print(f"\n=== {len(results) - len(fails)}/{len(results)} checks passed ===")
