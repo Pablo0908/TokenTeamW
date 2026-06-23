@@ -25,6 +25,24 @@ _PWD_DIGIT   = re.compile(r"\d")
 _PWD_SPECIAL = re.compile(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?`~]")
 
 
+def _session_response(user):
+    """The authenticated session shape shared by login / verify-2fa / google /
+    registration completion. Centralised so the payload can't drift between them."""
+    token = encode_token(str(user["_id"]), user["role"])
+    return {
+        "token": token,
+        "role": user["role"],
+        "user": {
+            "id": str(user["_id"]),
+            "name": user.get("name", ""),
+            "lastname": user.get("lastname", ""),
+            "email": user["email"],
+            "role": user["role"],
+            "preferences": user_model.merged_preferences(user),
+        },
+    }
+
+
 def _validate_password(password: str) -> str | None:
     if len(password) < 8:
         return "Password must be at least 8 characters."
@@ -60,26 +78,40 @@ def register():
 
     user_id = user_model.create_user(name, lastname, email, hash_password(password), role="attendee")
 
-    # Sign the new account in immediately (no separate login / 2FA step on sign-up),
-    # mirroring the Google flow. Returns the same session shape as verify-2fa/google.
-    user = user_model.find_by_id(user_id)
-    token = encode_token(user_id, "attendee")
-    return jsonify(
-        {
-            "message": "Account created",
-            "user_id": user_id,
-            "token": token,
-            "role": "attendee",
-            "user": {
-                "id": user_id,
-                "name": user.get("name", ""),
-                "lastname": user.get("lastname", ""),
-                "email": user["email"],
-                "role": "attendee",
-                "preferences": user_model.merged_preferences(user),
-            },
-        }
-    ), 201
+    # Verify the new account with a one-time code before signing in. 2FA happens
+    # at sign-up only; subsequent logins are password-only. The frontend collects the
+    # code and finishes via /auth/verify-2fa (which returns the session).
+    code = otp_model.generate(email)
+    try:
+        send_otp(email, code)
+    except Exception as exc:  # noqa: BLE001
+        # Log but don't block: the code is in the DB and can be resent.
+        import logging
+        logging.getLogger(__name__).error("Failed to send OTP email to %s: %s", email, exc)
+
+    return jsonify({"requires_2fa": True, "user_id": user_id}), 201
+
+
+@auth_bp.route("/resend-otp", methods=["POST"])
+@limiter.limit("5 per 10 minutes")
+def resend_otp():
+    """Re-send the sign-up verification code. Used by the register OTP step."""
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+
+    user = user_model.find_by_email(email)
+    if user and not user.get("disabled"):
+        code = otp_model.generate(email)
+        try:
+            send_otp(email, code)
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).error("Failed to resend OTP email to %s: %s", email, exc)
+
+    # Never reveal whether the address is registered.
+    return jsonify({"message": "If that account exists, a new code has been sent."}), 200
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -98,16 +130,8 @@ def login():
     if user.get("disabled"):
         return jsonify({"error": "This account has been disabled."}), 403
 
-    # Credentials are valid — generate and deliver a one-time code.
-    code = otp_model.generate(email)
-    try:
-        send_otp(email, code)
-    except Exception as exc:  # noqa: BLE001
-        # Log the failure but don't block the user (code is in the DB; they can retry).
-        import logging
-        logging.getLogger(__name__).error("Failed to send OTP email to %s: %s", email, exc)
-
-    return jsonify({"requires_2fa": True}), 200
+    # Password-only login: 2FA is verified once at sign-up, not on every login.
+    return jsonify(_session_response(user)), 200
 
 
 @auth_bp.route("/google", methods=["POST"])
@@ -140,21 +164,7 @@ def google_auth():
         user_id = user_model.create_user(given, family, email, hashed_password="", role="attendee")
         user = user_model.find_by_email(email)
 
-    token = encode_token(str(user["_id"]), user["role"])
-    return jsonify(
-        {
-            "token": token,
-            "role": user["role"],
-            "user": {
-                "id": str(user["_id"]),
-                "name": user.get("name", ""),
-                "lastname": user.get("lastname", ""),
-                "email": user["email"],
-                "role": user["role"],
-                "preferences": user_model.merged_preferences(user),
-            },
-        }
-    ), 200
+    return jsonify(_session_response(user)), 200
 
 
 @auth_bp.route("/forgot-password", methods=["POST"])
@@ -239,18 +249,4 @@ def verify_2fa():
     if not user:
         return jsonify({"error": "User not found."}), 404
 
-    token = encode_token(str(user["_id"]), user["role"])
-    return jsonify(
-        {
-            "token": token,
-            "role": user["role"],
-            "user": {
-                "id": str(user["_id"]),
-                "name": user.get("name", ""),
-                "lastname": user.get("lastname", ""),
-                "email": user["email"],
-                "role": user["role"],
-                "preferences": user_model.merged_preferences(user),
-            },
-        }
-    ), 200
+    return jsonify(_session_response(user)), 200

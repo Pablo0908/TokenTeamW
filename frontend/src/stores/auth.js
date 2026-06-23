@@ -119,22 +119,33 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Creates the account and triggers the one-time sign-up code.
+  // Returns 'otp' (code sent, show the verify step), 'duplicate', or false (error).
   async function register(payload) {
     loading.value = true
     error.value = null
     try {
-      const { data } = await api.post('/auth/register', payload)
-      // Registration now returns a session token — sign in immediately.
-      _applySession(data, payload.email)
-      const { useSettingsStore } = await import('@/stores/settings')
-      useSettingsStore().hydrate(data.user?.preferences)
-      return true
+      await api.post('/auth/register', payload)
+      pendingEmail.value = payload.email
+      return 'otp'
     } catch (e) {
       error.value = readApiError(e, t('errors.register'))
       if (e?.response?.status === 409) return 'duplicate'
       return false
     } finally {
       loading.value = false
+    }
+  }
+
+  // Re-send the sign-up verification code. Returns true on success.
+  async function resendOtp(email) {
+    error.value = null
+    try {
+      await api.post('/auth/resend-otp', { email })
+      return true
+    } catch (e) {
+      error.value = readApiError(e, t('errors.signIn'))
+      return false
     }
   }
 
@@ -178,6 +189,7 @@ export const useAuthStore = defineStore('auth', () => {
     verify2fa,
     loginWithGoogle,
     register,
+    resendOtp,
     logout,
     setRedirect,
     consumeRedirect,

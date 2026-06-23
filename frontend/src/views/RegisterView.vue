@@ -15,6 +15,12 @@ const form = reactive({ name: '', lastname: '', email: '', password: '', confirm
 const touched = ref(false)
 const emailTaken = ref(false)
 
+// step: 'form' (details) | 'otp' (verify the sign-up code)
+const step = ref('form')
+const otpCode = ref('')
+const otpTouched = ref(false)
+const otpInfo = ref('')  // success notice (e.g. "New code sent")
+
 const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
 
 const pwdRules = computed(() => ({
@@ -28,13 +34,22 @@ const passwordValid = computed(() => Object.values(pwdRules.value).every(Boolean
 const match = computed(() => form.password === form.confirm)
 const valid = computed(() => form.name.trim() && emailValid.value && passwordValid.value && match.value)
 
+function finishSignup() {
+  // A QR deep link takes priority; otherwise land on home and run the first-run
+  // greeting + language picker + tutorial (note: a saved redirect of "/" is common,
+  // so we don't treat its mere presence as a reason to skip onboarding).
+  const target = auth.consumeRedirect()
+  if (target && target.startsWith('/redeem')) {
+    router.push(target)
+  } else {
+    onboarding.maybeStart(auth.user?.id)
+    router.push('/')
+  }
+}
+
 async function handleGoogle(credential) {
   const ok = await auth.loginWithGoogle(credential)
-  if (ok) {
-    if (!auth.isStaff) onboarding.maybeStart(auth.user?.id)
-    const target = auth.consumeRedirect()
-    router.push(target || '/')
-  }
+  if (ok) finishSignup()
 }
 
 async function submit() {
@@ -48,19 +63,26 @@ async function submit() {
     password: form.password,
   })
   if (registered === 'duplicate') { emailTaken.value = true; return }
-  if (!registered) return
-  // Registration signs the user in directly (token returned by /auth/register),
-  // so we land them in the app instead of bouncing through the login/2FA screen.
-  const target = auth.consumeRedirect()
-  // A QR deep link takes priority; otherwise land on home and run the first-run
-  // greeting + language picker + tutorial (note: a saved redirect of "/" is common,
-  // so we don't treat its mere presence as a reason to skip onboarding).
-  if (target && target.startsWith('/redeem')) {
-    router.push(target)
-  } else {
-    onboarding.maybeStart(auth.user?.id)
-    router.push('/')
+  if (registered === 'otp') {
+    // Account created — verify the one-time code, then sign in (2FA at sign-up only).
+    step.value = 'otp'
+    otpCode.value = ''
+    otpTouched.value = false
+    otpInfo.value = ''
   }
+}
+
+async function submitOtp() {
+  otpTouched.value = true
+  if (!otpCode.value.trim()) return
+  const ok = await auth.verify2fa(form.email.trim(), otpCode.value.trim())
+  if (ok) finishSignup()
+}
+
+async function resendCode() {
+  otpInfo.value = ''
+  const ok = await auth.resendOtp(form.email.trim())
+  if (ok) otpInfo.value = 'otpSent'
 }
 </script>
 
@@ -69,12 +91,21 @@ async function submit() {
     <div class="mb-6 flex flex-col items-center gap-4 text-center">
       <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" :float="true" />
       <div>
-        <h1 class="text-2xl font-bold">{{ $t('auth.registerTitle') }}</h1>
-        <p class="text-sm text-base-content/60">{{ $t('auth.registerSubtitle') }}</p>
+        <h1 class="text-2xl font-bold">
+          {{ step === 'otp' ? $t('auth.twoFaTitle') : $t('auth.registerTitle') }}
+        </h1>
+        <p class="text-sm text-base-content/60">
+          <template v-if="step === 'otp'">
+            {{ $t('auth.twoFaSubtitle').replace('{email}', form.email) }}
+          </template>
+          <template v-else>
+            {{ $t('auth.registerSubtitle') }}
+          </template>
+        </p>
       </div>
     </div>
 
-    <form class="space-y-3.5" novalidate @submit.prevent="submit">
+    <form v-if="step === 'form'" class="space-y-3.5" novalidate @submit.prevent="submit">
       <AlertMessage type="error" :message="auth.error || ''" />
 
       <div class="flex gap-3">
@@ -153,7 +184,39 @@ async function submit() {
       </button>
     </form>
 
-    <div class="mt-6 flex flex-col gap-3">
+    <!-- ── Verify step: one-time code sent on sign-up ── -->
+    <form v-else class="space-y-4" novalidate @submit.prevent="submitOtp">
+      <AlertMessage type="error" :message="auth.error || ''" />
+      <AlertMessage v-if="otpInfo" type="success" :message="$t('auth.' + otpInfo)" />
+
+      <label class="form-control w-full">
+        <span class="label-text mb-1 text-base-content/70">{{ $t('auth.otpLabel') }}</span>
+        <input
+          v-model="otpCode"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          :placeholder="$t('auth.otpPlaceholder')"
+          class="input input-bordered w-full bg-base-100/70 text-center text-2xl tracking-[.3em] font-bold"
+          :class="{ 'input-error': otpTouched && !otpCode.trim() }"
+        />
+        <span v-if="otpTouched && !otpCode.trim()" class="mt-1 text-xs text-error">{{ $t('auth.errOtpRequired') }}</span>
+      </label>
+
+      <button type="submit" class="btn btn-primary w-full tap-target" :disabled="auth.loading">
+        <span v-if="auth.loading" class="loading loading-spinner loading-sm" />
+        {{ auth.loading ? $t('auth.verifying') : $t('auth.verify') }}
+      </button>
+
+      <div class="text-right text-sm">
+        <button type="button" class="text-primary" :disabled="auth.loading" @click="resendCode">
+          {{ auth.loading ? $t('auth.resending') : $t('auth.resend') }}
+        </button>
+      </div>
+    </form>
+
+    <div v-if="step === 'form'" class="mt-6 flex flex-col gap-3">
       <div class="flex items-center gap-3 text-xs text-base-content/40">
         <span class="flex-1 border-t border-base-content/10" />
         <span>or</span>
@@ -162,7 +225,7 @@ async function submit() {
       <GoogleSignInButton @credential="handleGoogle" />
     </div>
 
-    <p class="mt-6 text-center text-sm text-base-content/60">
+    <p v-if="step === 'form'" class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.haveAccount') }}
       <RouterLink to="/login" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
     </p>
