@@ -61,3 +61,8 @@ def counts_by_badge(event_id):
         {"$group": {"_id": "$badge_id", "count": {"$sum": 1}}},
     ]
     return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}
+
+
+def delete_by_user(user_id):
+    """Remove all redemptions belonging to a deleted user (cascade)."""
+    mongo.db.redemptions.delete_many({"user_id": _oid(user_id)})

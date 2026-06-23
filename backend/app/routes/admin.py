@@ -282,6 +282,7 @@ def delete_user(current_user, user_id):
     if not target:
         return jsonify({"error": "User not found"}), 404
 
+    redemption_model.delete_by_user(user_id)
     user_model.delete_user(user_id)
     audit_model.log(current_user["sub"], "user.delete", target.get("email", user_id))
     return jsonify({"id": user_id, "deleted": True}), 200
