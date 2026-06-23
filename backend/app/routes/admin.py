@@ -43,6 +43,7 @@ def create_event(current_user):
         prize=(body.get("prize") or "").strip(),
         created_by=current_user["sub"],
         org_id=org_id,
+        event_type=(body.get("event_type") or "uncategorized").strip().lower(),
     )
     audit_model.log(current_user["sub"], "event.create", name, org_id=org_id, event_id=event_id)
     return jsonify({"id": event_id, "name": name}), 201

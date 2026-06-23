@@ -65,7 +65,8 @@ def compute_status(start, end, now=None):
     return "active"
 
 
-def create_event(name, description, start_date, end_date, location, prize, created_by, org_id=None):
+def create_event(name, description, start_date, end_date, location, prize, created_by,
+                  org_id=None, event_type="uncategorized"):
     result = mongo.db.events.insert_one(
         {
             "name": name,
@@ -74,6 +75,9 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             "end_date": end_date,
             "location": location,
             "prize": prize,
+            # Category/class for analytics (e.g. "favorite event type"). Existing
+            # events are backfilled as "uncategorized".
+            "event_type": event_type or "uncategorized",
             # Authoritative tenant pointer. Optional at the model layer so existing
             # callers don't break; the admin route resolves and passes it.
             "org_id": _oid(org_id) if org_id else None,
@@ -116,6 +120,7 @@ def event_summary(event, badges_total, badges_earned, org=None):
         "badges_total": badges_total,
         "badges_earned": badges_earned,
         "completed": badges_total > 0 and badges_earned >= badges_total,
+        "event_type": event.get("event_type", "uncategorized"),
         "org_id": str(event["org_id"]) if event.get("org_id") else None,
     }
     if org is not None:
