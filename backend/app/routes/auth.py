@@ -9,6 +9,7 @@ from google.auth.transport import requests as google_requests
 from app import limiter, mongo
 from app.models import user as user_model
 from app.models import otp as otp_model
+from app.models import audit as audit_model
 from app.utils.auth import encode_token, hash_password, check_password
 from app.utils.email import send_otp, send_reset_email
 
@@ -131,6 +132,7 @@ def login():
         return jsonify({"error": "This account has been disabled."}), 403
 
     # Password-only login: 2FA is verified once at sign-up, not on every login.
+    audit_model.log(str(user["_id"]), "auth.login", actor_role=user["role"], actor_email=user["email"])
     return jsonify(_session_response(user)), 200
 
 
@@ -164,6 +166,7 @@ def google_auth():
         user_id = user_model.create_user(given, family, email, hashed_password="", role="attendee")
         user = user_model.find_by_email(email)
 
+    audit_model.log(str(user["_id"]), "auth.login", actor_role=user["role"], actor_email=user["email"])
     return jsonify(_session_response(user)), 200
 
 
@@ -249,4 +252,7 @@ def verify_2fa():
     if not user:
         return jsonify({"error": "User not found."}), 404
 
+    # This path is sign-up completion (login is password-only now), so it's a
+    # distinct signup interaction, kept separate from login counts.
+    audit_model.log(str(user["_id"]), "auth.signup", actor_role=user["role"], actor_email=user["email"])
     return jsonify(_session_response(user)), 200

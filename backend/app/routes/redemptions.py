@@ -4,6 +4,7 @@ from pymongo.errors import DuplicateKeyError
 from app.models import event as event_model
 from app.models import badge as badge_model
 from app.models import redemption as redemption_model
+from app.models import audit as audit_model
 from app.utils.auth import jwt_required
 
 redemptions_bp = Blueprint("redemptions", __name__)
@@ -30,6 +31,13 @@ def redeem(current_user, event_id, token):
         redeemed_at = redemption_model.redeem(badge["_id"], ev["_id"], uid, org_id=ev.get("org_id"))
     except DuplicateKeyError:
         return jsonify({"error": "You already have this badge."}), 409
+
+    # Org-scoped interaction: tagged with the event's org so org admins see scans
+    # within their own events (actor role/email auto-resolved by audit.log).
+    audit_model.log(
+        uid, "badge.redeem", f"{badge.get('name', '')} · {ev.get('name', '')}",
+        org_id=ev.get("org_id"), event_id=str(ev["_id"]),
+    )
 
     total = badge_model.count_for_event(ev["_id"])
     earned = redemption_model.count_for_event(uid, ev["_id"])
