@@ -7,7 +7,7 @@ from app.models import user as user_model
 from app.models import audit as audit_model
 from app.models import organization as org_model
 from app.models import membership as membership_model
-from app.utils.auth import admin_required, staff_required
+from app.utils.auth import admin_required, staff_required, jwt_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
 # All admin operations live here: event/badge creation, badge stats, and user management.
@@ -310,6 +310,17 @@ def delete_user(current_user, user_id):
 
 
 @admin_bp.route("/audit", methods=["GET"])
-@admin_required
+@jwt_required
 def audit_log(current_user):
-    return jsonify({"entries": audit_model.recent(150)}), 200
+    # Tiered access: a platform super_admin sees everything; an org owner/admin sees
+    # only entries for the org(s) they administer; staff and attendees get nothing.
+    # (Guarded by membership/platform, not the legacy global role, so it stays correct
+    # for org admins introduced by self-service in P4.)
+    actor = user_model.find_by_id(current_user["sub"])
+    if user_model.is_super_admin(actor):
+        return jsonify({"entries": audit_model.recent(150)}), 200
+
+    org_ids = membership_model.admin_orgs_for_user(current_user["sub"])
+    if not org_ids:
+        return jsonify({"error": "Admin access required."}), 403
+    return jsonify({"entries": audit_model.recent_for_orgs(org_ids, 150)}), 200
