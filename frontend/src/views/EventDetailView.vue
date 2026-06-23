@@ -57,6 +57,17 @@ onMounted(() => events.fetchEvent(route.params.id))
         </div>
       </header>
 
+      <!-- Moderation notices: a locked event is paused; an ended event is closed.
+           In both cases earned badges remain visible but scanning is disabled. -->
+      <div v-if="ev.status === 'locked'" class="surface flex items-center gap-3 border border-warning/40 bg-warning/10 p-4">
+        <span class="text-xl">🔒</span>
+        <p class="text-sm text-base-content/80">{{ $t('eventDetail.locked') }}</p>
+      </div>
+      <div v-else-if="ev.ended" class="surface flex items-center gap-3 bg-base-300/40 p-4">
+        <span class="text-xl">🏁</span>
+        <p class="text-sm text-base-content/80">{{ $t('eventDetail.ended') }}</p>
+      </div>
+
       <div class="surface space-y-2 p-4">
         <ProgressBar :value="earned" :max="total" :label="completed ? $t('eventDetail.completed') : $t('eventDetail.yourProgress')" />
       </div>

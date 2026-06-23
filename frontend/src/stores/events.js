@@ -98,6 +98,30 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
+  // Pause/unpause (temporary moderation lock). orgId routes to the org path.
+  async function setEventPaused(eventId, paused, orgId = null) {
+    error.value = null
+    try {
+      const { data } = await api.patch(`${badgeBase(eventId, orgId)}/pause`, { paused })
+      return data // { id, paused, status }
+    } catch (e) {
+      error.value = readApiError(e, 'Could not update the event lock.')
+      throw e
+    }
+  }
+
+  // End/reopen an event (terminal moderation; reversible by super admin / owner).
+  async function setEventEnded(eventId, ended, orgId = null) {
+    error.value = null
+    try {
+      const { data } = await api.patch(`${badgeBase(eventId, orgId)}/end`, { ended })
+      return data // { id, ended, status }
+    } catch (e) {
+      error.value = readApiError(e, 'Could not update the event.')
+      throw e
+    }
+  }
+
   async function fetchAdminBadges(eventId, orgId = null) {
     error.value = null
     try {
@@ -125,6 +149,8 @@ export const useEventsStore = defineStore('events', () => {
     addBadge,
     addBadgesBulk,
     setEventStarted,
+    setEventPaused,
+    setEventEnded,
     fetchAdminBadges,
   }
 })

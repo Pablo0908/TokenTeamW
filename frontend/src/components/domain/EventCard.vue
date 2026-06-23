@@ -14,6 +14,8 @@ const total = computed(() => props.event.badges_total ?? 0)
 const completed = computed(() => props.event.completed || (total.value > 0 && earned.value >= total.value))
 
 const status = computed(() => {
+  // A locked (paused) event is flagged distinctly even if the user has completed it.
+  if (props.event.status === 'locked') return { label: t('events.status.locked'), cls: 'badge-warning' }
   if (completed.value) return { label: t('events.status.completed'), cls: 'badge-primary' }
   switch (props.event.status) {
     case 'active':

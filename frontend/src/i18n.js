@@ -75,7 +75,7 @@ const en = {
   events: {
     title: 'Events', all: 'All', active: 'Active', past: 'Past',
     loading: 'Loading events…', empty: 'No events to show.',
-    status: { completed: 'Completed', active: 'Active', upcoming: 'Upcoming', past: 'Past', event: 'Event' },
+    status: { completed: 'Completed', active: 'Active', upcoming: 'Upcoming', past: 'Past', event: 'Event', locked: 'Locked' },
     dateTba: 'Date TBA', progress: 'Progress', unitBadges: 'badges',
   },
   eventDetail: {
@@ -83,6 +83,8 @@ const en = {
     prizeUnlocked: 'Prize unlocked', prizeLocked: 'Complete all badges to unlock',
     prizeDefault: 'A special reward', badges: 'Badges',
     noBadges: 'No badges have been added to this event yet.',
+    locked: 'This event is temporarily locked by a moderator. You can view your earned badges, but scanning is paused.',
+    ended: 'This event has ended. You can still view your earned badges, but it can no longer be scanned.',
   },
   profile: {
     organizer: 'Organizer', attendee: 'Attendee', assistant: 'Assistant',
@@ -258,7 +260,7 @@ const es = {
   events: {
     title: 'Eventos', all: 'Todos', active: 'Activos', past: 'Pasados',
     loading: 'Cargando eventos…', empty: 'No hay eventos para mostrar.',
-    status: { completed: 'Completado', active: 'Activo', upcoming: 'Próximo', past: 'Pasado', event: 'Evento' },
+    status: { completed: 'Completado', active: 'Activo', upcoming: 'Próximo', past: 'Pasado', event: 'Evento', locked: 'Bloqueado' },
     dateTba: 'Fecha por definir', progress: 'Progreso', unitBadges: 'insignias',
   },
   eventDetail: {
@@ -266,6 +268,8 @@ const es = {
     prizeUnlocked: 'Premio desbloqueado', prizeLocked: 'Completa todas las insignias para desbloquear',
     prizeDefault: 'Una recompensa especial', badges: 'Insignias',
     noBadges: 'Aún no se han agregado insignias a este evento.',
+    locked: 'Este evento está bloqueado temporalmente por un moderador. Puedes ver tus insignias obtenidas, pero el escaneo está pausado.',
+    ended: 'Este evento ha finalizado. Aún puedes ver tus insignias obtenidas, pero ya no se puede escanear.',
   },
   profile: {
     organizer: 'Organizador', attendee: 'Participante', assistant: 'Asistente',

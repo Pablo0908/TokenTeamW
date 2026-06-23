@@ -23,6 +23,10 @@ const id = route.params.id
 const isOrgMode = computed(() => route.meta.orgScoped === true)
 const orgId = computed(() => (isOrgMode.value ? orgContext.activeOrgId : null))
 const canManage = computed(() => (isOrgMode.value ? orgContext.isActiveAdmin : auth.isAdmin))
+// Ending an event is restricted to super admins and org owners (not org admins).
+const canEnd = computed(() =>
+  isOrgMode.value ? (orgContext.isActiveOwner || orgContext.isSuperAdmin) : auth.isAdmin,
+)
 const backTo = computed(() => (isOrgMode.value ? '/org/events' : '/admin/events'))
 
 const showForm = ref(false)
@@ -60,6 +64,28 @@ const colors = ['primary', 'secondary', 'accent', 'success', 'info', 'warning', 
 const form = reactive({ name: '', description: '', icon: '🏅', color: 'primary', image: '' })
 
 const ev = computed(() => events.current)
+
+// Moderation status display derived from the event's flags + computed status.
+const statusLabel = computed(() => {
+  if (!ev.value) return ''
+  if (ev.value.ended) return 'Ended'
+  if (ev.value.paused) return 'Locked'
+  return ev.value.status
+})
+const statusCls = computed(() => {
+  if (!ev.value) return 'badge-ghost'
+  if (ev.value.ended) return 'badge-ghost'
+  if (ev.value.paused) return 'badge-warning'
+  return ev.value.status === 'active' ? 'badge-success' : ev.value.status === 'upcoming' ? 'badge-secondary' : 'badge-ghost'
+})
+const statusHelp = computed(() => {
+  if (!ev.value) return ''
+  if (ev.value.ended) return 'This event has ended — it appears in past events and can no longer be scanned.'
+  if (ev.value.paused) return 'Locked for moderation. Attendees can view earned badges but cannot scan.'
+  if (ev.value.status === 'active') return 'Attendees can scan this event now.'
+  return 'Attendees cannot scan this event right now.'
+})
+
 const list = computed(() => events.adminBadges)
 const totalRedemptions = computed(() => list.value.reduce((sum, b) => sum + (b.redeemed_by ?? 0), 0))
 const attendees = computed(() => list.value[0]?.total_attendees ?? 0)
@@ -70,18 +96,30 @@ async function refresh() {
   await Promise.all([events.fetchEvent(id), events.fetchAdminBadges(id, orgId.value)])
 }
 
-const togglingStart = ref(false)
-async function toggleStarted() {
-  if (!ev.value) return
-  togglingStart.value = true
+const moderating = ref(false)
+async function runModeration(fn) {
+  if (!ev.value || moderating.value) return
+  moderating.value = true
   try {
-    await events.setEventStarted(id, !ev.value.started, orgId.value)
+    await fn()
     await events.fetchEvent(id)
   } catch {
     /* error surfaced via store */
   } finally {
-    togglingStart.value = false
+    moderating.value = false
   }
+}
+
+const toggleStarted = () => runModeration(() => events.setEventStarted(id, !ev.value.started, orgId.value))
+const togglePaused = () => runModeration(() => events.setEventPaused(id, !ev.value.paused, orgId.value))
+
+function toggleEnded() {
+  const ending = !ev.value.ended
+  const msg = ending
+    ? 'End this event? It will move to past events and attendees will no longer be able to scan it. You can reopen it later.'
+    : 'Reopen this event? Attendees will be able to scan it again.'
+  if (!window.confirm(msg)) return
+  runModeration(() => events.setEventEnded(id, ending, orgId.value))
 }
 
 async function addBadge() {
@@ -161,31 +199,63 @@ onBeforeUnmount(() => clearInterval(poll))
         <p v-if="ev.description" class="text-sm text-base-content/65">{{ ev.description }}</p>
       </header>
 
-      <!-- Status + manual start/stop (managers only) -->
-      <div class="surface flex items-center justify-between gap-3 p-4">
-        <div class="min-w-0">
+      <!-- Status + moderation controls -->
+      <div class="surface space-y-3 p-4">
+        <div>
           <p class="flex items-center gap-2">
-            <span
-              class="badge badge-sm capitalize"
-              :class="ev.status === 'active' ? 'badge-success' : ev.status === 'upcoming' ? 'badge-warning' : 'badge-ghost'"
-            >{{ ev.status }}</span>
-            <span v-if="ev.started" class="text-[0.7rem] font-medium text-success">● started manually</span>
+            <span class="badge badge-sm capitalize" :class="statusCls">{{ statusLabel }}</span>
+            <span v-if="ev.started && !ev.paused && !ev.ended" class="text-[0.7rem] font-medium text-success">● started manually</span>
           </p>
-          <p class="mt-1 text-[0.7rem] text-base-content/50">
-            {{ ev.status === 'active' ? 'Attendees can scan this event now.' : 'Attendees cannot scan this event yet.' }}
-          </p>
+          <p class="mt-1 text-[0.7rem] text-base-content/50">{{ statusHelp }}</p>
         </div>
-        <button
-          v-if="canManage"
-          type="button"
-          class="btn btn-sm shrink-0 tap-target"
-          :class="ev.started ? 'btn-outline btn-warning' : 'btn-success'"
-          :disabled="togglingStart"
-          @click="toggleStarted"
-        >
-          <span v-if="togglingStart" class="loading loading-spinner loading-xs" />
-          {{ ev.started ? 'Stop event' : 'Start event' }}
-        </button>
+
+        <div v-if="canManage || canEnd" class="flex flex-wrap gap-2">
+          <!-- Ended: the only action is to reopen -->
+          <template v-if="ev.ended">
+            <button
+              v-if="canEnd"
+              type="button"
+              class="btn btn-sm btn-outline tap-target"
+              :disabled="moderating"
+              @click="toggleEnded"
+            >
+              <span v-if="moderating" class="loading loading-spinner loading-xs" />
+              Reopen event
+            </button>
+          </template>
+
+          <template v-else>
+            <button
+              v-if="canManage"
+              type="button"
+              class="btn btn-sm tap-target"
+              :class="ev.started ? 'btn-outline btn-warning' : 'btn-success'"
+              :disabled="moderating"
+              @click="toggleStarted"
+            >
+              {{ ev.started ? 'Stop' : 'Start' }}
+            </button>
+            <button
+              v-if="canManage"
+              type="button"
+              class="btn btn-sm tap-target"
+              :class="ev.paused ? 'btn-success' : 'btn-outline btn-warning'"
+              :disabled="moderating"
+              @click="togglePaused"
+            >
+              {{ ev.paused ? 'Unlock' : 'Pause / lock' }}
+            </button>
+            <button
+              v-if="canEnd"
+              type="button"
+              class="btn btn-sm btn-outline btn-error tap-target"
+              :disabled="moderating"
+              @click="toggleEnded"
+            >
+              End event
+            </button>
+          </template>
+        </div>
       </div>
 
       <!-- Live summary -->
