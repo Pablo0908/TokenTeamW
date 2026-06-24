@@ -288,12 +288,6 @@ function accAfterLeave(el) {
       </div>
     </section>
 
-    <RouterLink v-if="orgContext.isSuperAdmin" to="/admin/events" class="btn btn-outline w-full tap-target">
-      {{ $t('profile.openAdmin') }}
-    </RouterLink>
-    <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
-      Manage organization
-    </RouterLink>
     <RouterLink
       to="/invites"
       class="surface flex items-center gap-3 p-4 transition-transform active:scale-[0.98]"
@@ -312,6 +306,13 @@ function accAfterLeave(el) {
       <svg class="h-4 w-4 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 18l6-6-6-6"/>
       </svg>
+    </RouterLink>
+
+    <RouterLink v-if="orgContext.isSuperAdmin" to="/admin/events" class="btn btn-outline w-full tap-target">
+      {{ $t('profile.openAdmin') }}
+    </RouterLink>
+    <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
+      Manage organization
     </RouterLink>
   </div>
 </template>
