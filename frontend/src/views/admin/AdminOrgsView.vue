@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { api, readApiError } from '@/services/api'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
@@ -23,18 +24,19 @@ async function load() {
     const { data } = await api.get('/admin/orgs')
     orgs.value = data.orgs || []
     loaded.value = true
-  } catch (e) { error.value = readApiError(e, 'Could not load organizations.') }
+  } catch (e) { error.value = readApiError(e, t('admin.orgs.couldNotLoad')) }
   finally { loading.value = false }
 }
 
 async function setStatus(org, status) {
-  const verb = status === 'suspended' ? 'Suspend' : 'Reactivate'
-  if (!window.confirm(`${verb} "${org.name}"? ${status === 'suspended' ? 'Its scans and event creation will be paused.' : 'It will be active again.'}`)) return
+  const verb = status === 'suspended' ? t('admin.orgs.suspend') : t('admin.orgs.reactivate')
+  const detail = status === 'suspended' ? t('admin.orgs.suspendDetail') : t('admin.orgs.reactivateDetail')
+  if (!window.confirm(t('admin.orgs.confirm', { verb, name: org.name, detail }))) return
   busy.value = org.id; error.value = ''
   try {
     await api.patch(`/admin/orgs/${org.id}/status`, { status })
     org.status = status
-  } catch (e) { error.value = readApiError(e, 'Could not update the organization.') }
+  } catch (e) { error.value = readApiError(e, t('admin.orgs.couldNotUpdate')) }
   finally { busy.value = '' }
 }
 
@@ -46,39 +48,38 @@ onMounted(load)
   <div class="space-y-5 px-4 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
-        <p class="text-xs uppercase tracking-wide text-secondary">Platform</p>
-        <h1 class="text-2xl font-bold">Organizations</h1>
+        <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('admin.platform') }}</p>
+        <h1 class="text-2xl font-bold">{{ $t('admin.orgs.title') }}</h1>
       </div>
-      <button class="btn btn-ghost btn-sm tap-target" @click="logout">Log out</button>
+      <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
-      <RouterLink to="/admin/events" role="tab" class="tab">Events</RouterLink>
-      <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
-      <RouterLink to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
-      <RouterLink to="/admin/insights" role="tab" class="tab">Insights</RouterLink>
-      <RouterLink to="/admin/orgs" role="tab" class="tab tab-active">Orgs</RouterLink>
-      <RouterLink to="/admin/org-invites" role="tab" class="tab">Codes</RouterLink>
-      <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
+      <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
+      <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
+      <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
+      <RouterLink to="/admin/insights" role="tab" class="tab">{{ $t('tabs.insights') }}</RouterLink>
+      <RouterLink to="/admin/orgs" role="tab" class="tab tab-active">{{ $t('tabs.orgs') }}</RouterLink>
+      <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
     </div>
 
     <p class="text-xs text-base-content/55">
-      Every tenant on the platform. Suspending an org freezes its scans and event creation;
-      it never affects member or attendee accounts.
+      {{ $t('admin.orgs.helper') }}
     </p>
 
     <AlertMessage type="warning" :message="error" />
-    <LoadingSpinner v-if="loading && !loaded" label="Loading…" />
+    <LoadingSpinner v-if="loading && !loaded" :label="$t('admin.loading')" />
 
     <section v-else-if="orgs.length" class="space-y-2">
       <div v-for="o in orgs" :key="o.id" class="surface flex items-center justify-between gap-2 p-3">
         <div class="min-w-0">
           <p class="truncate text-sm font-medium">
             {{ o.name }}
-            <span class="badge badge-sm" :class="o.status === 'suspended' ? 'badge-error' : 'badge-success'">{{ o.status }}</span>
+            <span class="badge badge-sm" :class="o.status === 'suspended' ? 'badge-error' : 'badge-success'">{{ o.status === 'suspended' ? $t('admin.orgs.statusSuspended') : $t('admin.orgs.statusActive') }}</span>
           </p>
           <p class="truncate text-[0.7rem] text-base-content/45">
-            {{ o.owner_email || 'no owner' }} · {{ o.members_count }} members · {{ o.events_count }} events
+            {{ o.owner_email || $t('admin.orgs.noOwner') }} · {{ $t('admin.orgs.membersEvents', { members: o.members_count, events: o.events_count }) }}
           </p>
         </div>
         <button
@@ -88,10 +89,10 @@ onMounted(load)
           @click="setStatus(o, o.status === 'suspended' ? 'active' : 'suspended')"
         >
           <span v-if="busy === o.id" class="loading loading-spinner loading-xs" />
-          {{ o.status === 'suspended' ? 'Reactivate' : 'Suspend' }}
+          {{ o.status === 'suspended' ? $t('admin.orgs.reactivate') : $t('admin.orgs.suspend') }}
         </button>
       </div>
     </section>
-    <div v-else-if="loaded" class="surface p-8 text-center text-sm text-base-content/60">No organizations yet.</div>
+    <div v-else-if="loaded" class="surface p-8 text-center text-sm text-base-content/60">{{ $t('admin.orgs.noneYet') }}</div>
   </div>
 </template>

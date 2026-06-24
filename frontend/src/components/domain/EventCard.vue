@@ -29,6 +29,10 @@ const status = computed(() => {
   }
 })
 
+const visibilityLabel = computed(() =>
+  props.event.visibility ? t(`visibility.${props.event.visibility}`) : '',
+)
+
 const dateLabel = computed(() => {
   const fmt = (iso) => {
     const d = new Date(iso)
@@ -66,7 +70,7 @@ const dateLabel = computed(() => {
         <span
           v-if="event.visibility && event.visibility !== 'public'"
           class="badge badge-xs badge-ghost capitalize"
-        >{{ event.visibility }}</span>
+        >{{ visibilityLabel }}</span>
       </div>
     </div>
 

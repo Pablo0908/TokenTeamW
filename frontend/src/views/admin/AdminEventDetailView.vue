@@ -9,6 +9,7 @@ import ProgressBar from '@/components/domain/ProgressBar.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import { printQrSheet } from '@/utils/qrSheet'
+import { t } from '@/i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,8 +69,11 @@ const ev = computed(() => events.current)
 // Moderation status display derived from the event's flags + computed status.
 const statusLabel = computed(() => {
   if (!ev.value) return ''
-  if (ev.value.ended) return 'Ended'
-  if (ev.value.paused) return 'Locked'
+  if (ev.value.ended) return t('admin.eventDetail.statusEnded')
+  if (ev.value.paused) return t('admin.eventDetail.statusLocked')
+  if (ev.value.status === 'upcoming') return t('admin.eventDetail.statusNotStarted')
+  if (ev.value.status === 'active') return t('events.status.active')
+  if (ev.value.status === 'past') return t('events.status.past')
   return ev.value.status
 })
 const statusCls = computed(() => {
@@ -80,10 +84,11 @@ const statusCls = computed(() => {
 })
 const statusHelp = computed(() => {
   if (!ev.value) return ''
-  if (ev.value.ended) return 'This event has ended — it appears in past events and can no longer be scanned.'
-  if (ev.value.paused) return 'Locked for moderation. Attendees can view earned badges but cannot scan.'
-  if (ev.value.status === 'active') return 'Attendees can scan this event now.'
-  return 'Attendees cannot scan this event right now.'
+  if (ev.value.ended) return t('admin.eventDetail.helpEnded')
+  if (ev.value.paused) return t('admin.eventDetail.helpLocked')
+  if (ev.value.status === 'active') return t('admin.eventDetail.helpActive')
+  if (ev.value.status === 'upcoming') return t('admin.eventDetail.helpUpcoming')
+  return t('admin.eventDetail.helpDefault')
 })
 
 const list = computed(() => events.adminBadges)
@@ -116,8 +121,8 @@ const togglePaused = () => runModeration(() => events.setEventPaused(id, !ev.val
 function toggleEnded() {
   const ending = !ev.value.ended
   const msg = ending
-    ? 'End this event? It will move to past events and attendees will no longer be able to scan it. You can reopen it later.'
-    : 'Reopen this event? Attendees will be able to scan it again.'
+    ? t('admin.eventDetail.confirmEnd')
+    : t('admin.eventDetail.confirmReopen')
   if (!window.confirm(msg)) return
   runModeration(() => events.setEventEnded(id, ending, orgId.value))
 }
@@ -153,7 +158,9 @@ async function addBulk() {
     const list = names.map((name) => ({ name, icon: bulkIcon.value, color: bulkColor.value, image: bulkImage.value.trim() }))
     const res = await events.addBadgesBulk(id, list, orgId.value)
     await refresh()
-    bulkResult.value = `✓ Created ${res.count} badge${res.count === 1 ? '' : 's'}`
+    bulkResult.value = res.count === 1
+      ? t('admin.eventDetail.bulkCreatedOne', { n: res.count })
+      : t('admin.eventDetail.bulkCreated', { n: res.count })
     bulkText.value = ''
   } catch {
     /* error surfaced via store */
@@ -167,7 +174,7 @@ async function exportSheet() {
   exporting.value = true
   try {
     const opened = await printQrSheet(ev.value?.name || 'Event', list.value)
-    if (!opened) alert('Allow pop-ups to export the QR sheet.')
+    if (!opened) alert(t('admin.eventDetail.popupBlocked'))
   } finally {
     exporting.value = false
   }
@@ -187,11 +194,11 @@ onBeforeUnmount(() => clearInterval(poll))
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
       </svg>
-      Events
+      {{ $t('admin.eventDetail.back') }}
     </button>
 
     <AlertMessage type="warning" :message="events.error || ''" />
-    <LoadingSpinner v-if="!ev" label="Loading event…" />
+    <LoadingSpinner v-if="!ev" :label="$t('admin.eventDetail.loading')" />
 
     <template v-else>
       <header>
@@ -204,7 +211,7 @@ onBeforeUnmount(() => clearInterval(poll))
         <div>
           <p class="flex items-center gap-2">
             <span class="badge badge-sm capitalize" :class="statusCls">{{ statusLabel }}</span>
-            <span v-if="ev.started && !ev.paused && !ev.ended" class="text-[0.7rem] font-medium text-success">● started manually</span>
+            <span v-if="ev.started && !ev.paused && !ev.ended" class="text-[0.7rem] font-medium text-success">{{ $t('admin.eventDetail.startedManually') }}</span>
           </p>
           <p class="mt-1 text-[0.7rem] text-base-content/50">{{ statusHelp }}</p>
         </div>
@@ -220,7 +227,7 @@ onBeforeUnmount(() => clearInterval(poll))
               @click="toggleEnded"
             >
               <span v-if="moderating" class="loading loading-spinner loading-xs" />
-              Reopen event
+              {{ $t('admin.eventDetail.reopenEvent') }}
             </button>
           </template>
 
@@ -233,7 +240,7 @@ onBeforeUnmount(() => clearInterval(poll))
               :disabled="moderating"
               @click="toggleStarted"
             >
-              {{ ev.started ? 'Stop' : 'Start' }}
+              {{ ev.started ? $t('admin.eventDetail.stop') : $t('admin.eventDetail.start') }}
             </button>
             <button
               v-if="canManage"
@@ -243,7 +250,7 @@ onBeforeUnmount(() => clearInterval(poll))
               :disabled="moderating"
               @click="togglePaused"
             >
-              {{ ev.paused ? 'Unlock' : 'Pause / lock' }}
+              {{ ev.paused ? $t('admin.eventDetail.unlock') : $t('admin.eventDetail.pauseLock') }}
             </button>
             <button
               v-if="canEnd"
@@ -252,7 +259,7 @@ onBeforeUnmount(() => clearInterval(poll))
               :disabled="moderating"
               @click="toggleEnded"
             >
-              End event
+              {{ $t('admin.eventDetail.endEvent') }}
             </button>
           </template>
         </div>
@@ -262,59 +269,59 @@ onBeforeUnmount(() => clearInterval(poll))
       <section class="grid grid-cols-3 gap-3">
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-primary">{{ list.length }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Badges</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.eventDetail.badges') }}</p>
         </div>
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-success">{{ totalRedemptions }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Redemptions</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.eventDetail.redemptions') }}</p>
         </div>
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-secondary">{{ attendees }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Attendees</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.eventDetail.attendees') }}</p>
         </div>
       </section>
 
       <p class="flex items-center gap-1.5 text-xs text-base-content/45">
         <span class="inline-block h-2 w-2 animate-pulse rounded-full bg-success" />
-        Live — counts refresh automatically
+        {{ $t('admin.eventDetail.live') }}
       </p>
 
       <!-- Add badge (managers only: platform admin, or org owner/admin) -->
       <div v-if="canManage" class="surface p-4">
         <button class="flex w-full items-center justify-between tap-target" :aria-expanded="showForm" @click="showForm = !showForm">
-          <span class="font-semibold">Add badge</span>
+          <span class="font-semibold">{{ $t('admin.eventDetail.addBadge') }}</span>
           <span class="text-xl text-primary">{{ showForm ? '−' : '+' }}</span>
         </button>
 
         <form v-if="showForm" class="mt-4 space-y-3" novalidate @submit.prevent="addBadge">
           <label class="form-control w-full">
-            <span class="label-text mb-1 text-base-content/70">Badge name *</span>
+            <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.badgeNameLabel') }}</span>
             <input
               v-model="form.name"
               type="text"
               class="input input-bordered w-full bg-base-100/70"
               :class="{ 'input-error': badgeTouched && !form.name.trim() }"
-              placeholder="Opening keynote"
+              :placeholder="$t('admin.eventDetail.badgeNamePlaceholder')"
             />
           </label>
           <label class="form-control w-full">
-            <span class="label-text mb-1 text-base-content/70">Description</span>
-            <input v-model="form.description" type="text" class="input input-bordered w-full bg-base-100/70" placeholder="Attended the keynote" />
+            <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.badgeDescriptionLabel') }}</span>
+            <input v-model="form.description" type="text" class="input input-bordered w-full bg-base-100/70" :placeholder="$t('admin.eventDetail.badgeDescriptionPlaceholder')" />
           </label>
           <div class="flex gap-3">
             <label class="form-control w-24">
-              <span class="label-text mb-1 text-base-content/70">Icon</span>
+              <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.iconLabel') }}</span>
               <input v-model="form.icon" type="text" maxlength="2" class="input input-bordered w-full bg-base-100/70 text-center text-xl" />
             </label>
             <label class="form-control flex-1">
-              <span class="label-text mb-1 text-base-content/70">Color</span>
+              <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.colorLabel') }}</span>
               <select v-model="form.color" class="select select-bordered w-full bg-base-100/70 capitalize">
                 <option v-for="c in colors" :key="c" :value="c">{{ c }}</option>
               </select>
             </label>
           </div>
           <label class="form-control w-full">
-            <span class="label-text mb-1 text-base-content/70">Image URL (optional — overrides the icon)</span>
+            <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.imageUrlLabel') }}</span>
             <div class="flex items-center gap-2">
               <input v-model="form.image" type="url" class="input input-bordered w-full bg-base-100/70" placeholder="https://…/badge.png" />
               <img v-if="form.image" :src="form.image" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-base-300" />
@@ -322,7 +329,7 @@ onBeforeUnmount(() => clearInterval(poll))
           </label>
           <button type="submit" class="btn btn-primary w-full tap-target" :disabled="creating">
             <span v-if="creating" class="loading loading-spinner loading-sm" />
-            {{ creating ? 'Creating…' : 'Create badge + QR' }}
+            {{ creating ? $t('admin.eventDetail.creating') : $t('admin.eventDetail.createBadge') }}
           </button>
         </form>
       </div>
@@ -330,13 +337,13 @@ onBeforeUnmount(() => clearInterval(poll))
       <!-- Bulk add (managers only: platform admin, or org owner/admin) -->
       <div v-if="canManage" class="surface p-4">
         <button class="flex w-full items-center justify-between tap-target" :aria-expanded="showBulk" @click="showBulk = !showBulk">
-          <span class="font-semibold">Bulk add badges</span>
+          <span class="font-semibold">{{ $t('admin.eventDetail.bulkAdd') }}</span>
           <span class="text-xl text-primary">{{ showBulk ? '−' : '+' }}</span>
         </button>
 
         <div v-if="showBulk" class="mt-4 space-y-3">
           <label class="form-control w-full">
-            <span class="label-text mb-1 text-base-content/70">One badge name per line</span>
+            <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.bulkLabel') }}</span>
             <textarea
               v-model="bulkText"
               rows="5"
@@ -346,24 +353,24 @@ onBeforeUnmount(() => clearInterval(poll))
           </label>
           <div class="flex gap-3">
             <label class="form-control w-24">
-              <span class="label-text mb-1 text-base-content/70">Icon</span>
+              <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.iconLabel') }}</span>
               <input v-model="bulkIcon" type="text" maxlength="2" class="input input-bordered w-full bg-base-100/70 text-center text-xl" />
             </label>
             <label class="form-control flex-1">
-              <span class="label-text mb-1 text-base-content/70">Color</span>
+              <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.colorLabel') }}</span>
               <select v-model="bulkColor" class="select select-bordered w-full bg-base-100/70 capitalize">
                 <option v-for="c in colors" :key="c" :value="c">{{ c }}</option>
               </select>
             </label>
           </div>
           <label class="form-control w-full">
-            <span class="label-text mb-1 text-base-content/70">Image URL (optional — applied to all)</span>
+            <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventDetail.bulkImageLabel') }}</span>
             <input v-model="bulkImage" type="url" class="input input-bordered w-full bg-base-100/70" placeholder="https://…/badge.png" />
           </label>
-          <p class="text-xs text-base-content/55">{{ bulkNames.length }} badge{{ bulkNames.length === 1 ? '' : 's' }} — each gets its own QR code.</p>
+          <p class="text-xs text-base-content/55">{{ bulkNames.length === 1 ? $t('admin.eventDetail.bulkCountOne', { n: bulkNames.length }) : $t('admin.eventDetail.bulkCount', { n: bulkNames.length }) }}</p>
           <button type="button" class="btn btn-primary w-full tap-target" :disabled="bulkCreating || !bulkNames.length" @click="addBulk">
             <span v-if="bulkCreating" class="loading loading-spinner loading-sm" />
-            {{ bulkCreating ? 'Creating…' : `Create ${bulkNames.length || ''} badges + QR` }}
+            {{ bulkCreating ? $t('admin.eventDetail.creating') : $t('admin.eventDetail.bulkCreate', { n: bulkNames.length || '' }) }}
           </button>
           <p v-if="bulkResult" class="text-center text-sm font-medium text-success">{{ bulkResult }}</p>
         </div>
@@ -371,14 +378,14 @@ onBeforeUnmount(() => clearInterval(poll))
 
       <!-- Freshly created QR -->
       <div v-if="lastCreated" class="surface space-y-3 p-4">
-        <p class="text-center text-sm font-medium text-success">✓ “{{ lastCreated.name }}” created — print this QR</p>
+        <p class="text-center text-sm font-medium text-success">{{ $t('admin.eventDetail.createdQr', { name: lastCreated.name }) }}</p>
         <QRDisplay :value="lastCreated.qr_url" :image="lastCreated.qr_image" :label="lastCreated.name" :filename="`${lastCreated.name}-qr.png`" />
       </div>
 
       <!-- Badge list -->
       <section class="space-y-3">
         <div class="flex items-center justify-between gap-3">
-          <h2 class="font-semibold">Badges &amp; QR codes</h2>
+          <h2 class="font-semibold">{{ $t('admin.eventDetail.badgesAndQr') }}</h2>
           <button
             v-if="list.length"
             type="button"
@@ -390,7 +397,7 @@ onBeforeUnmount(() => clearInterval(poll))
             <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z" />
             </svg>
-            QR sheet
+            {{ $t('admin.eventDetail.qrSheet') }}
           </button>
         </div>
         <div v-if="list.length" class="space-y-3">
@@ -399,10 +406,10 @@ onBeforeUnmount(() => clearInterval(poll))
               <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-base-300/60 text-xl">{{ b.icon || '🏅' }}</span>
               <div class="min-w-0 flex-1">
                 <p class="truncate font-medium">{{ b.name }}</p>
-                <p class="text-xs text-base-content/55">{{ b.redeemed_by }} / {{ b.total_attendees }} redeemed</p>
+                <p class="text-xs text-base-content/55">{{ $t('admin.eventDetail.redeemed', { redeemed: b.redeemed_by, total: b.total_attendees }) }}</p>
               </div>
               <button class="btn btn-outline btn-xs tap-target" @click="expanded = expanded === b.id ? null : b.id">
-                {{ expanded === b.id ? 'Hide QR' : 'Show QR' }}
+                {{ expanded === b.id ? $t('admin.eventDetail.hideQr') : $t('admin.eventDetail.showQr') }}
               </button>
             </div>
             <div class="mt-3">
@@ -412,18 +419,18 @@ onBeforeUnmount(() => clearInterval(poll))
               <QRDisplay :value="b.qr_url" :label="b.name" :filename="`${b.name}-qr.png`" />
               <!-- Unique token paired with its QR (for staff verification). -->
               <div class="surface-soft rounded-xl p-3">
-                <p class="mb-1 text-[0.7rem] uppercase tracking-wide text-base-content/45">Unique token</p>
+                <p class="mb-1 text-[0.7rem] uppercase tracking-wide text-base-content/45">{{ $t('admin.eventDetail.uniqueToken') }}</p>
                 <div class="flex items-center gap-2">
                   <code class="min-w-0 flex-1 truncate font-mono text-xs text-base-content/80">{{ b.token }}</code>
                   <button class="btn btn-ghost btn-xs tap-target" @click="copyToken(b.token)">
-                    {{ copiedToken === b.token ? 'Copied!' : 'Copy' }}
+                    {{ copiedToken === b.token ? $t('admin.eventDetail.copied') : $t('admin.eventDetail.copy') }}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <p v-else class="text-sm text-base-content/50">No badges yet — add one above to generate its QR.</p>
+        <p v-else class="text-sm text-base-content/50">{{ $t('admin.eventDetail.noBadges') }}</p>
       </section>
     </template>
   </div>

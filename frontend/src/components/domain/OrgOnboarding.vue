@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
+import { t } from '@/i18n'
 
 // Guided setup checklist for a freshly-created org, shown on the dashboard tab to
 // owners/admins. Step completion is DERIVED from existing data (org settings, members,
@@ -45,9 +46,9 @@ const steps = computed(() => {
   const invited = members.value.length > 1 || invites.value.some((iv) => iv.status === 'pending')
   const hasEvent = props.eventsTotal > 0
   return [
-    { key: 'name', label: 'Name your organization', hint: 'Add a name and description', done: named, to: '/org/settings' },
-    { key: 'invite', label: 'Invite a teammate', hint: 'Add an admin or staff member', done: invited, to: '/org/members' },
-    { key: 'event', label: 'Create your first event', hint: 'Then mint its badges', done: hasEvent, to: '/org/events' },
+    { key: 'name', label: t('onboarding.nameLabel'), hint: t('onboarding.nameHint'), done: named, to: '/org/settings' },
+    { key: 'invite', label: t('onboarding.inviteLabel'), hint: t('onboarding.inviteHint'), done: invited, to: '/org/members' },
+    { key: 'event', label: t('onboarding.eventLabel'), hint: t('onboarding.eventHint'), done: hasEvent, to: '/org/events' },
   ]
 })
 const doneCount = computed(() => steps.value.filter((s) => s.done).length)
@@ -66,10 +67,10 @@ watch(() => props.orgId, load, { immediate: true })
   <div v-if="visible" class="surface space-y-3 border border-primary/30 p-4">
     <div class="flex items-start justify-between gap-2">
       <div>
-        <h2 class="font-semibold">Get your organization set up</h2>
-        <p class="text-xs text-base-content/55">{{ doneCount }} of {{ steps.length }} done</p>
+        <h2 class="font-semibold">{{ $t('onboarding.title') }}</h2>
+        <p class="text-xs text-base-content/55">{{ $t('onboarding.progress', { done: doneCount, total: steps.length }) }}</p>
       </div>
-      <button class="btn btn-ghost btn-xs" title="Dismiss" @click="dismiss">✕</button>
+      <button class="btn btn-ghost btn-xs" :title="$t('onboarding.dismiss')" @click="dismiss">✕</button>
     </div>
     <ul class="space-y-2">
       <li v-for="s in steps" :key="s.key">

@@ -74,7 +74,7 @@ function barHeight(count) {
         />
       </div>
     </div>
-    <p v-else class="py-8 text-center text-sm text-base-content/50">No activity in range.</p>
+    <p v-else class="py-8 text-center text-sm text-base-content/50">{{ $t('insights.noActivity') }}</p>
 
     <div v-if="hasData" class="mt-2 flex justify-between text-[0.65rem] text-base-content/45">
       <span>{{ barLabel(cols[0].bucket) }}</span>

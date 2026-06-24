@@ -6,6 +6,7 @@ import { useAnnouncementsStore } from '@/stores/announcements'
 import { useEventsStore } from '@/stores/events'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import { t } from '@/i18n'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -70,7 +71,7 @@ async function submit() {
 }
 
 async function remove(a) {
-  if (!window.confirm(`Delete announcement "${a.title}"? This cannot be undone.`)) return
+  if (!window.confirm(t('admin.announcements.confirmDelete', { title: a.title }))) return
   deletingId.value = a.id
   try {
     await announcements.remove(a.id)
@@ -98,61 +99,61 @@ onMounted(() => {
   <div class="space-y-5 px-4 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
-        <p class="text-xs uppercase tracking-wide text-secondary">Platform</p>
-        <h1 class="text-2xl font-bold">Announcements</h1>
+        <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('admin.platform') }}</p>
+        <h1 class="text-2xl font-bold">{{ $t('admin.announcements.title') }}</h1>
       </div>
-      <button class="btn btn-ghost btn-sm tap-target" @click="logout">Log out</button>
+      <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
-      <RouterLink to="/admin/events" role="tab" class="tab">Events</RouterLink>
-      <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
-      <RouterLink to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
-      <RouterLink to="/admin/insights" role="tab" class="tab">Insights</RouterLink>
-      <RouterLink to="/admin/orgs" role="tab" class="tab">Orgs</RouterLink>
-      <RouterLink to="/admin/org-invites" role="tab" class="tab">Codes</RouterLink>
-      <RouterLink to="/admin/announcements" role="tab" class="tab tab-active">News</RouterLink>
+      <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
+      <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
+      <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
+      <RouterLink to="/admin/insights" role="tab" class="tab">{{ $t('tabs.insights') }}</RouterLink>
+      <RouterLink to="/admin/orgs" role="tab" class="tab">{{ $t('tabs.orgs') }}</RouterLink>
+      <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab tab-active">{{ $t('tabs.news') }}</RouterLink>
     </div>
 
     <p class="text-xs text-base-content/55">
-      Announcements appear on everyone's home page. Link one to any event so users know where and when it happens.
+      {{ $t('admin.announcements.helper') }}
     </p>
 
     <!-- Composer / editor -->
     <form class="surface space-y-3 p-4" novalidate @submit.prevent="submit">
       <div class="flex items-center justify-between">
-        <h2 class="font-semibold">{{ editingId ? 'Edit announcement' : 'New announcement' }}</h2>
-        <button v-if="editingId" type="button" class="btn btn-ghost btn-xs" @click="resetForm">Cancel edit</button>
+        <h2 class="font-semibold">{{ editingId ? $t('admin.announcements.editTitle') : $t('admin.announcements.newTitle') }}</h2>
+        <button v-if="editingId" type="button" class="btn btn-ghost btn-xs" @click="resetForm">{{ $t('admin.announcements.cancelEdit') }}</button>
       </div>
 
       <AlertMessage type="error" :message="announcements.error || ''" />
 
       <label class="form-control w-full">
-        <span class="label-text mb-1 text-base-content/70">Title *</span>
+        <span class="label-text mb-1 text-base-content/70">{{ $t('admin.announcements.titleLabel') }}</span>
         <input
           v-model="form.title"
           type="text"
           class="input input-bordered input-sm w-full bg-base-100/70"
           :class="{ 'input-error': touched && !form.title.trim() }"
-          placeholder="Doors open at 6pm!"
+          :placeholder="$t('admin.announcements.titlePlaceholder')"
         />
       </label>
 
       <label class="form-control w-full">
-        <span class="label-text mb-1 text-base-content/70">Description *</span>
+        <span class="label-text mb-1 text-base-content/70">{{ $t('admin.announcements.bodyLabel') }}</span>
         <textarea
           v-model="form.body"
           rows="3"
           class="textarea textarea-bordered w-full bg-base-100/70"
           :class="{ 'textarea-error': touched && !form.body.trim() }"
-          placeholder="Tell users what's happening and how to join."
+          :placeholder="$t('admin.announcements.bodyPlaceholder')"
         />
       </label>
 
       <label class="form-control w-full">
-        <span class="label-text mb-1 text-base-content/70">Linked event (optional)</span>
+        <span class="label-text mb-1 text-base-content/70">{{ $t('admin.announcements.linkedEventLabel') }}</span>
         <select v-model="form.event_id" class="select select-bordered select-sm w-full bg-base-100/70">
-          <option value="">No linked event</option>
+          <option value="">{{ $t('admin.announcements.noLinkedEvent') }}</option>
           <option v-for="ev in events.events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
         </select>
       </label>
@@ -161,18 +162,18 @@ onMounted(() => {
       <label v-if="form.event_id" class="flex cursor-pointer items-start gap-2 rounded-xl bg-base-100/50 p-3">
         <input v-model="form.enable_event" type="checkbox" class="checkbox checkbox-sm checkbox-primary mt-0.5" />
         <span class="text-sm">
-          Start the linked event now
-          <span class="block text-[0.7rem] text-base-content/55">Forces it active so attendees can scan immediately — no need to set it live separately.</span>
+          {{ $t('admin.announcements.startNow') }}
+          <span class="block text-[0.7rem] text-base-content/55">{{ $t('admin.announcements.startNowHint') }}</span>
         </span>
       </label>
 
       <button type="submit" class="btn btn-primary btn-sm w-full tap-target" :disabled="submitting">
         <span v-if="submitting" class="loading loading-spinner loading-xs" />
-        {{ editingId ? 'Save changes' : 'Post announcement' }}
+        {{ editingId ? $t('admin.announcements.saveChanges') : $t('admin.announcements.post') }}
       </button>
     </form>
 
-    <LoadingSpinner v-if="announcements.loading && !announcements.loaded" label="Loading announcements…" />
+    <LoadingSpinner v-if="announcements.loading && !announcements.loaded" :label="$t('admin.announcements.loading')" />
 
     <section v-else-if="announcements.items.length" class="space-y-3">
       <div v-for="a in announcements.items" :key="a.id" class="surface p-4">
@@ -181,15 +182,15 @@ onMounted(() => {
             <p class="truncate font-semibold">{{ a.title }}</p>
             <p class="mt-1 whitespace-pre-line text-sm text-base-content/70">{{ a.body }}</p>
             <p v-if="a.event_id" class="mt-2 text-[0.7rem] text-primary">
-              🔗 {{ eventName(a.event_id) || 'Linked event' }}
+              🔗 {{ eventName(a.event_id) || $t('admin.announcements.linkedEvent') }}
             </p>
             <p class="mt-1 text-[0.7rem] text-base-content/45">{{ fmt(a.created_at) }}</p>
           </div>
           <div class="flex shrink-0 flex-col gap-1">
-            <button class="btn btn-ghost btn-xs text-primary" @click="startEdit(a)">Edit</button>
+            <button class="btn btn-ghost btn-xs text-primary" @click="startEdit(a)">{{ $t('admin.announcements.edit') }}</button>
             <button class="btn btn-ghost btn-xs text-error" :disabled="deletingId === a.id" @click="remove(a)">
               <span v-if="deletingId === a.id" class="loading loading-spinner loading-xs" />
-              <span v-else>Delete</span>
+              <span v-else>{{ $t('admin.announcements.delete') }}</span>
             </button>
           </div>
         </div>
@@ -197,7 +198,7 @@ onMounted(() => {
     </section>
 
     <div v-else-if="announcements.loaded" class="surface p-8 text-center text-sm text-base-content/60">
-      No announcements yet. Post the first one above.
+      {{ $t('admin.announcements.noneYet') }}
     </div>
   </div>
 </template>

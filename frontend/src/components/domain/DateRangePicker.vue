@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { t } from '@/i18n'
 
 // Period (bucket granularity) + a quick date-range preset. Emits `change` with
 // { period, start, end } (ISO date strings; start='' for "all"). Parents pass these
@@ -16,6 +17,10 @@ const PRESETS = [
 
 const period = ref('day')
 const preset = ref('30d')
+
+const PRESET_KEY = { '7d': 'd7', '30d': 'd30', '90d': 'd90', all: 'all' }
+const presetLabel = (key) => t(`dateRange.${PRESET_KEY[key] || key}`)
+const periodLabel = (p) => t(`dateRange.${p}`)
 
 function isoDate(d) { return d.toISOString().slice(0, 10) }
 
@@ -59,7 +64,7 @@ onMounted(() => emit('change', payload()))
         class="tab"
         :class="{ 'tab-active': preset === p.key }"
         @click="setPreset(p.key)"
-      >{{ p.label }}</button>
+      >{{ presetLabel(p.key) }}</button>
     </div>
     <div role="tablist" class="tabs tabs-boxed tabs-xs bg-base-300/40">
       <button
@@ -69,7 +74,7 @@ onMounted(() => emit('change', payload()))
         class="tab capitalize"
         :class="{ 'tab-active': period === p }"
         @click="setPeriod(p)"
-      >{{ p }}</button>
+      >{{ periodLabel(p) }}</button>
     </div>
   </div>
 </template>
