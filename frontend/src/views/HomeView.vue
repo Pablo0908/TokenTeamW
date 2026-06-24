@@ -209,13 +209,17 @@ async function downloadCard(badge) {
           ]"
           @click="openAnnouncement(a)"
         >
-          <!-- Unread dot -->
+          <!-- Ringing bell — visible while unread, disappears once markSeen() clears it -->
           <span
             v-if="a.unread"
-            class="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(255,210,60,0.8)]"
+            class="ann-bell absolute right-2 top-2 text-primary drop-shadow-[0_0_6px_rgba(255,210,60,0.9)]"
             aria-hidden="true"
-          />
-          <div class="flex items-center gap-2 pr-4">
+          >
+            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 16.25v-5.5a6 6 0 00-4.5-5.81V4a1.5 1.5 0 10-3 0v.94A6 6 0 006 10.75v5.5H4v1.5h16v-1.5h-2zm-6 5.75a2 2 0 002-2H10a2 2 0 002 2z"/>
+            </svg>
+          </span>
+          <div class="flex items-center gap-2 pr-8">
             <p class="truncate font-semibold">{{ a.title }}</p>
             <span v-if="a.unread" class="badge badge-primary badge-xs font-bold">{{ $t('home.newTag') }}</span>
           </div>
@@ -294,7 +298,7 @@ async function downloadCard(badge) {
     <!-- First-run greeting + language picker -->
     <LanguageModal v-if="onboarding.welcomeOpen" @choose="onboarding.chooseLanguage" />
 
-    <!-- Badge detail modal -->
+    <!-- Badge detail overlay -->
     <div
       v-if="selected"
       class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
@@ -364,3 +368,23 @@ async function downloadCard(badge) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.ann-bell {
+  display: inline-block;
+  transform-origin: 50% 0%;
+  animation: ring-bell 0.8s ease-in-out 3;
+  animation-fill-mode: forwards;
+}
+
+@keyframes ring-bell {
+  0%   { transform: rotate(0deg); }
+  10%  { transform: rotate(22deg); }
+  28%  { transform: rotate(-20deg); }
+  46%  { transform: rotate(16deg); }
+  62%  { transform: rotate(-12deg); }
+  76%  { transform: rotate(7deg); }
+  88%  { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+</style>
