@@ -159,6 +159,11 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
+  function updateUser(fields) {
+    user.value = { ...user.value, ...fields }
+    localStorage.setItem('user', JSON.stringify(user.value))
+  }
+
   function setRedirect(path) {
     redirectAfterLogin.value = path
     localStorage.setItem('redirectAfterLogin', path)
@@ -191,6 +196,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     resendOtp,
     logout,
+    updateUser,
     setRedirect,
     consumeRedirect,
   }

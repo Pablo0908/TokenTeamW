@@ -178,6 +178,10 @@ def set_disabled(user_id, disabled: bool):
         return False
 
 
+def update_name(user_id, name, lastname):
+    mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"name": name, "lastname": lastname}})
+
+
 def update_password(user_id, hashed_password):
     mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"hashed_password": hashed_password}})
 

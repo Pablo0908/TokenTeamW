@@ -13,6 +13,9 @@ const routes = [
   { path: '/events', name: 'events', component: () => import('@/views/EventsView.vue'), meta: { requiresAuth: true } },
   { path: '/events/:id', name: 'event-detail', component: () => import('@/views/EventDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/settings', name: 'profile-settings', component: () => import('@/views/ProfileSettingsView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/edit-name', name: 'profile-edit-name', component: () => import('@/views/ProfileEditNameView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/change-password', name: 'profile-change-password', component: () => import('@/views/ProfileChangePasswordView.vue'), meta: { requiresAuth: true } },
   { path: '/invites', name: 'invites', component: () => import('@/views/InvitesView.vue'), meta: { requiresAuth: true } },
 
   // Public QR landing — redirects to login then back (handled inside the view).

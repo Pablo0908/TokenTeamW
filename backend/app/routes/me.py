@@ -57,6 +57,18 @@ def put_settings(current_user):
     return jsonify(prefs), 200
 
 
+@me_bp.route("/profile", methods=["PATCH"])
+@jwt_required
+def update_profile(current_user):
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    lastname = (body.get("lastname") or "").strip()
+    if not name:
+        return jsonify({"error": "Name is required."}), 400
+    user_model.update_name(current_user["sub"], name, lastname)
+    return jsonify({"name": name, "lastname": lastname}), 200
+
+
 @me_bp.route("/password/send-code", methods=["POST"])
 @jwt_required
 def send_change_password_code(current_user):
