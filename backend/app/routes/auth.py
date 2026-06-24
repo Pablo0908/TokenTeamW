@@ -42,6 +42,7 @@ def _session_response(user):
             # Platform tier so the client can show the super-admin panel. Org
             # memberships are fetched separately via GET /me/orgs (they change).
             "platform_role": user.get("platform_role"),
+            "avatar_url": user.get("avatar_url"),
             "preferences": user_model.merged_preferences(user),
         },
     }

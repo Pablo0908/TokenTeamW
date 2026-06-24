@@ -69,6 +69,17 @@ def update_profile(current_user):
     return jsonify({"name": name, "lastname": lastname}), 200
 
 
+@me_bp.route("/avatar", methods=["PATCH"])
+@jwt_required
+def update_avatar(current_user):
+    body = request.get_json(silent=True) or {}
+    avatar_url = (body.get("avatar_url") or "").strip()
+    if avatar_url and len(avatar_url) > 2_000_000:
+        return jsonify({"error": "Image too large. Use a smaller image (under ~1.5 MB) or an external URL."}), 400
+    user_model.update_avatar(current_user["sub"], avatar_url or None)
+    return jsonify({"avatar_url": avatar_url or None}), 200
+
+
 @me_bp.route("/password/send-code", methods=["POST"])
 @jwt_required
 def send_change_password_code(current_user):

@@ -32,8 +32,17 @@ function logout() {
 
     <!-- User card -->
     <div class="surface flex items-center gap-3 p-4">
-      <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-base font-bold text-primary-content">
-        {{ initials }}
+      <span class="relative h-12 w-12 shrink-0">
+        <img
+          v-if="auth.user?.avatar_url"
+          :src="auth.user.avatar_url"
+          class="h-12 w-12 rounded-full object-cover"
+          alt=""
+        />
+        <span
+          v-else
+          class="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-base font-bold text-primary-content"
+        >{{ initials }}</span>
       </span>
       <div class="min-w-0 flex-1">
         <p class="font-semibold">{{ [auth.user?.name, auth.user?.lastname].filter(Boolean).join(' ') || auth.displayName }}</p>
