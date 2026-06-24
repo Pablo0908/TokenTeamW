@@ -10,10 +10,13 @@ from app.models import audit as audit_model
 from app.models import organization as org_model
 from app.models import membership as membership_model
 from app.models import ban as ban_model
-from app.utils.auth import admin_required, staff_required, jwt_required, super_admin_required
+from app.utils.auth import jwt_required, super_admin_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
-# All admin operations live here: event/badge creation, badge stats, and user management.
+# The PLATFORM panel — super-admin only. Global event/badge creation, badge stats, org
+# lifecycle, and user management across all tenants. Org-tier members operate through the
+# org-scoped /orgs/* routes instead. The two read endpoints that tier internally (audit,
+# per-user analytics) stay on jwt_required so org admins keep their own-org view.
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
@@ -27,7 +30,7 @@ def _resolve_org_for_creator(user_id):
 
 
 @admin_bp.route("/event", methods=["POST"])
-@admin_required
+@super_admin_required
 def create_event(current_user):
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
@@ -52,7 +55,7 @@ def create_event(current_user):
 
 
 @admin_bp.route("/events/<event_id>/badge", methods=["POST"])
-@admin_required
+@super_admin_required
 def create_badge(current_user, event_id):
     ev = event_model.find_by_id(event_id)
     if not ev:
@@ -95,7 +98,7 @@ def create_badge(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/badges/bulk", methods=["POST"])
-@admin_required
+@super_admin_required
 def create_badges_bulk(current_user, event_id):
     """Create many badges in one call. Accepts either an explicit list:
         {"badges": [{"name", "description?", "icon?", "color?"}, ...]}
@@ -164,7 +167,7 @@ def create_badges_bulk(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/status", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def set_event_status(current_user, event_id):
     """Start/stop an event: a manual activation override that forces the event active
     (scannable now) or reverts it to its date-derived status. Reduces human error
@@ -183,7 +186,7 @@ def set_event_status(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/pause", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def pause_event(current_user, event_id):
     """Temporary moderation lock: attendees keep seeing earned badges but cannot scan.
     Reversible (paused=false unlocks)."""
@@ -199,7 +202,7 @@ def pause_event(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/end", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def end_event(current_user, event_id):
     """Terminal moderation: moves the event to past events and blocks scanning.
     Reversible by a super admin (ended=false reopens)."""
@@ -215,7 +218,7 @@ def end_event(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
-@staff_required
+@super_admin_required
 def list_badges(current_user, event_id):
     ev = event_model.find_by_id(event_id)
     if not ev:
@@ -292,10 +295,10 @@ def set_org_status(current_user, org_id):
     return jsonify({"id": org_id, "status": status}), 200
 
 
-# --- User management (admin-only): track badge counts, promote/demote ---
+# --- User management (super-admin only): track badge counts, promote/demote ---
 
 @admin_bp.route("/users", methods=["GET"])
-@staff_required
+@super_admin_required
 def list_users(current_user):
     counts = redemption_model.counts_by_user()
     out = []
@@ -317,7 +320,7 @@ def list_users(current_user):
 
 
 @admin_bp.route("/users/<user_id>/badges", methods=["GET"])
-@staff_required
+@super_admin_required
 def user_badges(current_user, user_id):
     user = user_model.find_by_id(user_id)
     if not user:
@@ -400,7 +403,7 @@ def user_analytics(current_user, user_id):
 
 
 @admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def set_user_role(current_user, user_id):
     body = request.get_json(silent=True) or {}
     role = (body.get("role") or "").strip().lower()
@@ -418,7 +421,7 @@ def set_user_role(current_user, user_id):
 
 
 @admin_bp.route("/users/<user_id>/disable", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def toggle_disable_user(current_user, user_id):
     if user_id == current_user["sub"]:
         return jsonify({"error": "You can't disable your own account."}), 400
@@ -435,7 +438,7 @@ def toggle_disable_user(current_user, user_id):
 
 
 @admin_bp.route("/users/<user_id>", methods=["DELETE"])
-@admin_required
+@super_admin_required
 def delete_user(current_user, user_id):
     if user_id == current_user["sub"]:
         return jsonify({"error": "You can't delete your own account."}), 400
