@@ -11,6 +11,7 @@ from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import audit as audit_model
 from app.models import ban as ban_model
+from app.models import analytics as analytics_model
 from app.utils.auth import jwt_required, super_admin_required, org_role_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -235,6 +236,38 @@ def org_dashboard(current_user, org_id):
         "top_events": redemption_model.top_events(org_id, 5),
         "activity": redemption_model.scans_over_time(org_id, period),
         "period": period,
+    }), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/insights", methods=["GET"])
+@org_role_required("owner", "admin")
+def org_insights(current_user, org_id):
+    """Attendee insights for an org (owner/admin): period-over-period KPI deltas, new-vs-
+    returning attendees + an acquisition trend, and a retention/return-rate signal."""
+    period, start, end = analytics_model.parse_range(request.args)
+    prev_start = start - (end - start)
+    cur = analytics_model.window_counts(org_id, start, end)
+    prev = analytics_model.window_counts(org_id, prev_start, start)
+
+    nvr = analytics_model.new_vs_returning(org_id, start, end)
+    retention = analytics_model.org_retention(org_id)
+    attendance = analytics_model.event_attendance(org_id)
+    # Chronological per-event attendance for context (all_events is newest-first).
+    events = [{"id": str(ev["_id"]), "name": ev.get("name", ""),
+               "attendees": attendance.get(str(ev["_id"]), 0)}
+              for ev in reversed(event_model.all_events(org_id=org_id))]
+
+    return jsonify({
+        "period": period,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "kpi_deltas": {
+            "scans": {"value": cur["scans"], "delta_pct": analytics_model.pct_delta(cur["scans"], prev["scans"])},
+            "participants": {"value": cur["unique_participants"],
+                             "delta_pct": analytics_model.pct_delta(cur["unique_participants"], prev["unique_participants"])},
+        },
+        "new_vs_returning": {**nvr, "series": analytics_model.new_attendees_series(org_id, period, start, end)},
+        "retention": {**retention, "events": events},
     }), 200
 
 

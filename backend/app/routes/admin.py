@@ -10,6 +10,7 @@ from app.models import audit as audit_model
 from app.models import organization as org_model
 from app.models import membership as membership_model
 from app.models import ban as ban_model
+from app.models import analytics as analytics_model
 from app.utils.auth import jwt_required, super_admin_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -246,6 +247,27 @@ def list_badges(current_user, event_id):
             }
         )
     return jsonify(out), 200
+
+
+# --- Platform analytics (super-admin) ---
+
+@admin_bp.route("/insights", methods=["GET"])
+@super_admin_required
+def platform_insights(current_user):
+    """Global, date-range-aware analytics: totals, DAU/MAU, scans + user growth over time,
+    org leaderboard, and event-type mix. DAU/MAU accrue from now on; the rest is historical."""
+    period, start, end = analytics_model.parse_range(request.args)
+    return jsonify({
+        "period": period,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "totals": analytics_model.platform_totals(),
+        "active_users": analytics_model.active_users(period, start, end),
+        "scans_over_time": analytics_model.series_count("redemptions", "redeemed_at", period, start, end),
+        "user_growth": analytics_model.series_count("users", "created_at", period, start, end),
+        "org_leaderboard": analytics_model.org_leaderboard(start, end, 10),
+        "event_type_mix": analytics_model.event_type_mix(start, end),
+    }), 200
 
 
 # --- Organization lifecycle (super-admin platform governance) ---

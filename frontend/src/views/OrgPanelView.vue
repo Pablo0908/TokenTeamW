@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import StatTile from '@/components/domain/StatTile.vue'
 import ActivityChart from '@/components/domain/ActivityChart.vue'
+import DateRangePicker from '@/components/domain/DateRangePicker.vue'
 import OrgOnboarding from '@/components/domain/OrgOnboarding.vue'
 
 const route = useRoute()
@@ -39,6 +40,15 @@ const error = ref('')
 const dashboard = ref(null)
 const dashPeriod = ref('day')
 const DASH_PERIODS = ['day', 'week', 'month']
+const insights = ref(null)
+const newReturningSeries = computed(() => [
+  { label: 'New attendees', colorClass: 'bg-primary/70', data: insights.value?.new_vs_returning?.series ?? [] },
+])
+async function loadInsights(r) {
+  if (!orgId.value) return
+  try { insights.value = (await api.get(`/orgs/${orgId.value}/insights`, { params: r })).data }
+  catch (e) { error.value = readApiError(e, 'Could not load insights.') }
+}
 const events = ref([])
 const members = ref([])
 const invites = ref([])
@@ -217,6 +227,33 @@ onMounted(loadTab)
             </button>
           </div>
           <p v-else class="py-4 text-center text-sm text-base-content/50">No scans yet.</p>
+        </div>
+
+        <!-- Attendee insights -->
+        <div class="surface space-y-3 p-4">
+          <h2 class="font-semibold">Attendee insights</h2>
+          <DateRangePicker @change="loadInsights" />
+          <template v-if="insights">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatTile :value="insights.kpi_deltas.scans.value" label="Scans" tone="primary" :delta="insights.kpi_deltas.scans.delta_pct" />
+              <StatTile :value="insights.kpi_deltas.participants.value" label="People" tone="secondary" :delta="insights.kpi_deltas.participants.delta_pct" />
+              <StatTile :value="insights.new_vs_returning.new" label="New" tone="accent" />
+              <StatTile :value="insights.new_vs_returning.returning" label="Returning" tone="secondary" />
+            </div>
+            <div>
+              <p class="mb-1 text-xs uppercase tracking-wide text-base-content/45">New attendees over time</p>
+              <ActivityChart :series="newReturningSeries" :period="insights.period" />
+            </div>
+            <div class="rounded-xl bg-base-100/40 p-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">Return rate</span>
+                <span class="text-sm font-semibold text-primary">{{ insights.retention.return_rate }}%</span>
+              </div>
+              <p class="text-[0.7rem] text-base-content/45">
+                {{ insights.retention.repeat }} of {{ insights.retention.attendees }} attendees came to ≥2 of your events
+              </p>
+            </div>
+          </template>
         </div>
       </section>
 

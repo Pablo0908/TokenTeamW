@@ -13,6 +13,10 @@ const routes = [
   { path: '/events', name: 'events', component: () => import('@/views/EventsView.vue'), meta: { requiresAuth: true } },
   { path: '/events/:id', name: 'event-detail', component: () => import('@/views/EventDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/settings', name: 'profile-settings', component: () => import('@/views/ProfileSettingsView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/edit-name', name: 'profile-edit-name', component: () => import('@/views/ProfileEditNameView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/change-password', name: 'profile-change-password', component: () => import('@/views/ProfileChangePasswordView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/change-photo', name: 'profile-change-photo', component: () => import('@/views/ProfileChangePhotoView.vue'), meta: { requiresAuth: true } },
   { path: '/invites', name: 'invites', component: () => import('@/views/InvitesView.vue'), meta: { requiresAuth: true } },
 
   // Public QR landing — redirects to login then back (handled inside the view).
@@ -26,6 +30,7 @@ const routes = [
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/insights', name: 'admin-insights', component: () => import('@/views/admin/AdminInsightsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/orgs', name: 'admin-orgs', component: () => import('@/views/admin/AdminOrgsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/org-invites', name: 'admin-org-invites', component: () => import('@/views/admin/AdminOrgInvitesView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/announcements', name: 'admin-announcements', component: () => import('@/views/admin/AdminAnnouncementsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
