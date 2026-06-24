@@ -57,6 +57,7 @@ const en = {
     badges: 'Badges', events: 'Events', streak: 'Streak',
     noBadges: 'No badges yet — scan your first one!', loading: 'Loading your badges…',
     announcements: 'Announcements', noAnnouncements: 'No announcements yet.', newTag: 'NEW',
+    minimize: 'Minimize', expand: 'Expand',
   },
   badges: {
     title: 'Badges & Events',
@@ -250,6 +251,7 @@ const es = {
     badges: 'Insignias', events: 'Eventos', streak: 'Racha',
     noBadges: 'Aún no tienes insignias, ¡escanea la primera!', loading: 'Cargando tus insignias…',
     announcements: 'Anuncios', noAnnouncements: 'Aún no hay anuncios.', newTag: 'NUEVO',
+    minimize: 'Minimizar', expand: 'Expandir',
   },
   badges: {
     title: 'Insignias y Eventos',
