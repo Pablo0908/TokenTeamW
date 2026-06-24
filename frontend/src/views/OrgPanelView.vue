@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import StatTile from '@/components/domain/StatTile.vue'
 import ActivityChart from '@/components/domain/ActivityChart.vue'
+import OrgOnboarding from '@/components/domain/OrgOnboarding.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,6 +154,11 @@ onMounted(loadTab)
         <div v-if="dashboard?.org?.status === 'suspended'" class="alert alert-warning text-sm">
           This organization is suspended. Scanning and event creation are paused.
         </div>
+        <OrgOnboarding
+          v-if="isAdmin && dashboard"
+          :org-id="orgId"
+          :events-total="dashboard?.events?.total ?? 0"
+        />
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile :value="dashboard?.total_scans ?? 0" label="Scans" tone="primary" />
           <StatTile :value="dashboard?.unique_participants ?? 0" label="People" tone="secondary" />
