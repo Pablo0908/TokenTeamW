@@ -294,8 +294,24 @@ function accAfterLeave(el) {
     <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
       Manage organization
     </RouterLink>
-    <RouterLink to="/invites" class="btn btn-ghost w-full tap-target">
-      Invitations
+    <RouterLink
+      to="/invites"
+      class="surface flex items-center gap-3 p-4 transition-transform active:scale-[0.98]"
+    >
+      <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary/15 drop-shadow-[0_0_6px_rgba(99,102,241,0.3)]">
+        <svg class="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+      </span>
+      <div class="flex-1">
+        <p class="text-sm font-semibold">Invitations</p>
+        <p class="text-xs text-base-content/50">View &amp; manage your invites</p>
+      </div>
+      <svg class="h-4 w-4 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
     </RouterLink>
   </div>
 </template>
