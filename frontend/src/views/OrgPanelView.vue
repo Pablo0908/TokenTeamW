@@ -5,6 +5,8 @@ import { api, readApiError } from '@/services/api'
 import { useOrgContextStore } from '@/stores/orgContext'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import StatTile from '@/components/domain/StatTile.vue'
+import ActivityChart from '@/components/domain/ActivityChart.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +18,7 @@ const isOwner = computed(() => orgContext.isActiveOwner)
 const isAdmin = computed(() => orgContext.isActiveAdmin) // owner or admin
 
 const TABS = computed(() => [
+  { key: 'dashboard', label: 'Dashboard', show: true },
   { key: 'events', label: 'Events', show: true },
   { key: 'members', label: 'Members', show: isAdmin.value },
   { key: 'participants', label: 'People', show: true },
@@ -23,8 +26,8 @@ const TABS = computed(() => [
   { key: 'settings', label: 'Settings', show: isOwner.value },
 ])
 const tab = computed(() => {
-  const t = route.params.tab || 'events'
-  return TABS.value.some((x) => x.key === t && x.show) ? t : 'events'
+  const t = route.params.tab || 'dashboard'
+  return TABS.value.some((x) => x.key === t && x.show) ? t : 'dashboard'
 })
 function go(t) { router.push(`/org/${t}`) }
 
@@ -32,6 +35,9 @@ const loading = ref(false)
 const error = ref('')
 
 // section data
+const dashboard = ref(null)
+const dashPeriod = ref('day')
+const DASH_PERIODS = ['day', 'week', 'month']
 const events = ref([])
 const members = ref([])
 const invites = ref([])
@@ -51,7 +57,8 @@ async function loadTab() {
   loading.value = true; error.value = ''
   try {
     const base = `/orgs/${orgId.value}`
-    if (tab.value === 'events') events.value = (await api.get(`${base}/events`)).data || []
+    if (tab.value === 'dashboard') dashboard.value = (await api.get(`${base}/dashboard`, { params: { period: dashPeriod.value } })).data
+    else if (tab.value === 'events') events.value = (await api.get(`${base}/events`)).data || []
     else if (tab.value === 'members') {
       members.value = (await api.get(`${base}/members`)).data.members || []
       invites.value = (await api.get(`${base}/invites`)).data.invites || []
@@ -97,6 +104,11 @@ async function saveSettings() {
     await orgContext.load()
   } catch (e) { error.value = readApiError(e, 'Could not save settings.') }
 }
+function setDashPeriod(p) {
+  if (p === dashPeriod.value) return
+  dashPeriod.value = p
+  loadTab()
+}
 function auditPage(delta) {
   const next = audit.value.page + delta
   if (next < 1 || (delta > 0 && !audit.value.has_more)) return
@@ -136,8 +148,62 @@ onMounted(loadTab)
     <LoadingSpinner v-if="loading" label="Loading…" />
 
     <template v-else>
+      <!-- DASHBOARD -->
+      <section v-if="tab === 'dashboard'" class="space-y-4">
+        <div v-if="dashboard?.org?.status === 'suspended'" class="alert alert-warning text-sm">
+          This organization is suspended. Scanning and event creation are paused.
+        </div>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile :value="dashboard?.total_scans ?? 0" label="Scans" tone="primary" />
+          <StatTile :value="dashboard?.unique_participants ?? 0" label="People" tone="secondary" />
+          <StatTile :value="dashboard?.events?.total ?? 0" label="Events" tone="accent" />
+          <StatTile :value="dashboard?.badges_minted ?? 0" label="Badges" tone="primary" />
+        </div>
+
+        <div class="surface space-y-2 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">Scans over time</h2>
+            <div role="tablist" class="tabs tabs-boxed tabs-xs bg-base-300/40">
+              <button
+                v-for="p in DASH_PERIODS"
+                :key="p"
+                role="tab"
+                class="tab capitalize"
+                :class="{ 'tab-active': dashPeriod === p }"
+                @click="setDashPeriod(p)"
+              >{{ p }}</button>
+            </div>
+          </div>
+          <ActivityChart :activity="dashboard?.activity ?? []" :period="dashPeriod" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile :value="dashboard?.events?.active ?? 0" label="Active" tone="primary" />
+          <StatTile :value="dashboard?.events?.upcoming ?? 0" label="Upcoming" tone="secondary" />
+          <StatTile :value="dashboard?.events?.locked ?? 0" label="Locked" tone="accent" />
+          <StatTile :value="dashboard?.events?.past ?? 0" label="Past" tone="secondary" />
+        </div>
+
+        <div class="surface p-4">
+          <h2 class="mb-2 font-semibold">Top events</h2>
+          <div v-if="dashboard?.top_events?.length" class="space-y-2">
+            <button
+              v-for="ev in dashboard.top_events"
+              :key="ev.id"
+              type="button"
+              class="flex w-full items-center justify-between rounded-lg px-1 py-1.5 text-left hover:bg-base-100/60"
+              @click="router.push(`/org/events/${ev.id}`)"
+            >
+              <span class="truncate text-sm">{{ ev.name }}</span>
+              <span class="shrink-0 text-sm font-semibold text-primary">{{ ev.scans }} 🏅</span>
+            </button>
+          </div>
+          <p v-else class="py-4 text-center text-sm text-base-content/50">No scans yet.</p>
+        </div>
+      </section>
+
       <!-- EVENTS -->
-      <section v-if="tab === 'events'" class="space-y-3">
+      <section v-else-if="tab === 'events'" class="space-y-3">
         <button v-if="isAdmin" class="btn btn-primary btn-sm tap-target" @click="showNewEvent = !showNewEvent">
           {{ showNewEvent ? 'Cancel' : '+ New event' }}
         </button>

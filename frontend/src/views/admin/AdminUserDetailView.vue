@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUsersStore } from '@/stores/users'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
+import ActivityChart from '@/components/domain/ActivityChart.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 
@@ -29,19 +30,8 @@ const PERIODS = ['day', 'week', 'month']
 const period = ref('day')
 const analytics = computed(() => users.analytics)
 const activity = computed(() => analytics.value?.activity ?? [])
-const maxCount = computed(() => activity.value.reduce((m, b) => Math.max(m, b.count), 0))
 const favorite = computed(() => analytics.value?.favorite_event_type || null)
 
-function barLabel(bucket) {
-  if (!bucket) return ''
-  const d = new Date(bucket)
-  if (Number.isNaN(d.getTime())) return ''
-  if (period.value === 'month') return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-function barHeight(count) {
-  return maxCount.value > 0 ? `${Math.max(6, (count / maxCount.value) * 100)}%` : '6%'
-}
 function setPeriod(p) {
   if (p === period.value) return
   period.value = p
@@ -104,20 +94,7 @@ onMounted(() => {
         </div>
 
         <div class="surface p-4">
-          <div v-if="activity.length" class="flex h-32 items-end gap-1">
-            <div
-              v-for="b in activity"
-              :key="b.bucket"
-              class="group relative flex-1 rounded-t bg-primary/70 transition-colors hover:bg-primary"
-              :style="{ height: barHeight(b.count) }"
-              :title="`${barLabel(b.bucket)}: ${b.count}`"
-            />
-          </div>
-          <p v-else class="py-8 text-center text-sm text-base-content/50">No activity in range.</p>
-          <div v-if="activity.length" class="mt-2 flex justify-between text-[0.65rem] text-base-content/45">
-            <span>{{ barLabel(activity[0].bucket) }}</span>
-            <span>{{ barLabel(activity[activity.length - 1].bucket) }}</span>
-          </div>
+          <ActivityChart :activity="activity" :period="period" />
         </div>
 
         <div class="grid grid-cols-2 gap-3">

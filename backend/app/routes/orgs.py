@@ -204,6 +204,39 @@ def revoke_join_invite(current_user, org_id, invite_id):
 
 # ───────────────────────── org-scoped management panel ─────────────────────────
 
+@orgs_bp.route("/orgs/<org_id>/dashboard", methods=["GET"])
+@org_role_required("owner", "admin", "staff")
+def org_dashboard(current_user, org_id):
+    """At-a-glance org overview: event status breakdown, unique participants, total
+    scans, badges minted, busiest events, and a scans-over-time series for the chart.
+    All aggregations are tenant-scoped; reuses the existing redemption/badge helpers."""
+    period = request.args.get("period", "day")
+    if period not in ("day", "week", "month"):
+        period = "day"
+
+    org = org_model.find_by_id(org_id)
+    # Event status breakdown — small N, so iterate the org's events once.
+    events = {"total": 0, "active": 0, "upcoming": 0, "locked": 0, "past": 0}
+    for ev in event_model.all_events(org_id=org_id):
+        events["total"] += 1
+        st = event_model.status_of(ev)
+        if st in events:
+            events[st] += 1
+
+    overview = redemption_model.org_overview(org_id)
+    return jsonify({
+        "org": {"id": str(org_id), "name": (org or {}).get("name", ""),
+                "status": (org or {}).get("status", "active")},
+        "events": events,
+        "unique_participants": overview["unique_participants"],
+        "total_scans": overview["total_scans"],
+        "badges_minted": badge_model.count_for_org(org_id),
+        "top_events": redemption_model.top_events(org_id, 5),
+        "activity": redemption_model.scans_over_time(org_id, period),
+        "period": period,
+    }), 200
+
+
 @orgs_bp.route("/orgs/<org_id>/events", methods=["GET"])
 @org_role_required("owner", "admin", "staff")
 def org_events(current_user, org_id):
