@@ -99,6 +99,13 @@ async function removeMember(uid) {
   try { await api.delete(`/orgs/${orgId.value}/members/${uid}`); await loadTab() }
   catch (e) { error.value = readApiError(e, 'Could not remove the member.') }
 }
+async function banParticipant(uid, banned) {
+  try {
+    if (banned) await api.delete(`/orgs/${orgId.value}/participants/${uid}/ban`)
+    else await api.post(`/orgs/${orgId.value}/participants/${uid}/ban`)
+    await loadTab()
+  } catch (e) { error.value = readApiError(e, 'Could not update the ban.') }
+}
 async function saveSettings() {
   try {
     await api.patch(`/orgs/${orgId.value}`, { name: settings.value.name.trim(), description: settings.value.description })
@@ -267,10 +274,23 @@ onMounted(loadTab)
 
       <!-- PARTICIPANTS -->
       <section v-else-if="tab === 'participants'" class="space-y-2">
-        <div v-for="p in participants" :key="p.id" class="surface flex items-center justify-between p-3">
-          <div class="min-w-0"><p class="truncate text-sm font-medium">{{ p.name }} {{ p.lastname }}</p>
-            <p class="truncate text-[0.7rem] text-base-content/45">{{ p.email }}</p></div>
-          <span class="text-sm font-semibold text-primary">{{ p.badges_count }} 🏅</span>
+        <div v-for="p in participants" :key="p.id" class="surface flex items-center justify-between gap-2 p-3">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium">
+              {{ p.name }} {{ p.lastname }}
+              <span v-if="p.banned" class="badge badge-xs badge-error">banned</span>
+            </p>
+            <p class="truncate text-[0.7rem] text-base-content/45">{{ p.email }}</p>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <span class="text-sm font-semibold text-primary">{{ p.badges_count }} 🏅</span>
+            <button
+              v-if="isAdmin"
+              class="btn btn-ghost btn-xs"
+              :class="p.banned ? 'text-success' : 'text-error'"
+              @click="banParticipant(p.id, p.banned)"
+            >{{ p.banned ? 'unban' : 'ban' }}</button>
+          </div>
         </div>
         <p v-if="!participants.length" class="surface p-6 text-center text-sm text-base-content/50">No participants yet.</p>
       </section>

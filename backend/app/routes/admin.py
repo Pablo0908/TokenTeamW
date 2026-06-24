@@ -9,6 +9,7 @@ from app.models import user as user_model
 from app.models import audit as audit_model
 from app.models import organization as org_model
 from app.models import membership as membership_model
+from app.models import ban as ban_model
 from app.utils.auth import admin_required, staff_required, jwt_required, super_admin_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -442,6 +443,7 @@ def delete_user(current_user, user_id):
         return jsonify({"error": "User not found"}), 404
 
     redemption_model.delete_by_user(user_id)
+    ban_model.delete_by_user(user_id)
     user_model.delete_user(user_id)
     audit_model.log(current_user["sub"], "user.delete", target.get("email", user_id))
     return jsonify({"id": user_id, "deleted": True}), 200

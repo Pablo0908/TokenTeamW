@@ -10,6 +10,7 @@ from app.models import event as event_model
 from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import audit as audit_model
+from app.models import ban as ban_model
 from app.utils.auth import jwt_required, super_admin_required, org_role_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -438,14 +439,36 @@ def org_end_event(current_user, org_id, event_id):
 @org_role_required("owner", "admin", "staff")
 def org_participants(current_user, org_id):
     counts = redemption_model.counts_by_user(org_id=org_id)
+    banned = ban_model.banned_user_ids(org_id)
     out = []
     for uid, n in counts.items():
         u = user_model.find_by_id(uid)
         if u:
             out.append({"id": uid, "name": u.get("name", ""), "lastname": u.get("lastname", ""),
-                        "email": u.get("email", ""), "badges_count": n})
+                        "email": u.get("email", ""), "badges_count": n, "banned": uid in banned})
     out.sort(key=lambda x: x["badges_count"], reverse=True)
     return jsonify({"participants": out}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/participants/<user_id>/ban", methods=["POST"])
+@org_role_required("owner", "admin")
+def org_ban_participant(current_user, org_id, user_id):
+    """Ban an attendee from THIS org's events (owner/admin). Org-scoped only — it never
+    disables the platform account; the attendee keeps every badge and other-org access."""
+    if not user_model.find_by_id(user_id):
+        return jsonify({"error": "User not found."}), 404
+    reason = (request.get_json(silent=True) or {}).get("reason", "")
+    ban_model.add_ban(user_id, org_id, banned_by=current_user["sub"], reason=reason)
+    audit_model.log(current_user["sub"], "attendee.ban", _email_of(user_id) or user_id, org_id=org_id)
+    return jsonify({"user_id": user_id, "banned": True}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/participants/<user_id>/ban", methods=["DELETE"])
+@org_role_required("owner", "admin")
+def org_unban_participant(current_user, org_id, user_id):
+    ban_model.remove_ban(user_id, org_id)
+    audit_model.log(current_user["sub"], "attendee.unban", _email_of(user_id) or user_id, org_id=org_id)
+    return jsonify({"user_id": user_id, "banned": False}), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/audit", methods=["GET"])

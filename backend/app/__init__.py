@@ -71,7 +71,8 @@ def create_app(config_class=Config):
     mongo.db = mongo.client[app.config["DB_NAME"]]
 
     # Indexes are created once at startup (not per-request).
-    from app.models import user, event, badge, redemption, otp, audit, organization, membership, invite, announcement
+    from app.models import (user, event, badge, redemption, otp, audit, organization,
+                            membership, invite, announcement, ban)
 
     user.create_indexes()
     event.create_indexes()
@@ -83,6 +84,7 @@ def create_app(config_class=Config):
     membership.create_indexes()
     invite.create_indexes()
     announcement.create_indexes()
+    ban.create_indexes()
     mongo.db.reset_codes.create_index("created_at", expireAfterSeconds=600)
     mongo.db.reset_codes.create_index("email", unique=True)
     mongo.db.change_pwd_codes.create_index("created_at", expireAfterSeconds=600)
