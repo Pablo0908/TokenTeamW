@@ -9,7 +9,7 @@ from app.models import user as user_model
 from app.models import audit as audit_model
 from app.models import organization as org_model
 from app.models import membership as membership_model
-from app.utils.auth import admin_required, staff_required, jwt_required
+from app.utils.auth import admin_required, staff_required, jwt_required, super_admin_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
 # All admin operations live here: event/badge creation, badge stats, and user management.
@@ -241,6 +241,53 @@ def list_badges(current_user, event_id):
             }
         )
     return jsonify(out), 200
+
+
+# --- Organization lifecycle (super-admin platform governance) ---
+
+@admin_bp.route("/orgs", methods=["GET"])
+@super_admin_required
+def list_orgs(current_user):
+    """Platform-wide org directory for the super-admin panel: status, owner, and cheap
+    member/event counts."""
+    out = []
+    for o in org_model.all_orgs():
+        oid = str(o["_id"])
+        members = membership_model.members_of(oid)
+        owner = next((m for m in members if m.get("role") == "owner"), None)
+        owner_email = ""
+        if owner:
+            ou = user_model.find_by_id(owner["user_id"])
+            owner_email = ou.get("email", "") if ou else ""
+        out.append({
+            "id": oid,
+            "name": o.get("name", ""),
+            "slug": o.get("slug", ""),
+            "status": o.get("status", "active"),
+            "owner_email": owner_email,
+            "members_count": len(members),
+            "events_count": len(event_model.all_events(org_id=oid)),
+            "created_at": event_model.fmt_date(o.get("created_at")),
+        })
+    return jsonify({"orgs": out}), 200
+
+
+@admin_bp.route("/orgs/<org_id>/status", methods=["PATCH"])
+@super_admin_required
+def set_org_status(current_user, org_id):
+    """Suspend or reactivate an org (platform governance). Suspending freezes the org's
+    scans and event creation; it never touches member accounts (attendees stay
+    platform-level)."""
+    org = org_model.find_by_id(org_id)
+    if not org:
+        return jsonify({"error": "Organization not found."}), 404
+    status = (request.get_json(silent=True) or {}).get("status", "")
+    if status not in ("active", "suspended"):
+        return jsonify({"error": "Status must be 'active' or 'suspended'."}), 400
+    org_model.update_org(org_id, {"status": status})
+    audit_model.log(current_user["sub"], "org.suspend" if status == "suspended" else "org.reactivate",
+                    org.get("name", ""), org_id=org_id)
+    return jsonify({"id": org_id, "status": status}), 200
 
 
 # --- User management (admin-only): track badge counts, promote/demote ---

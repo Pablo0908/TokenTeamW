@@ -250,6 +250,8 @@ def org_events(current_user, org_id):
 @orgs_bp.route("/orgs/<org_id>/event", methods=["POST"])
 @org_role_required("owner", "admin")
 def org_create_event(current_user, org_id):
+    if org_model.is_suspended(org_id):
+        return jsonify({"error": "This organization is suspended."}), 403
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
     if not name:

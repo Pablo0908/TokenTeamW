@@ -117,7 +117,8 @@ onMounted(load)
       <RouterLink to="/admin/events" role="tab" class="tab">Events</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab tab-active">Audit</RouterLink>
-      <RouterLink to="/admin/org-invites" role="tab" class="tab">Orgs</RouterLink>
+      <RouterLink to="/admin/orgs" role="tab" class="tab">Orgs</RouterLink>
+      <RouterLink to="/admin/org-invites" role="tab" class="tab">Codes</RouterLink>
       <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
     </div>
 

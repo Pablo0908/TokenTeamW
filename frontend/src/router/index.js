@@ -26,6 +26,7 @@ const routes = [
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/orgs', name: 'admin-orgs', component: () => import('@/views/admin/AdminOrgsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/org-invites', name: 'admin-org-invites', component: () => import('@/views/admin/AdminOrgInvitesView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/announcements', name: 'admin-announcements', component: () => import('@/views/admin/AdminAnnouncementsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
 

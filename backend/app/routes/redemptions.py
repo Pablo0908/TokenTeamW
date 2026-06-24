@@ -5,6 +5,7 @@ from app.models import event as event_model
 from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import audit as audit_model
+from app.models import organization as org_model
 from app.utils.auth import jwt_required
 
 redemptions_bp = Blueprint("redemptions", __name__)
@@ -26,6 +27,11 @@ def redeem(current_user, event_id, token):
 
     if event_model.status_of(ev) != "active":
         return jsonify({"error": "This event isn’t active right now."}), 403
+
+    # A suspended org freezes all of its events' scans (platform governance), without
+    # touching the attendee's account.
+    if org_model.is_suspended(ev.get("org_id")):
+        return jsonify({"error": "This organization is not active right now."}), 403
 
     try:
         redeemed_at = redemption_model.redeem(badge["_id"], ev["_id"], uid, org_id=ev.get("org_id"))
