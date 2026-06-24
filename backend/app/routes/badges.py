@@ -19,6 +19,11 @@ def my_badges(current_user):
     for ev in event_model.all_events():
         badges = badge_model.find_by_event(ev["_id"])
         redeemed = redemption_model.redeemed_badge_map(uid, ev["_id"])
+        # "My badges" is the user's own collection: only events where they've earned at
+        # least one badge. This keeps it personal and avoids listing every org's events
+        # (org-scoped feed, P7). Earned events always appear regardless of visibility.
+        if not redeemed:
+            continue
         badge_counts = redemption_model.counts_by_badge(ev["_id"])
         total = len(badges)
         earned = sum(1 for b in badges if str(b["_id"]) in redeemed)

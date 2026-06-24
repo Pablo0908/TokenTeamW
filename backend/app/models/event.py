@@ -91,8 +91,11 @@ def status_of(event, now=None):
     )
 
 
+VISIBILITIES = ("public", "unlisted", "scan-only")
+
+
 def create_event(name, description, start_date, end_date, location, prize, created_by,
-                  org_id=None, event_type="uncategorized"):
+                  org_id=None, event_type="uncategorized", visibility="public"):
     result = mongo.db.events.insert_one(
         {
             "name": name,
@@ -104,6 +107,11 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             # Category/class for analytics (e.g. "favorite event type"). Existing
             # events are backfilled as "uncategorized".
             "event_type": event_type or "uncategorized",
+            # Feed visibility (P7): "public" = listed in members'/participants' feeds;
+            # "unlisted" = not listed except to org members, still reachable by link;
+            # "scan-only" = never listed, reachable only via its QR. Governs the LIST,
+            # not hard detail access. Existing events are backfilled as "public".
+            "visibility": visibility if visibility in VISIBILITIES else "public",
             # Authoritative tenant pointer. Optional at the model layer so existing
             # callers don't break; the admin route resolves and passes it.
             "org_id": _oid(org_id) if org_id else None,
@@ -158,6 +166,32 @@ def all_events(org_id=None):
     return list(mongo.db.events.find(query).sort("created_at", -1))
 
 
+def feed_events_for_user(user_id):
+    """The personalized attendee feed (P7): events from orgs the user has interacted
+    with (≥1 redemption) or is a member of. Visibility then filters the LIST:
+      - "public"    -> listed (within scope)
+      - "unlisted"  -> listed only to members of that org
+      - "scan-only" -> never listed (reachable only via its QR)
+    Newest first. Discovery of NEW orgs happens via QR scan / announcements, not here.
+    """
+    from app.models import redemption as redemption_model
+    from app.models import membership as membership_model
+
+    member_orgs = set(membership_model.orgs_for_user(user_id))
+    scope_orgs = set(redemption_model.org_ids_for_user(user_id)) | member_orgs
+    if not scope_orgs:
+        return []
+    cursor = (mongo.db.events.find({"org_id": {"$in": [_oid(o) for o in scope_orgs]}})
+              .sort("created_at", -1))
+    out = []
+    for ev in cursor:
+        vis = ev.get("visibility", "public")
+        org_str = str(ev["org_id"]) if ev.get("org_id") else None
+        if vis == "public" or (vis == "unlisted" and org_str in member_orgs):
+            out.append(ev)
+    return out
+
+
 def event_summary(event, badges_total, badges_earned, org=None):
     """The shape every event-list/detail endpoint shares (matches the frontend contract).
 
@@ -180,6 +214,7 @@ def event_summary(event, badges_total, badges_earned, org=None):
         "badges_earned": badges_earned,
         "completed": badges_total > 0 and badges_earned >= badges_total,
         "event_type": event.get("event_type", "uncategorized"),
+        "visibility": event.get("visibility", "public"),
         "org_id": str(event["org_id"]) if event.get("org_id") else None,
     }
     if org is not None:

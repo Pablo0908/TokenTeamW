@@ -88,6 +88,13 @@ def counts_by_user(org_id=None):
     return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}
 
 
+def org_ids_for_user(user_id):
+    """Set of org_id strings where the user has at least one redemption — the orgs they've
+    'interacted with'. Drives the org-scoped feed (P7). Skips legacy null-org redemptions."""
+    ids = mongo.db.redemptions.distinct("org_id", {"user_id": _oid(user_id)})
+    return {str(o) for o in ids if o}
+
+
 def org_overview(org_id):
     """Headline counts for an org dashboard: total scans (redemptions) and the number
     of distinct attendees who scanned at least once. Two cheap counts, no join."""

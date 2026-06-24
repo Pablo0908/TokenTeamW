@@ -46,10 +46,15 @@ const participants = ref([])
 const audit = ref({ entries: [], page: 1, has_more: false, total: 0 })
 const settings = ref({ name: '', description: '' })
 
-const newEvent = ref({ name: '', event_type: 'conference' })
+const newEvent = ref({ name: '', event_type: 'conference', visibility: 'public' })
 const showNewEvent = ref(false)
 const inviteEmail = ref('')
 const EVENT_TYPES = ['conference', 'workshop', 'meetup', 'hackathon', 'networking', 'other']
+const VISIBILITIES = [
+  { value: 'public', label: 'Public — listed in feeds' },
+  { value: 'unlisted', label: 'Unlisted — link only' },
+  { value: 'scan-only', label: 'Scan-only — QR only' },
+]
 
 function fmtTime(ts) { const d = new Date(ts); return Number.isNaN(d.getTime()) ? ts : d.toLocaleString() }
 
@@ -77,7 +82,7 @@ async function createEvent() {
   if (!newEvent.value.name.trim()) return
   try {
     await api.post(`/orgs/${orgId.value}/event`, { ...newEvent.value, name: newEvent.value.name.trim() })
-    showNewEvent.value = false; newEvent.value = { name: '', event_type: 'conference' }
+    showNewEvent.value = false; newEvent.value = { name: '', event_type: 'conference', visibility: 'public' }
     await loadTab()
   } catch (e) { error.value = readApiError(e, 'Could not create the event.') }
 }
@@ -224,6 +229,9 @@ onMounted(loadTab)
           <input v-model="newEvent.name" placeholder="Event name" class="input input-bordered input-sm w-full bg-base-100/70" />
           <select v-model="newEvent.event_type" class="select select-bordered select-sm w-full bg-base-100/70 capitalize">
             <option v-for="ty in EVENT_TYPES" :key="ty" :value="ty">{{ ty }}</option>
+          </select>
+          <select v-model="newEvent.visibility" class="select select-bordered select-sm w-full bg-base-100/70">
+            <option v-for="v in VISIBILITIES" :key="v.value" :value="v.value">{{ v.label }}</option>
           </select>
           <button class="btn btn-primary btn-sm w-full" @click="createEvent">Create event</button>
         </div>

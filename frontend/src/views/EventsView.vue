@@ -24,6 +24,17 @@ const visible = computed(() => {
   if (filter.value === 'past') return events.events.filter((e) => e.status === 'past')
   return events.events
 })
+
+// Org-grouped feed (P7): cluster the visible events under their organization.
+const grouped = computed(() => {
+  const m = new Map()
+  for (const ev of visible.value) {
+    const key = ev.org?.name || 'Other'
+    if (!m.has(key)) m.set(key, [])
+    m.get(key).push(ev)
+  }
+  return [...m.entries()].map(([name, list]) => ({ name, list }))
+})
 </script>
 
 <template>
@@ -50,13 +61,16 @@ const visible = computed(() => {
     <AlertMessage type="warning" :message="events.error || ''" />
     <LoadingSpinner v-if="events.loading && !events.loaded" :label="$t('events.loading')" />
 
-    <div v-else-if="visible.length" class="space-y-3">
-      <EventCard
-        v-for="ev in visible"
-        :key="ev.id"
-        :event="ev"
-        @select="router.push(`/events/${ev.id}`)"
-      />
+    <div v-else-if="visible.length" class="space-y-5">
+      <section v-for="g in grouped" :key="g.name" class="space-y-3">
+        <h2 class="px-1 text-xs font-semibold uppercase tracking-wide text-base-content/45">{{ g.name }}</h2>
+        <EventCard
+          v-for="ev in g.list"
+          :key="ev.id"
+          :event="ev"
+          @select="router.push(`/events/${ev.id}`)"
+        />
+      </section>
     </div>
 
     <div v-else class="surface p-8 text-center text-sm text-base-content/60">

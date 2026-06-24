@@ -267,6 +267,7 @@ def org_create_event(current_user, org_id):
         created_by=current_user["sub"],
         org_id=org_id,
         event_type=(body.get("event_type") or "uncategorized").strip().lower(),
+        visibility=(body.get("visibility") or "public").strip().lower(),
     )
     audit_model.log(current_user["sub"], "event.create", name, org_id=org_id, event_id=event_id)
     return jsonify({"id": event_id, "name": name}), 201
