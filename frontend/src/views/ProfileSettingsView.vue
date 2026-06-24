@@ -74,6 +74,26 @@ function logout() {
           </svg>
         </RouterLink>
 
+        <!-- Change photo -->
+        <RouterLink
+          to="/profile/change-photo"
+          class="flex w-full items-center gap-3 p-4 transition-colors active:bg-base-300/30"
+        >
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-secondary/15">
+            <svg class="h-5 w-5 text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold">{{ $t('settings.changePhoto') }}</p>
+            <p class="text-xs text-base-content/50">{{ $t('settings.changePhotoHint') }}</p>
+          </div>
+          <svg class="h-4 w-4 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </RouterLink>
+
         <!-- Change password -->
         <RouterLink
           to="/profile/change-password"

@@ -16,6 +16,7 @@ const routes = [
   { path: '/profile/settings', name: 'profile-settings', component: () => import('@/views/ProfileSettingsView.vue'), meta: { requiresAuth: true } },
   { path: '/profile/edit-name', name: 'profile-edit-name', component: () => import('@/views/ProfileEditNameView.vue'), meta: { requiresAuth: true } },
   { path: '/profile/change-password', name: 'profile-change-password', component: () => import('@/views/ProfileChangePasswordView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/change-photo', name: 'profile-change-photo', component: () => import('@/views/ProfileChangePhotoView.vue'), meta: { requiresAuth: true } },
   { path: '/invites', name: 'invites', component: () => import('@/views/InvitesView.vue'), meta: { requiresAuth: true } },
 
   // Public QR landing — redirects to login then back (handled inside the view).

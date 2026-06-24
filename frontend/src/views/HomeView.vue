@@ -12,7 +12,6 @@ import EventCard from '@/components/domain/EventCard.vue'
 import ShareSheet from '@/components/domain/ShareSheet.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
-import BrandLogo from '@/components/ui/BrandLogo.vue'
 import LanguageModal from '@/components/ui/LanguageModal.vue'
 import Coachmark from '@/components/ui/Coachmark.vue'
 import { rarityMeta, rarityLabel } from '@/utils/rarity'
@@ -20,6 +19,12 @@ import { rarityMeta, rarityLabel } from '@/utils/rarity'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+
+const avatarInitials = computed(() => {
+  const n = auth.user?.name ?? ''
+  const l = auth.user?.lastname ?? ''
+  return ((n[0] ?? '') + (l[0] ?? '')).toUpperCase() || (auth.user?.email?.[0] ?? 'U').toUpperCase()
+})
 const badges = useBadgesStore()
 const events = useEventsStore()
 const announcements = useAnnouncementsStore()
@@ -141,9 +146,25 @@ async function downloadCard(badge) {
           {{ newThisWeek === 1 ? $t('home.newBadgeOne', { n: newThisWeek }) : $t('home.newBadgeMany', { n: newThisWeek }) }}
         </p>
       </div>
-      <RouterLink to="/profile" class="surface grid h-11 w-11 place-items-center rounded-2xl p-2 active:scale-90 transition-transform">
-        <BrandLogo :size="28" :show-wordmark="false" />
-      </RouterLink>
+      <!-- Avatar button: main area → profile, camera badge → change photo -->
+      <div class="relative">
+        <RouterLink to="/profile" class="surface grid h-11 w-11 overflow-hidden place-items-center rounded-2xl active:scale-90 transition-transform">
+          <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="h-full w-full object-cover" alt="" />
+          <span v-else class="grid h-full w-full place-items-center bg-gradient-to-br from-primary to-secondary text-sm font-bold text-primary-content">
+            {{ avatarInitials }}
+          </span>
+        </RouterLink>
+        <RouterLink
+          to="/profile/change-photo"
+          class="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-base-200 shadow ring-2 ring-base-100 transition-transform active:scale-90"
+          :aria-label="$t('settings.changePhoto')"
+        >
+          <svg class="h-3 w-3 text-base-content/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </RouterLink>
+      </div>
     </header>
 
     <AlertMessage type="warning" :message="badges.error || ''" />
