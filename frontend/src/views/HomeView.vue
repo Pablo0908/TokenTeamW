@@ -12,7 +12,6 @@ import EventCard from '@/components/domain/EventCard.vue'
 import ShareSheet from '@/components/domain/ShareSheet.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
-import BrandLogo from '@/components/ui/BrandLogo.vue'
 import LanguageModal from '@/components/ui/LanguageModal.vue'
 import Coachmark from '@/components/ui/Coachmark.vue'
 import { rarityMeta, rarityLabel } from '@/utils/rarity'
@@ -20,6 +19,12 @@ import { rarityMeta, rarityLabel } from '@/utils/rarity'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+
+const avatarInitials = computed(() => {
+  const n = auth.user?.name ?? ''
+  const l = auth.user?.lastname ?? ''
+  return ((n[0] ?? '') + (l[0] ?? '')).toUpperCase() || (auth.user?.email?.[0] ?? 'U').toUpperCase()
+})
 const badges = useBadgesStore()
 const events = useEventsStore()
 const announcements = useAnnouncementsStore()
@@ -141,9 +146,25 @@ async function downloadCard(badge) {
           {{ newThisWeek === 1 ? $t('home.newBadgeOne', { n: newThisWeek }) : $t('home.newBadgeMany', { n: newThisWeek }) }}
         </p>
       </div>
-      <RouterLink to="/profile" class="surface grid h-11 w-11 place-items-center rounded-2xl p-2 active:scale-90 transition-transform">
-        <BrandLogo :size="28" :show-wordmark="false" />
-      </RouterLink>
+      <!-- Avatar button: main area → profile, camera badge → change photo -->
+      <div class="relative">
+        <RouterLink to="/profile" class="surface grid h-11 w-11 overflow-hidden place-items-center rounded-2xl active:scale-90 transition-transform">
+          <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="h-full w-full object-cover" alt="" />
+          <span v-else class="grid h-full w-full place-items-center bg-gradient-to-br from-primary to-secondary text-sm font-bold text-primary-content">
+            {{ avatarInitials }}
+          </span>
+        </RouterLink>
+        <RouterLink
+          to="/profile/change-photo"
+          class="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-base-200 shadow ring-2 ring-base-100 transition-transform active:scale-90"
+          :aria-label="$t('settings.changePhoto')"
+        >
+          <svg class="h-3 w-3 text-base-content/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </RouterLink>
+      </div>
     </header>
 
     <AlertMessage type="warning" :message="badges.error || ''" />
@@ -209,13 +230,17 @@ async function downloadCard(badge) {
           ]"
           @click="openAnnouncement(a)"
         >
-          <!-- Unread dot -->
+          <!-- Ringing bell — visible while unread, disappears once markSeen() clears it -->
           <span
             v-if="a.unread"
-            class="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(255,210,60,0.8)]"
+            class="ann-bell absolute right-2 top-2 text-primary drop-shadow-[0_0_6px_rgba(255,210,60,0.9)]"
             aria-hidden="true"
-          />
-          <div class="flex items-center gap-2 pr-4">
+          >
+            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 16.25v-5.5a6 6 0 00-4.5-5.81V4a1.5 1.5 0 10-3 0v.94A6 6 0 006 10.75v5.5H4v1.5h16v-1.5h-2zm-6 5.75a2 2 0 002-2H10a2 2 0 002 2z"/>
+            </svg>
+          </span>
+          <div class="flex items-center gap-2 pr-8">
             <p class="truncate font-semibold">{{ a.title }}</p>
             <span v-if="a.unread" class="badge badge-primary badge-xs font-bold">{{ $t('home.newTag') }}</span>
           </div>
@@ -294,7 +319,7 @@ async function downloadCard(badge) {
     <!-- First-run greeting + language picker -->
     <LanguageModal v-if="onboarding.welcomeOpen" @choose="onboarding.chooseLanguage" />
 
-    <!-- Badge detail modal -->
+    <!-- Badge detail overlay -->
     <div
       v-if="selected"
       class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
@@ -364,3 +389,23 @@ async function downloadCard(badge) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.ann-bell {
+  display: inline-block;
+  transform-origin: 50% 0%;
+  animation: ring-bell 0.8s ease-in-out 3;
+  animation-fill-mode: forwards;
+}
+
+@keyframes ring-bell {
+  0%   { transform: rotate(0deg); }
+  10%  { transform: rotate(22deg); }
+  28%  { transform: rotate(-20deg); }
+  46%  { transform: rotate(16deg); }
+  62%  { transform: rotate(-12deg); }
+  76%  { transform: rotate(7deg); }
+  88%  { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+</style>
