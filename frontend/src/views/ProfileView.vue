@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useOrgContextStore } from '@/stores/orgContext'
 import { useBadgesStore } from '@/stores/badges'
 import { useSettingsStore, CONTRAST_RANGE, FONT_SIZE_RANGE } from '@/stores/settings'
-import StatTile from '@/components/domain/StatTile.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
 
 const router = useRouter()
@@ -60,13 +59,6 @@ function accAfterLeave(el) {
 
 <template>
   <div class="space-y-6 px-4 pb-4 pt-6">
-    <!-- Stats -->
-    <section class="grid grid-cols-3 gap-3">
-      <StatTile :value="badges.totalEarned" :label="$t('profile.badges')" tone="primary" />
-      <StatTile :value="badges.eventsCount" :label="$t('profile.events')" tone="secondary" />
-      <StatTile :value="badges.completedEvents" :label="$t('profile.done')" tone="accent" />
-    </section>
-
     <!-- Profile Settings nav card -->
     <section class="space-y-2">
       <h2 class="font-semibold">{{ $t('settings.profileSettings') }}</h2>
