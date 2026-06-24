@@ -59,6 +59,7 @@ def main():
 
         ev_id = (client.post(f"/orgs/{org_id}/event", headers=H(tok["owner"]),
                              json={"name": f"{SUFFIX} ev", "event_type": "workshop"}).get_json() or {}).get("id")
+        client.patch(f"/orgs/{org_id}/events/{ev_id}/status", headers=H(tok["owner"]), json={"started": True})
         # two distinct attendees scan one badge each -> 2 redemptions today, this org
         for who in ("a1", "a2"):
             t = (client.post(f"/orgs/{org_id}/events/{ev_id}/badge", headers=H(tok["owner"]),

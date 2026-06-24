@@ -64,6 +64,8 @@ def main():
                              json={"name": f"{SUFFIX} ev"}).get_json() or {}).get("id")
         token = (client.post(f"/orgs/{org_id}/events/{ev_id}/badge", headers=H(tok["owner"]),
                              json={"name": "Door"}).get_json() or {}).get("token")
+        # Events start closed (Start/Stop master switch) — start it so it's 'active'.
+        client.patch(f"/orgs/{org_id}/events/{ev_id}/status", headers=H(tok["owner"]), json={"started": True})
         pause = f"/orgs/{org_id}/events/{ev_id}/pause"
         end = f"/orgs/{org_id}/events/{ev_id}/end"
         status_of = lambda: next((e for e in client.get(f"/orgs/{org_id}/events", headers=H(tok['owner'])).get_json()

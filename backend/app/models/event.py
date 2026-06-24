@@ -49,19 +49,18 @@ def fmt_date(value):
 
 
 def compute_status(start, end, now=None, started=False, paused=False, ended=False):
-    """Derive the lifecycle status from the date window plus moderation overrides.
+    """Derive the lifecycle status. Start/Stop is the MASTER SWITCH: an event is only
+    scannable ('active') once it has been explicitly started. A freshly created event is
+    'upcoming' (closed) until its creator presses Start, and Stop closes it again.
 
-    No dates -> 'active' (an unscheduled event is treated as happening now, so a
-    freshly-created demo event is immediately scannable). Redemption requires 'active'.
+    Dates (`start`/`end`) are informational only — shown in the UI, they do NOT auto-open
+    or auto-close scanning (kept in the signature for callers/back-compat).
 
-    Moderation overrides take precedence over the date window, in this order:
-      - `ended`  -> 'past'    (terminal moderation: appears in past events, not
-                               scannable; reversible only by super admin / owner)
-      - `paused` -> 'locked'  (temporary moderation lock: attendees still see earned
-                               badges but cannot scan; reversible)
-      - `started`-> 'active'  (manual activation: forced scannable regardless of dates)
-    Only one applies — ended wins over paused wins over started. None set => the
-    status follows the dates exactly as before.
+    Precedence, highest first:
+      - `ended`  -> 'past'     (terminal moderation: in past events, not scannable)
+      - `paused` -> 'locked'   (temporary lock: earned badges visible, cannot scan)
+      - `started`-> 'active'   (open for scanning)
+      - otherwise -> 'upcoming' (created but not started → not scannable)
     """
     if ended:
         return "past"
@@ -69,15 +68,7 @@ def compute_status(start, end, now=None, started=False, paused=False, ended=Fals
         return "locked"
     if started:
         return "active"
-    now = now or datetime.now(timezone.utc)
-    today = now.date()
-    start_d = start.date() if isinstance(start, datetime) else None
-    end_d = end.date() if isinstance(end, datetime) else None
-    if start_d and today < start_d:
-        return "upcoming"
-    if end_d and today > end_d:
-        return "past"
-    return "active"
+    return "upcoming"
 
 
 def status_of(event, now=None):

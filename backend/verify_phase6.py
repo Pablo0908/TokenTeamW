@@ -67,6 +67,9 @@ def main():
 
         ev_a = (client.post(f"/orgs/{org_a}/event", headers=H(tok["owner"]), json={"name": "A ev"}).get_json() or {}).get("id")
         ev_b = (client.post(f"/orgs/{org_b}/event", headers=H(tok["otherowner"]), json={"name": "B ev"}).get_json() or {}).get("id")
+        # Events start closed — open both so scans succeed.
+        client.patch(f"/orgs/{org_a}/events/{ev_a}/status", headers=H(tok["owner"]), json={"started": True})
+        client.patch(f"/orgs/{org_b}/events/{ev_b}/status", headers=H(tok["otherowner"]), json={"started": True})
         a1, a2, a3 = (make_badge(org_a, ev_a, f"A{i}") for i in (1, 2, 3))
         b1, b2 = (make_badge(org_b, ev_b, f"B{i}") for i in (1, 2))
 

@@ -83,6 +83,8 @@ def main():
         token = r.get_json().get("token")
         check("admin create badge -> 201", r.status_code == 201 and token)
 
+        # Events start closed — open it before scanning.
+        client.patch(f"/admin/events/{created_event_id}/status", headers=sah, json={"started": True})
         r = client.get(f"/redeem/{created_event_id}/{token}", headers=ah)
         redeem = r.get_json()
         check("scan -> 200, completed, prize", r.status_code == 200 and redeem.get("event_completed") and redeem.get("prize") == "P2 Prize")

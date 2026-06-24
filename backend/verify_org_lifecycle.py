@@ -62,6 +62,8 @@ def main():
                           json={"name": "B1"}).get_json() or {}).get("token")
         b2 = (client.post(f"/orgs/{org_id}/events/{ev_id}/badge", headers=H(tok["owner"]),
                           json={"name": "B2"}).get_json() or {}).get("token")
+        # Events start closed — open it so an active org's scans succeed.
+        client.patch(f"/orgs/{org_id}/events/{ev_id}/status", headers=H(tok["owner"]), json={"started": True})
 
         # ---- 1. only super_admin governs orgs ----
         check("org owner cannot list /admin/orgs (403)",

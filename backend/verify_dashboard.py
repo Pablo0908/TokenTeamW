@@ -63,6 +63,7 @@ def main():
         badge = client.post(f"/orgs/{org_id}/events/{ev_id}/badge", headers=H(tok["owner"]),
                             json={"name": "Keynote"}).get_json() or {}
         token = badge.get("token")
+        client.patch(f"/orgs/{org_id}/events/{ev_id}/status", headers=H(tok["owner"]), json={"started": True})
         r = client.get(f"/redeem/{ev_id}/{token}", headers=H(tok["attendee"]))
         check("setup: attendee scanned a badge (redeem 200)", r.status_code == 200)
 

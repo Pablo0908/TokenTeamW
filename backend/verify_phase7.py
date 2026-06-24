@@ -61,6 +61,8 @@ def main():
                                json={"name": f"{SUFFIX} {key}", "visibility": vis}).get_json() or {}).get("id")
             tok = (client.post(f"/orgs/{org_a}/events/{eid}/badge", headers=H(toks["owner"]),
                                json={"name": f"{key} badge"}).get_json() or {}).get("token")
+            # Events start closed — open each so it's scannable (visibility governs listing, not scannability).
+            client.patch(f"/orgs/{org_a}/events/{eid}/status", headers=H(toks["owner"]), json={"started": True})
             evs[key] = {"id": eid, "token": tok, "vis": vis}
 
         def feed_ids(tk):

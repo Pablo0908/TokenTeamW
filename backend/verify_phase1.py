@@ -87,6 +87,8 @@ def main():
         check("new badge inherited event's org_id",
               bool(badge_doc) and badge_doc.get("org_id") == (ev_doc.get("org_id") if ev_doc else 1))
 
+        # Events start closed (Start/Stop is the master switch) — open it before scanning.
+        client.patch(f"/admin/events/{created_event_id}/status", headers=adh, json={"started": True})
         r = client.get(f"/redeem/{created_event_id}/{token}", headers=ah)
         redeem = r.get_json()
         check("scan /redeem -> 200", r.status_code == 200)
