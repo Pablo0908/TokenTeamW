@@ -7,6 +7,7 @@ import { useEventsStore } from '@/stores/events'
 import { useAnnouncementsStore } from '@/stores/announcements'
 import { useOnboardingStore } from '@/stores/onboarding'
 import StatTile from '@/components/domain/StatTile.vue'
+import StreakCard from '@/components/domain/StreakCard.vue'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import EventCard from '@/components/domain/EventCard.vue'
 import ShareSheet from '@/components/domain/ShareSheet.vue'
@@ -32,6 +33,7 @@ const onboarding = useOnboardingStore()
 
 onMounted(async () => {
   if (!badges.loaded) badges.fetchMyBadges()
+  badges.fetchStreak()
   if (!events.loaded) events.fetchEvents()
   // Load announcements, then mark them seen shortly after so the unread markers are
   // visible on arrival but clear for the next visit.
@@ -61,7 +63,8 @@ const newThisWeek = computed(
       return !Number.isNaN(t) && Date.now() - t <= WEEK
     }).length,
 )
-const streak = computed(() => new Set(badges.earnedBadges.map((b) => b.date).filter(Boolean)).size)
+// Authoritative streak: consecutive event-days of completed events, computed server-side.
+const streak = computed(() => badges.streak)
 
 const previewBadges = computed(() => badges.allBadges.slice(0, 4))
 
@@ -178,10 +181,12 @@ async function downloadCard(badge) {
     <AlertMessage type="warning" :message="badges.error || ''" />
 
     <!-- Stats -->
-    <section class="grid grid-cols-3 gap-3">
-      <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" :label="$t('home.badges')" tone="primary" />
-      <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" :label="$t('home.events')" tone="secondary" />
-      <StatTile class="anim-rise" style="animation-delay: 0.19s" :value="streak" :label="$t('home.streak')" tone="accent" />
+    <section class="space-y-3">
+      <StreakCard :value="streak" :label="$t('home.streak')" />
+      <div class="grid grid-cols-2 gap-3">
+        <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" :label="$t('home.badges')" tone="primary" />
+        <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" :label="$t('home.events')" tone="secondary" />
+      </div>
     </section>
 
     <!-- Scan CTA -->

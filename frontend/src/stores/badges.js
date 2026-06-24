@@ -11,6 +11,8 @@ export const useBadgesStore = defineStore('badges', () => {
   const loading = ref(false)
   const loaded = ref(false)
   const lastEarned = ref(null)
+  // Authoritative consecutive-event-day streak, computed server-side (GET /me/streak).
+  const streak = ref(0)
 
   const allBadges = computed(() => groups.value.flatMap((g) => g.badges.map((b) => ({ ...b, event: g.event }))))
   const earnedBadges = computed(() => allBadges.value.filter((b) => b.earned))
@@ -32,6 +34,16 @@ export const useBadgesStore = defineStore('badges', () => {
     }
   }
 
+  // Authoritative streak from the backend (consecutive event-days of completed events).
+  async function fetchStreak() {
+    try {
+      const { data } = await api.get('/me/streak')
+      streak.value = Number(data?.streak) || 0
+    } catch {
+      /* non-critical: leave the previous value in place */
+    }
+  }
+
   // Public QR redemption. Returns the result payload (caller drives the celebration UI).
   async function redeem(eventId, token) {
     error.value = null
@@ -39,6 +51,7 @@ export const useBadgesStore = defineStore('badges', () => {
       const { data } = await api.get(`/redeem/${eventId}/${token}`)
       lastEarned.value = data
       loaded.value = false // gallery should refetch next time it opens
+      fetchStreak() // completing an event may advance the streak — refresh it
       return { ok: true, data }
     } catch (e) {
       // No HTTP response (or the browser reports offline) ⇒ a network failure the caller
@@ -54,12 +67,14 @@ export const useBadgesStore = defineStore('badges', () => {
     loading,
     loaded,
     lastEarned,
+    streak,
     allBadges,
     earnedBadges,
     totalEarned,
     eventsCount,
     completedEvents,
     fetchMyBadges,
+    fetchStreak,
     redeem,
   }
 })

@@ -56,7 +56,7 @@ const participants = ref([])
 const audit = ref({ entries: [], page: 1, has_more: false, total: 0 })
 const settings = ref({ name: '', description: '' })
 
-const newEvent = ref({ name: '', event_type: 'conference', visibility: 'public' })
+const newEvent = ref({ name: '', event_type: 'conference', visibility: 'public', date: '', end_date: '' })
 const showNewEvent = ref(false)
 const inviteEmail = ref('')
 const EVENT_TYPES = ['conference', 'workshop', 'meetup', 'hackathon', 'networking', 'other']
@@ -92,7 +92,7 @@ async function createEvent() {
   if (!newEvent.value.name.trim()) return
   try {
     await api.post(`/orgs/${orgId.value}/event`, { ...newEvent.value, name: newEvent.value.name.trim() })
-    showNewEvent.value = false; newEvent.value = { name: '', event_type: 'conference', visibility: 'public' }
+    showNewEvent.value = false; newEvent.value = { name: '', event_type: 'conference', visibility: 'public', date: '', end_date: '' }
     await loadTab()
   } catch (e) { error.value = readApiError(e, 'Could not create the event.') }
 }
@@ -270,6 +270,16 @@ onMounted(loadTab)
           <select v-model="newEvent.visibility" class="select select-bordered select-sm w-full bg-base-100/70">
             <option v-for="v in VISIBILITIES" :key="v.value" :value="v.value">{{ v.label }}</option>
           </select>
+          <div class="flex gap-2">
+            <label class="form-control flex-1">
+              <span class="label-text mb-1 text-xs text-base-content/60">Hosting day</span>
+              <input v-model="newEvent.date" type="date" class="input input-bordered input-sm w-full bg-base-100/70" />
+            </label>
+            <label class="form-control flex-1">
+              <span class="label-text mb-1 text-xs text-base-content/60">End day</span>
+              <input v-model="newEvent.end_date" type="date" class="input input-bordered input-sm w-full bg-base-100/70" />
+            </label>
+          </div>
           <button class="btn btn-primary btn-sm w-full" @click="createEvent">Create event</button>
         </div>
         <button
