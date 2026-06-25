@@ -148,3 +148,8 @@ def counts_by_badge(event_id):
 def delete_by_user(user_id):
     """Remove all redemptions belonging to a deleted user (cascade)."""
     mongo.db.redemptions.delete_many({"user_id": _oid(user_id)})
+
+
+def delete_by_event(event_id):
+    """Remove all redemptions (scanned badges) for an event (cascade on event delete)."""
+    return mongo.db.redemptions.delete_many({"event_id": _oid(event_id)}).deleted_count

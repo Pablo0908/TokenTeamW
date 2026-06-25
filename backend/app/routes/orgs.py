@@ -13,6 +13,7 @@ from app.models import redemption as redemption_model
 from app.models import audit as audit_model
 from app.models import ban as ban_model
 from app.models import analytics as analytics_model
+from app.models import prize_claim as prize_claim_model
 from app.utils.auth import jwt_required, super_admin_required, org_role_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 from app.utils.email import send_invite_email
@@ -495,6 +496,27 @@ def org_end_event(current_user, org_id, event_id):
                     ev.get("name", ""), org_id=org_id, event_id=str(ev["_id"]))
     ev["ended"] = ended
     return jsonify({"id": event_id, "ended": ended, "status": event_model.status_of(ev)}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>", methods=["DELETE"])
+@org_role_required("owner", "admin")
+def org_delete_event(current_user, org_id, event_id):
+    """Permanently delete one of this org's ENDED (past) events and everything tied to it:
+    badges, redemptions (scanned badges) and prize claims. Owner/admin only (super_admin
+    passes too — they can moderate any org's events); never automatic. Only ended events
+    can be deleted, so an event can't disappear from attendees mid-run."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    if not ev.get("ended"):
+        return jsonify({"error": "Only ended (past) events can be deleted. End the event first."}), 409
+    badge_model.delete_by_event(event_id)
+    redemption_model.delete_by_event(event_id)
+    prize_claim_model.delete_by_event(event_id)
+    event_model.delete_event(event_id)
+    audit_model.log(current_user["sub"], "event.delete", ev.get("name", ""),
+                    org_id=org_id, event_id=event_id)
+    return jsonify({"id": event_id, "deleted": True}), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/participants", methods=["GET"])

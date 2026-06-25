@@ -126,6 +126,23 @@ function toggleEnded() {
   runModeration(() => events.setEventEnded(id, ending, orgId.value))
 }
 
+// Permanent delete — only for ENDED (past) events, owner/admin (or super admin on any
+// event). Second confirmation before the irreversible cascade (badges + scans + claims).
+const deleting = ref(false)
+async function deleteEventConfirmed() {
+  if (!ev.value || deleting.value) return
+  if (!window.confirm(t('admin.eventDetail.confirmDelete', { name: ev.value.name }))) return
+  deleting.value = true
+  try {
+    await events.deleteEvent(id, orgId.value)
+    router.push(backTo.value)
+  } catch {
+    /* error surfaced via store */
+  } finally {
+    deleting.value = false
+  }
+}
+
 async function addBadge() {
   badgeTouched.value = true
   if (!form.name.trim()) return
@@ -433,6 +450,23 @@ onBeforeUnmount(() => { clearInterval(poll); clearOrgTheme() })
           </div>
         </div>
         <p v-else class="text-sm text-base-content/50">{{ $t('admin.eventDetail.noBadges') }}</p>
+      </section>
+
+      <!-- Danger zone: permanently delete a past (ended) event. Only owner/admin (or a
+           super admin on any event); a past event is the prerequisite so nothing is
+           deleted from under attendees mid-run. -->
+      <section v-if="canManage && ev.ended" class="surface space-y-2 border border-error/40 p-4">
+        <p class="font-semibold text-error">{{ $t('admin.eventDetail.dangerZone') }}</p>
+        <p class="text-xs text-base-content/60">{{ $t('admin.eventDetail.deleteHint') }}</p>
+        <button
+          type="button"
+          class="btn btn-error btn-sm mt-1 w-full tap-target"
+          :disabled="deleting"
+          @click="deleteEventConfirmed"
+        >
+          <span v-if="deleting" class="loading loading-spinner loading-xs" />
+          {{ $t('admin.eventDetail.deleteEvent') }}
+        </button>
       </section>
     </template>
   </div>

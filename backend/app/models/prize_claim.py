@@ -73,3 +73,8 @@ def public_claim(doc, awarded_by_name=None):
 def delete_by_user(user_id):
     """Remove all claims belonging to a deleted user (cascade parity with redemptions)."""
     mongo.db.prize_claims.delete_many({"user_id": _oid(user_id)})
+
+
+def delete_by_event(event_id):
+    """Remove all prize claims for an event (cascade on event delete)."""
+    return mongo.db.prize_claims.delete_many({"event_id": _oid(event_id)}).deleted_count
