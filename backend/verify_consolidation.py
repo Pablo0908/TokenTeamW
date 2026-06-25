@@ -60,8 +60,8 @@ def main():
               client.get("/admin/users", headers=oah).status_code == 403)
         check("org admin: POST /admin/event -> 403",
               client.post("/admin/event", headers=oah, json={"name": "nope"}).status_code == 403)
-        check("org admin: PATCH /admin/users/<id>/role -> 403",
-              client.patch(f"/admin/users/{DUMMY}/role", headers=oah, json={"role": "admin"}).status_code == 403)
+        check("org admin: PATCH /admin/users/<id>/super-admin -> 403",
+              client.patch(f"/admin/users/{DUMMY}/super-admin", headers=oah, json={"super_admin": True}).status_code == 403)
         check("org admin: PATCH /admin/users/<id>/disable -> 403",
               client.patch(f"/admin/users/{DUMMY}/disable", headers=oah, json={"disabled": True}).status_code == 403)
         check("org admin: DELETE /admin/users/<id> -> 403",

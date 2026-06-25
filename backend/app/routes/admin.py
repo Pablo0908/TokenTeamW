@@ -332,7 +332,7 @@ def list_users(current_user):
                 "name": u.get("name", ""),
                 "lastname": u.get("lastname", ""),
                 "email": u.get("email", ""),
-                "role": u.get("role", "attendee"),
+                "super_admin": user_model.is_super_admin(u),
                 "disabled": bool(u.get("disabled", False)),
                 "badges_count": counts.get(uid, 0),
                 "created_at": event_model.fmt_date(u.get("created_at")),
@@ -379,7 +379,7 @@ def user_badges(current_user, user_id):
                 "name": user.get("name", ""),
                 "lastname": user.get("lastname", ""),
                 "email": user.get("email", ""),
-                "role": user.get("role", "attendee"),
+                "super_admin": user_model.is_super_admin(user),
                 "badges_count": redemption_model.count_for_user(user_id),
             },
             "events": events,
@@ -424,22 +424,28 @@ def user_analytics(current_user, user_id):
     return jsonify(payload), 200
 
 
-@admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
+@admin_bp.route("/users/<user_id>/super-admin", methods=["PATCH"])
 @super_admin_required
-def set_user_role(current_user, user_id):
+def set_user_super_admin(current_user, user_id):
+    """Promote/demote a user to/from platform super_admin. There is no global "admin" tier
+    anymore — regular admin is org-scoped (a membership role); super_admin is the only
+    platform tier and is granted here by an existing super admin."""
     body = request.get_json(silent=True) or {}
-    role = (body.get("role") or "").strip().lower()
-    if role not in ("admin", "attendee", "assistant"):
-        return jsonify({"error": "Role must be 'admin', 'assistant' or 'attendee'."}), 400
+    make_super = bool(body.get("super_admin"))
+    # Block changing your own status: prevents self-lockout and, since you can't self-demote,
+    # the platform can never be left with zero super admins.
     if user_id == current_user["sub"]:
-        return jsonify({"error": "You can’t change your own role."}), 400
+        return jsonify({"error": "You can’t change your own super-admin status."}), 400
     target = user_model.find_by_id(user_id)
     if not target:
         return jsonify({"error": "User not found"}), 404
 
-    user_model.set_role(user_id, role)
-    audit_model.log(current_user["sub"], "user.role_change", f"{target.get('email', user_id)} → {role}")
-    return jsonify({"id": user_id, "role": role}), 200
+    user_model.set_platform_role(user_id, "super_admin" if make_super else None)
+    # platform_role is re-read from the DB on every request (super_admin_required), so a
+    # demotion takes effect immediately — no token revocation needed.
+    detail = f"{target.get('email', user_id)} → {'super_admin' if make_super else 'removed'}"
+    audit_model.log(current_user["sub"], "user.role_change", detail)
+    return jsonify({"id": user_id, "super_admin": make_super}), 200
 
 
 @admin_bp.route("/users/<user_id>/disable", methods=["PATCH"])

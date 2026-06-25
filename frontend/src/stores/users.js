@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api, readApiError } from '@/services/api'
 
-// Admin-only: the registered-user directory with per-user badge counts, plus
-// role promotion/demotion. Backed by GET /admin/users and PATCH /admin/users/<id>/role.
+// Super-admin-only: the registered-user directory with per-user badge counts, plus
+// platform super-admin promotion/demotion. Backed by GET /admin/users and
+// PATCH /admin/users/<id>/super-admin. (There is no global "admin" tier — regular admin is
+// org-scoped, managed per org in the OrgPanel Members tab.)
 export const useUsersStore = defineStore('users', () => {
   const users = ref([])
   const current = ref(null) // { user, events } for the user being inspected
@@ -12,9 +14,8 @@ export const useUsersStore = defineStore('users', () => {
   const loading = ref(false)
   const loaded = ref(false)
 
-  const adminCount = computed(() => users.value.filter((u) => u.role === 'admin').length)
-  const assistantCount = computed(() => users.value.filter((u) => u.role === 'assistant').length)
-  const attendeeCount = computed(() => users.value.filter((u) => u.role === 'attendee').length)
+  const superAdminCount = computed(() => users.value.filter((u) => u.super_admin).length)
+  const attendeeCount = computed(() => users.value.filter((u) => !u.super_admin).length)
 
   async function fetchUsers() {
     loading.value = true
@@ -60,16 +61,16 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
-  // Promote ('admin') or demote ('attendee'). Optimistic update on success.
-  async function setRole(id, role) {
+  // Grant or revoke platform super-admin. Optimistic update on success.
+  async function setSuperAdmin(id, superAdmin) {
     error.value = null
     try {
-      await api.patch(`/admin/users/${id}/role`, { role })
+      await api.patch(`/admin/users/${id}/super-admin`, { super_admin: superAdmin })
       const u = users.value.find((x) => x.id === id)
-      if (u) u.role = role
+      if (u) u.super_admin = superAdmin
       return true
     } catch (e) {
-      error.value = readApiError(e, 'Could not update the role.')
+      error.value = readApiError(e, 'Could not update super-admin status.')
       throw e
     }
   }
@@ -99,5 +100,5 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
-  return { users, current, analytics, error, loading, loaded, adminCount, assistantCount, attendeeCount, fetchUsers, fetchUserBadges, fetchUserAnalytics, setRole, disableUser, deleteUser }
+  return { users, current, analytics, error, loading, loaded, superAdminCount, attendeeCount, fetchUsers, fetchUserBadges, fetchUserAnalytics, setSuperAdmin, disableUser, deleteUser }
 })

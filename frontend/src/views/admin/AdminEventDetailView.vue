@@ -1,7 +1,6 @@
 <script setup>
-import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { reactive, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
 import { useOrgContextStore } from '@/stores/orgContext'
 import QRDisplay from '@/components/domain/QRDisplay.vue'
@@ -10,10 +9,10 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import { printQrSheet } from '@/utils/qrSheet'
 import { t } from '@/i18n'
+import { applyOrgTheme, clearOrgTheme } from '@/utils/orgTheme'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
 const events = useEventsStore()
 const orgContext = useOrgContextStore()
 const id = route.params.id
@@ -23,10 +22,10 @@ const id = route.params.id
 // endpoints and authorizes on the org role; otherwise it keeps the legacy /admin path.
 const isOrgMode = computed(() => route.meta.orgScoped === true)
 const orgId = computed(() => (isOrgMode.value ? orgContext.activeOrgId : null))
-const canManage = computed(() => (isOrgMode.value ? orgContext.isActiveAdmin : auth.isAdmin))
+const canManage = computed(() => (isOrgMode.value ? orgContext.isActiveAdmin : orgContext.isSuperAdmin))
 // Ending an event is restricted to super admins and org owners (not org admins).
 const canEnd = computed(() =>
-  isOrgMode.value ? (orgContext.isActiveOwner || orgContext.isSuperAdmin) : auth.isAdmin,
+  isOrgMode.value ? (orgContext.isActiveOwner || orgContext.isSuperAdmin) : orgContext.isSuperAdmin,
 )
 const backTo = computed(() => (isOrgMode.value ? '/org/events' : '/admin/events'))
 
@@ -180,12 +179,15 @@ async function exportSheet() {
   }
 }
 
+// Theme the event detail with the owning org's brand colors while open.
+watch(() => ev.value?.org?.theme, (th) => applyOrgTheme(th || {}), { deep: true })
+
 onMounted(async () => {
   await refresh()
   // Near-real-time redemption counts (PRD §4.2 dashboard polling).
   poll = setInterval(() => events.fetchAdminBadges(id, orgId.value), 4000)
 })
-onBeforeUnmount(() => clearInterval(poll))
+onBeforeUnmount(() => { clearInterval(poll); clearOrgTheme() })
 </script>
 
 <template>

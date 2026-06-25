@@ -44,8 +44,9 @@ def main():
     mongo.db.users.delete_one({"email": ATT_EMAIL})
     att_id = user_model.create_user("Verify", "Attendee", ATT_EMAIL, hash_password("TestPass1!"), role="attendee")
     attendee = user_model.find_by_id(att_id)
-    admin = mongo.db.users.find_one({"role": "admin"})
-    assert attendee and admin, "need at least one admin in the DB"
+    # The /admin/* surface is platform super_admin only (no global admin tier anymore).
+    admin = mongo.db.users.find_one({"platform_role": "super_admin"})
+    assert attendee and admin, "need at least one super_admin in the DB"
 
     with app.app_context():
         attendee_tok = encode_token(str(attendee["_id"]), attendee["role"])
@@ -106,7 +107,7 @@ def main():
         users_body = r.get_json()
         check("GET /admin/users -> 200 with users[]", r.status_code == 200 and "users" in users_body)
         check("user rows keep their original shape",
-              all({"id", "email", "role", "badges_count"} <= set(u) for u in users_body["users"]))
+              all({"id", "email", "super_admin", "badges_count"} <= set(u) for u in users_body["users"]))
         r = client.get("/admin/audit", headers=adh)
         check("GET /admin/audit -> 200 with entries[]",
               r.status_code == 200 and "entries" in r.get_json())

@@ -26,7 +26,8 @@ const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
 const valid = computed(() => emailValid.value && form.password.length >= 1)
 
 function finishLogin() {
-  if (!auth.isStaff) onboarding.maybeStart(auth.user?.id)
+  // Skip the attendee coach-marks for platform super admins; everyone else gets the tour.
+  if (auth.user?.platform_role !== 'super_admin') onboarding.maybeStart(auth.user?.id)
   // Everyone (admins included) lands on home first; a saved deep-link redirect
   // (e.g. a QR scan or a protected page they were headed to) still takes priority.
   const target = auth.consumeRedirect()
