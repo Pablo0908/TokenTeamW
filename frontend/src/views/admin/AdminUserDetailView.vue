@@ -4,8 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUsersStore } from '@/stores/users'
 import BadgeCard from '@/components/domain/BadgeCard.vue'
 import ProgressBar from '@/components/domain/ProgressBar.vue'
+import ActivityChart from '@/components/domain/ActivityChart.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
+import { t } from '@/i18n'
+
+const periodLabel = (p) => t(`dateRange.${p}`)
 
 const route = useRoute()
 const router = useRouter()
@@ -29,19 +33,8 @@ const PERIODS = ['day', 'week', 'month']
 const period = ref('day')
 const analytics = computed(() => users.analytics)
 const activity = computed(() => analytics.value?.activity ?? [])
-const maxCount = computed(() => activity.value.reduce((m, b) => Math.max(m, b.count), 0))
 const favorite = computed(() => analytics.value?.favorite_event_type || null)
 
-function barLabel(bucket) {
-  if (!bucket) return ''
-  const d = new Date(bucket)
-  if (Number.isNaN(d.getTime())) return ''
-  if (period.value === 'month') return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-function barHeight(count) {
-  return maxCount.value > 0 ? `${Math.max(6, (count / maxCount.value) * 100)}%` : '6%'
-}
 function setPeriod(p) {
   if (p === period.value) return
   period.value = p
@@ -63,11 +56,11 @@ onMounted(() => {
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
       </svg>
-      Users
+      {{ $t('admin.userDetail.back') }}
     </button>
 
     <AlertMessage type="warning" :message="users.error || ''" />
-    <LoadingSpinner v-if="users.loading && !data" label="Loading progress…" />
+    <LoadingSpinner v-if="users.loading && !data" :label="$t('admin.userDetail.loading')" />
 
     <template v-else-if="person">
       <header class="flex items-center gap-3">
@@ -83,14 +76,14 @@ onMounted(() => {
         </div>
         <div class="ml-auto shrink-0 text-center">
           <p class="text-2xl font-bold leading-none text-primary">{{ person.badges_count ?? 0 }}</p>
-          <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">badges</p>
+          <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">{{ $t('admin.userDetail.badges') }}</p>
         </div>
       </header>
 
       <!-- Analytics -->
       <section v-if="analytics" class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold">Activity</h2>
+          <h2 class="font-semibold">{{ $t('admin.userDetail.activity') }}</h2>
           <div role="tablist" class="tabs tabs-boxed tabs-xs bg-base-300/40">
             <button
               v-for="p in PERIODS"
@@ -99,37 +92,24 @@ onMounted(() => {
               class="tab capitalize"
               :class="{ 'tab-active': period === p }"
               @click="setPeriod(p)"
-            >{{ p }}</button>
+            >{{ periodLabel(p) }}</button>
           </div>
         </div>
 
         <div class="surface p-4">
-          <div v-if="activity.length" class="flex h-32 items-end gap-1">
-            <div
-              v-for="b in activity"
-              :key="b.bucket"
-              class="group relative flex-1 rounded-t bg-primary/70 transition-colors hover:bg-primary"
-              :style="{ height: barHeight(b.count) }"
-              :title="`${barLabel(b.bucket)}: ${b.count}`"
-            />
-          </div>
-          <p v-else class="py-8 text-center text-sm text-base-content/50">No activity in range.</p>
-          <div v-if="activity.length" class="mt-2 flex justify-between text-[0.65rem] text-base-content/45">
-            <span>{{ barLabel(activity[0].bucket) }}</span>
-            <span>{{ barLabel(activity[activity.length - 1].bucket) }}</span>
-          </div>
+          <ActivityChart :activity="activity" :period="period" />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div class="surface p-4">
-            <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">Favorite type</p>
+            <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">{{ $t('admin.userDetail.favoriteType') }}</p>
             <p class="mt-1 truncate font-semibold capitalize">
               {{ favorite ? favorite.event_type : '—' }}
-              <span v-if="favorite?.tie" class="text-[0.6rem] font-normal text-base-content/45">(tie)</span>
+              <span v-if="favorite?.tie" class="text-[0.6rem] font-normal text-base-content/45">{{ $t('admin.userDetail.tie') }}</span>
             </p>
           </div>
           <div v-if="'login_count' in analytics" class="surface p-4">
-            <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">Logins</p>
+            <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">{{ $t('admin.userDetail.logins') }}</p>
             <p class="mt-1 font-semibold">{{ analytics.login_count }}</p>
           </div>
         </div>
@@ -137,7 +117,7 @@ onMounted(() => {
 
       <!-- Progress per event -->
       <section class="space-y-3">
-        <h2 class="font-semibold">Progress by event</h2>
+        <h2 class="font-semibold">{{ $t('admin.userDetail.progressByEvent') }}</h2>
         <div v-if="events.length" class="space-y-3">
           <div v-for="ev in events" :key="ev.event_id" class="surface p-4">
             <div class="mb-2 flex items-center justify-between gap-2">
@@ -145,21 +125,21 @@ onMounted(() => {
               <span
                 class="badge badge-sm shrink-0"
                 :class="ev.completed ? 'badge-success' : ev.status === 'active' ? 'badge-primary' : 'badge-ghost'"
-              >{{ ev.completed ? 'Completed' : ev.status }}</span>
+              >{{ ev.completed ? $t('admin.userDetail.completed') : ev.status }}</span>
             </div>
             <ProgressBar :value="ev.badges_earned" :max="ev.badges_total" />
           </div>
         </div>
-        <p v-else class="surface p-6 text-center text-sm text-base-content/50">None</p>
+        <p v-else class="surface p-6 text-center text-sm text-base-content/50">{{ $t('admin.userDetail.none') }}</p>
       </section>
 
       <!-- Claimed badges -->
       <section class="space-y-3">
-        <h2 class="font-semibold">Claimed badges</h2>
+        <h2 class="font-semibold">{{ $t('admin.userDetail.claimedBadges') }}</h2>
         <div v-if="claimed.length" class="grid grid-cols-3 gap-3">
           <BadgeCard v-for="b in claimed" :key="b.id" :badge="b" />
         </div>
-        <p v-else class="surface p-6 text-center text-sm text-base-content/50">None</p>
+        <p v-else class="surface p-6 text-center text-sm text-base-content/50">{{ $t('admin.userDetail.none') }}</p>
       </section>
     </template>
   </div>

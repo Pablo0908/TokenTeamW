@@ -60,6 +60,11 @@ def count_for_event(event_id):
     return mongo.db.badges.count_documents({"event_id": _oid(event_id)})
 
 
+def count_for_org(org_id):
+    """Total badges minted across an org's events (uses the denormalized org_id)."""
+    return mongo.db.badges.count_documents({"org_id": _oid(org_id)})
+
+
 def compute_rarity(redeemed_by, total_attendees):
     """Tier a badge by how few attendees have collected it. Returns None when there's not
     enough signal yet (no attendees, or nobody has earned it) so the UI shows no tier."""

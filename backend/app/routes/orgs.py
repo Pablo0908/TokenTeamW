@@ -10,6 +10,8 @@ from app.models import event as event_model
 from app.models import badge as badge_model
 from app.models import redemption as redemption_model
 from app.models import audit as audit_model
+from app.models import ban as ban_model
+from app.models import analytics as analytics_model
 from app.utils.auth import jwt_required, super_admin_required, org_role_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -204,6 +206,71 @@ def revoke_join_invite(current_user, org_id, invite_id):
 
 # ───────────────────────── org-scoped management panel ─────────────────────────
 
+@orgs_bp.route("/orgs/<org_id>/dashboard", methods=["GET"])
+@org_role_required("owner", "admin", "staff")
+def org_dashboard(current_user, org_id):
+    """At-a-glance org overview: event status breakdown, unique participants, total
+    scans, badges minted, busiest events, and a scans-over-time series for the chart.
+    All aggregations are tenant-scoped; reuses the existing redemption/badge helpers."""
+    period = request.args.get("period", "day")
+    if period not in ("day", "week", "month"):
+        period = "day"
+
+    org = org_model.find_by_id(org_id)
+    # Event status breakdown — small N, so iterate the org's events once.
+    events = {"total": 0, "active": 0, "upcoming": 0, "locked": 0, "past": 0}
+    for ev in event_model.all_events(org_id=org_id):
+        events["total"] += 1
+        st = event_model.status_of(ev)
+        if st in events:
+            events[st] += 1
+
+    overview = redemption_model.org_overview(org_id)
+    return jsonify({
+        "org": {"id": str(org_id), "name": (org or {}).get("name", ""),
+                "status": (org or {}).get("status", "active")},
+        "events": events,
+        "unique_participants": overview["unique_participants"],
+        "total_scans": overview["total_scans"],
+        "badges_minted": badge_model.count_for_org(org_id),
+        "top_events": redemption_model.top_events(org_id, 5),
+        "activity": redemption_model.scans_over_time(org_id, period),
+        "period": period,
+    }), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/insights", methods=["GET"])
+@org_role_required("owner", "admin")
+def org_insights(current_user, org_id):
+    """Attendee insights for an org (owner/admin): period-over-period KPI deltas, new-vs-
+    returning attendees + an acquisition trend, and a retention/return-rate signal."""
+    period, start, end = analytics_model.parse_range(request.args)
+    prev_start = start - (end - start)
+    cur = analytics_model.window_counts(org_id, start, end)
+    prev = analytics_model.window_counts(org_id, prev_start, start)
+
+    nvr = analytics_model.new_vs_returning(org_id, start, end)
+    retention = analytics_model.org_retention(org_id)
+    attendance = analytics_model.event_attendance(org_id)
+    # Chronological per-event attendance for context (all_events is newest-first).
+    events = [{"id": str(ev["_id"]), "name": ev.get("name", ""),
+               "attendees": attendance.get(str(ev["_id"]), 0)}
+              for ev in reversed(event_model.all_events(org_id=org_id))]
+
+    return jsonify({
+        "period": period,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "kpi_deltas": {
+            "scans": {"value": cur["scans"], "delta_pct": analytics_model.pct_delta(cur["scans"], prev["scans"])},
+            "participants": {"value": cur["unique_participants"],
+                             "delta_pct": analytics_model.pct_delta(cur["unique_participants"], prev["unique_participants"])},
+        },
+        "new_vs_returning": {**nvr, "series": analytics_model.new_attendees_series(org_id, period, start, end)},
+        "retention": {**retention, "events": events},
+    }), 200
+
+
 @orgs_bp.route("/orgs/<org_id>/events", methods=["GET"])
 @org_role_required("owner", "admin", "staff")
 def org_events(current_user, org_id):
@@ -217,6 +284,8 @@ def org_events(current_user, org_id):
 @orgs_bp.route("/orgs/<org_id>/event", methods=["POST"])
 @org_role_required("owner", "admin")
 def org_create_event(current_user, org_id):
+    if org_model.is_suspended(org_id):
+        return jsonify({"error": "This organization is suspended."}), 403
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
     if not name:
@@ -231,6 +300,7 @@ def org_create_event(current_user, org_id):
         created_by=current_user["sub"],
         org_id=org_id,
         event_type=(body.get("event_type") or "uncategorized").strip().lower(),
+        visibility=(body.get("visibility") or "public").strip().lower(),
     )
     audit_model.log(current_user["sub"], "event.create", name, org_id=org_id, event_id=event_id)
     return jsonify({"id": event_id, "name": name}), 201
@@ -403,14 +473,36 @@ def org_end_event(current_user, org_id, event_id):
 @org_role_required("owner", "admin", "staff")
 def org_participants(current_user, org_id):
     counts = redemption_model.counts_by_user(org_id=org_id)
+    banned = ban_model.banned_user_ids(org_id)
     out = []
     for uid, n in counts.items():
         u = user_model.find_by_id(uid)
         if u:
             out.append({"id": uid, "name": u.get("name", ""), "lastname": u.get("lastname", ""),
-                        "email": u.get("email", ""), "badges_count": n})
+                        "email": u.get("email", ""), "badges_count": n, "banned": uid in banned})
     out.sort(key=lambda x: x["badges_count"], reverse=True)
     return jsonify({"participants": out}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/participants/<user_id>/ban", methods=["POST"])
+@org_role_required("owner", "admin")
+def org_ban_participant(current_user, org_id, user_id):
+    """Ban an attendee from THIS org's events (owner/admin). Org-scoped only — it never
+    disables the platform account; the attendee keeps every badge and other-org access."""
+    if not user_model.find_by_id(user_id):
+        return jsonify({"error": "User not found."}), 404
+    reason = (request.get_json(silent=True) or {}).get("reason", "")
+    ban_model.add_ban(user_id, org_id, banned_by=current_user["sub"], reason=reason)
+    audit_model.log(current_user["sub"], "attendee.ban", _email_of(user_id) or user_id, org_id=org_id)
+    return jsonify({"user_id": user_id, "banned": True}), 200
+
+
+@orgs_bp.route("/orgs/<org_id>/participants/<user_id>/ban", methods=["DELETE"])
+@org_role_required("owner", "admin")
+def org_unban_participant(current_user, org_id, user_id):
+    ban_model.remove_ban(user_id, org_id)
+    audit_model.log(current_user["sub"], "attendee.unban", _email_of(user_id) or user_id, org_id=org_id)
+    return jsonify({"user_id": user_id, "banned": False}), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/audit", methods=["GET"])

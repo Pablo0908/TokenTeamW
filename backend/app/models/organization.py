@@ -57,6 +57,15 @@ def find_by_slug(slug):
     return mongo.db.organizations.find_one({"slug": slug})
 
 
+def is_suspended(org_id):
+    """True when the org exists and is suspended. A missing org_id (legacy/global
+    resource) is never 'suspended', so callers can guard writes/scans uniformly."""
+    if not org_id:
+        return False
+    org = find_by_id(org_id)
+    return bool(org and org.get("status") == "suspended")
+
+
 def all_orgs():
     return list(mongo.db.organizations.find().sort("created_at", 1))
 

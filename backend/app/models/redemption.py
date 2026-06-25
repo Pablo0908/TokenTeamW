@@ -88,6 +88,53 @@ def counts_by_user(org_id=None):
     return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}
 
 
+def org_ids_for_user(user_id):
+    """Set of org_id strings where the user has at least one redemption — the orgs they've
+    'interacted with'. Drives the org-scoped feed (P7). Skips legacy null-org redemptions."""
+    ids = mongo.db.redemptions.distinct("org_id", {"user_id": _oid(user_id)})
+    return {str(o) for o in ids if o}
+
+
+def org_overview(org_id):
+    """Headline counts for an org dashboard: total scans (redemptions) and the number
+    of distinct attendees who scanned at least once. Two cheap counts, no join."""
+    oid = _oid(org_id)
+    total = mongo.db.redemptions.count_documents({"org_id": oid})
+    unique = len(mongo.db.redemptions.distinct("user_id", {"org_id": oid}))
+    return {"total_scans": total, "unique_participants": unique}
+
+
+def scans_over_time(org_id, period):
+    """Per-period scan counts for one org, oldest→newest — same {bucket, count} shape
+    as audit.activity_buckets so the frontend ActivityChart renders it unchanged.
+    `period` is 'day' | 'week' | 'month'."""
+    unit = {"day": "day", "week": "week", "month": "month"}.get(period, "day")
+    pipeline = [
+        {"$match": {"org_id": _oid(org_id)}},
+        {"$group": {"_id": {"$dateTrunc": {"date": "$redeemed_at", "unit": unit}}, "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+    ]
+    out = []
+    for doc in mongo.db.redemptions.aggregate(pipeline):
+        bucket = doc["_id"]
+        out.append({"bucket": bucket.isoformat() if bucket else None, "count": doc["count"]})
+    return out
+
+
+def top_events(org_id, limit=5):
+    """The org's most-scanned events: [{id, name, scans}], busiest first."""
+    pipeline = [
+        {"$match": {"org_id": _oid(org_id)}},
+        {"$group": {"_id": "$event_id", "scans": {"$sum": 1}}},
+        {"$sort": {"scans": -1}},
+        {"$limit": limit},
+        {"$lookup": {"from": "events", "localField": "_id", "foreignField": "_id", "as": "ev"}},
+        {"$unwind": "$ev"},
+    ]
+    return [{"id": str(d["_id"]), "name": d["ev"].get("name", ""), "scans": d["scans"]}
+            for d in mongo.db.redemptions.aggregate(pipeline)]
+
+
 def counts_by_badge(event_id):
     """Return {badge_id_str: redemption_count} for one event (one aggregation) — used to
     compute each badge's rarity without a query per badge."""

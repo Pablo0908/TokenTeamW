@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, computed, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
@@ -21,7 +22,7 @@ const sorted = computed(() =>
 const isSelf = (u) => u.id === auth.user?.id
 
 // Admin sees "Organizer"; assistant sees "Assistant".
-const roleLabel = computed(() => (auth.isAdmin ? 'Organizer' : 'Assistant'))
+const roleLabel = computed(() => (auth.isAdmin ? t('admin.organizer') : t('profile.assistant')))
 const roleBadgeClass = (role) =>
   role === 'admin' ? 'badge-secondary' : role === 'assistant' ? 'badge-accent' : 'badge-ghost'
 
@@ -74,37 +75,39 @@ onMounted(() => users.fetchUsers())
     <header class="flex items-center justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-secondary">{{ roleLabel }}</p>
-        <h1 class="text-2xl font-bold">Users</h1>
+        <h1 class="text-2xl font-bold">{{ $t('admin.users.title') }}</h1>
       </div>
-      <button class="btn btn-ghost btn-sm tap-target" @click="logout">Log out</button>
+      <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
     <!-- Admin section nav -->
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
-      <RouterLink to="/admin/events" role="tab" class="tab">Events</RouterLink>
-      <RouterLink to="/admin/users" role="tab" class="tab tab-active">Users</RouterLink>
-      <RouterLink v-if="auth.isAdmin" to="/admin/audit" role="tab" class="tab">Audit</RouterLink>
-      <RouterLink to="/admin/org-invites" role="tab" class="tab">Orgs</RouterLink>
-      <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
+      <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
+      <RouterLink to="/admin/users" role="tab" class="tab tab-active">{{ $t('tabs.users') }}</RouterLink>
+      <RouterLink v-if="auth.isAdmin" to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
+      <RouterLink to="/admin/insights" role="tab" class="tab">{{ $t('tabs.insights') }}</RouterLink>
+      <RouterLink to="/admin/orgs" role="tab" class="tab">{{ $t('tabs.orgs') }}</RouterLink>
+      <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
     </div>
 
     <AlertMessage type="warning" :message="users.error || ''" />
-    <LoadingSpinner v-if="users.loading && !users.loaded" label="Loading users…" />
+    <LoadingSpinner v-if="users.loading && !users.loaded" :label="$t('admin.users.loading')" />
 
     <template v-else>
       <!-- Summary -->
       <section class="grid grid-cols-3 gap-3">
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-secondary">{{ users.adminCount }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Admins</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.users.admins') }}</p>
         </div>
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-accent">{{ users.assistantCount }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Assistants</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.users.assistants') }}</p>
         </div>
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-success">{{ users.attendeeCount }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">Attendees</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.users.attendees') }}</p>
         </div>
       </section>
 
@@ -124,20 +127,20 @@ onMounted(() => users.fetchUsers())
               <p class="flex items-center gap-2 truncate font-medium">
                 {{ [u.name, u.lastname].filter(Boolean).join(' ') || u.email }}
                 <span class="badge badge-sm" :class="roleBadgeClass(u.role)">{{ u.role }}</span>
-                <span v-if="u.disabled" class="badge badge-sm badge-error">disabled</span>
-                <span v-if="isSelf(u)" class="badge badge-sm badge-outline">you</span>
+                <span v-if="u.disabled" class="badge badge-sm badge-error">{{ $t('admin.users.disabled') }}</span>
+                <span v-if="isSelf(u)" class="badge badge-sm badge-outline">{{ $t('admin.users.you') }}</span>
               </p>
               <p class="truncate text-xs text-base-content/55">{{ u.email }}</p>
             </div>
             <div class="shrink-0 text-center">
               <p class="text-lg font-bold text-primary leading-none">{{ u.badges_count ?? 0 }}</p>
-              <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">badges</p>
+              <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">{{ $t('admin.users.badges') }}</p>
             </div>
           </div>
 
           <div class="mt-3 flex flex-col gap-2">
             <RouterLink :to="`/admin/users/${u.id}`" class="btn btn-ghost btn-xs tap-target gap-1 text-primary self-start">
-              View progress
+              {{ $t('admin.users.viewProgress') }}
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 5l7 7-7 7" />
               </svg>
@@ -150,35 +153,35 @@ onMounted(() => users.fetchUsers())
                   class="select select-bordered select-xs flex-1 min-w-0 bg-base-100/70"
                   :value="u.role"
                   :disabled="updatingId === u.id"
-                  aria-label="Change role"
+                  :aria-label="$t('admin.users.changeRole')"
                   @change="(e) => changeRole(u, e.target.value)"
                 >
-                  <option value="attendee">Attendee</option>
-                  <option value="assistant">Assistant</option>
-                  <option value="admin">Admin</option>
+                  <option value="attendee">{{ $t('admin.users.roleAttendee') }}</option>
+                  <option value="assistant">{{ $t('admin.users.roleAssistant') }}</option>
+                  <option value="admin">{{ $t('admin.users.roleAdmin') }}</option>
                 </select>
                 <button
                   class="btn btn-xs shrink-0"
                   :class="u.disabled ? 'btn-success' : 'btn-warning'"
                   @click="openConfirm(u.disabled ? 'enable' : 'disable', u)"
                 >
-                  {{ u.disabled ? 'Enable' : 'Disable' }}
+                  {{ u.disabled ? $t('admin.users.enable') : $t('admin.users.disable') }}
                 </button>
                 <button
                   class="btn btn-xs btn-error shrink-0"
                   @click="openConfirm('delete', u)"
                 >
-                  Delete
+                  {{ $t('admin.users.delete') }}
                 </button>
               </template>
             </div>
-            <span v-else-if="isSelf(u)" class="text-xs text-base-content/40">your account</span>
+            <span v-else-if="isSelf(u)" class="text-xs text-base-content/40">{{ $t('admin.users.yourAccount') }}</span>
           </div>
         </div>
       </section>
 
       <div v-else class="surface p-8 text-center text-sm text-base-content/60">
-        No registered users yet.
+        {{ $t('admin.users.noneYet') }}
       </div>
     </template>
 
@@ -186,31 +189,28 @@ onMounted(() => users.fetchUsers())
     <div v-if="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div class="surface w-full max-w-sm rounded-2xl p-6 shadow-xl space-y-4">
         <h3 class="text-lg font-bold">
-          <span v-if="confirmModal.type === 'delete'">Delete account?</span>
-          <span v-else-if="confirmModal.type === 'disable'">Disable account?</span>
-          <span v-else>Enable account?</span>
+          <span v-if="confirmModal.type === 'delete'">{{ $t('admin.users.deleteTitle') }}</span>
+          <span v-else-if="confirmModal.type === 'disable'">{{ $t('admin.users.disableTitle') }}</span>
+          <span v-else>{{ $t('admin.users.enableTitle') }}</span>
         </h3>
-        <p class="text-sm text-base-content/70">
-          <template v-if="confirmModal.type === 'delete'">
-            This will permanently delete <strong>{{ [confirmModal.user.name, confirmModal.user.lastname].filter(Boolean).join(' ') || confirmModal.user.email }}</strong> and all their data. This cannot be undone.
-          </template>
-          <template v-else-if="confirmModal.type === 'disable'">
-            <strong>{{ [confirmModal.user.name, confirmModal.user.lastname].filter(Boolean).join(' ') || confirmModal.user.email }}</strong> will no longer be able to log in.
-          </template>
-          <template v-else>
-            <strong>{{ [confirmModal.user.name, confirmModal.user.lastname].filter(Boolean).join(' ') || confirmModal.user.email }}</strong> will be able to log in again.
-          </template>
-        </p>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <p
+          class="text-sm text-base-content/70"
+          v-html="$t(
+            confirmModal.type === 'delete' ? 'admin.users.deleteMsg' : confirmModal.type === 'disable' ? 'admin.users.disableMsg' : 'admin.users.enableMsg',
+            { name: `<strong>${[confirmModal.user.name, confirmModal.user.lastname].filter(Boolean).join(' ') || confirmModal.user.email}</strong>` },
+          )"
+        />
         <div class="flex justify-end gap-3 pt-1">
-          <button class="btn btn-ghost btn-sm" @click="closeConfirm">Cancel</button>
+          <button class="btn btn-ghost btn-sm" @click="closeConfirm">{{ $t('common.cancel') }}</button>
           <button
             class="btn btn-sm"
             :class="confirmModal.type === 'delete' ? 'btn-error' : confirmModal.type === 'disable' ? 'btn-warning' : 'btn-success'"
             @click="confirmAction"
           >
-            <span v-if="confirmModal.type === 'delete'">Delete</span>
-            <span v-else-if="confirmModal.type === 'disable'">Disable</span>
-            <span v-else>Enable</span>
+            <span v-if="confirmModal.type === 'delete'">{{ $t('admin.users.delete') }}</span>
+            <span v-else-if="confirmModal.type === 'disable'">{{ $t('admin.users.disable') }}</span>
+            <span v-else>{{ $t('admin.users.enable') }}</span>
           </button>
         </div>
       </div>

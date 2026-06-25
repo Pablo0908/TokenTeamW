@@ -9,10 +9,15 @@ from app.models import user as user_model
 from app.models import audit as audit_model
 from app.models import organization as org_model
 from app.models import membership as membership_model
-from app.utils.auth import admin_required, staff_required, jwt_required
+from app.models import ban as ban_model
+from app.models import analytics as analytics_model
+from app.utils.auth import jwt_required, super_admin_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
-# All admin operations live here: event/badge creation, badge stats, and user management.
+# The PLATFORM panel — super-admin only. Global event/badge creation, badge stats, org
+# lifecycle, and user management across all tenants. Org-tier members operate through the
+# org-scoped /orgs/* routes instead. The two read endpoints that tier internally (audit,
+# per-user analytics) stay on jwt_required so org admins keep their own-org view.
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
@@ -26,7 +31,7 @@ def _resolve_org_for_creator(user_id):
 
 
 @admin_bp.route("/event", methods=["POST"])
-@admin_required
+@super_admin_required
 def create_event(current_user):
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
@@ -44,13 +49,14 @@ def create_event(current_user):
         created_by=current_user["sub"],
         org_id=org_id,
         event_type=(body.get("event_type") or "uncategorized").strip().lower(),
+        visibility=(body.get("visibility") or "public").strip().lower(),
     )
     audit_model.log(current_user["sub"], "event.create", name, org_id=org_id, event_id=event_id)
     return jsonify({"id": event_id, "name": name}), 201
 
 
 @admin_bp.route("/events/<event_id>/badge", methods=["POST"])
-@admin_required
+@super_admin_required
 def create_badge(current_user, event_id):
     ev = event_model.find_by_id(event_id)
     if not ev:
@@ -93,7 +99,7 @@ def create_badge(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/badges/bulk", methods=["POST"])
-@admin_required
+@super_admin_required
 def create_badges_bulk(current_user, event_id):
     """Create many badges in one call. Accepts either an explicit list:
         {"badges": [{"name", "description?", "icon?", "color?"}, ...]}
@@ -162,7 +168,7 @@ def create_badges_bulk(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/status", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def set_event_status(current_user, event_id):
     """Start/stop an event: a manual activation override that forces the event active
     (scannable now) or reverts it to its date-derived status. Reduces human error
@@ -181,7 +187,7 @@ def set_event_status(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/pause", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def pause_event(current_user, event_id):
     """Temporary moderation lock: attendees keep seeing earned badges but cannot scan.
     Reversible (paused=false unlocks)."""
@@ -197,7 +203,7 @@ def pause_event(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/end", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def end_event(current_user, event_id):
     """Terminal moderation: moves the event to past events and blocks scanning.
     Reversible by a super admin (ended=false reopens)."""
@@ -213,7 +219,7 @@ def end_event(current_user, event_id):
 
 
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
-@staff_required
+@super_admin_required
 def list_badges(current_user, event_id):
     ev = event_model.find_by_id(event_id)
     if not ev:
@@ -243,10 +249,78 @@ def list_badges(current_user, event_id):
     return jsonify(out), 200
 
 
-# --- User management (admin-only): track badge counts, promote/demote ---
+# --- Platform analytics (super-admin) ---
+
+@admin_bp.route("/insights", methods=["GET"])
+@super_admin_required
+def platform_insights(current_user):
+    """Global, date-range-aware analytics: totals, DAU/MAU, scans + user growth over time,
+    org leaderboard, and event-type mix. DAU/MAU accrue from now on; the rest is historical."""
+    period, start, end = analytics_model.parse_range(request.args)
+    return jsonify({
+        "period": period,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "totals": analytics_model.platform_totals(),
+        "active_users": analytics_model.active_users(period, start, end),
+        "scans_over_time": analytics_model.series_count("redemptions", "redeemed_at", period, start, end),
+        "user_growth": analytics_model.series_count("users", "created_at", period, start, end),
+        "org_leaderboard": analytics_model.org_leaderboard(start, end, 10),
+        "event_type_mix": analytics_model.event_type_mix(start, end),
+    }), 200
+
+
+# --- Organization lifecycle (super-admin platform governance) ---
+
+@admin_bp.route("/orgs", methods=["GET"])
+@super_admin_required
+def list_orgs(current_user):
+    """Platform-wide org directory for the super-admin panel: status, owner, and cheap
+    member/event counts."""
+    out = []
+    for o in org_model.all_orgs():
+        oid = str(o["_id"])
+        members = membership_model.members_of(oid)
+        owner = next((m for m in members if m.get("role") == "owner"), None)
+        owner_email = ""
+        if owner:
+            ou = user_model.find_by_id(owner["user_id"])
+            owner_email = ou.get("email", "") if ou else ""
+        out.append({
+            "id": oid,
+            "name": o.get("name", ""),
+            "slug": o.get("slug", ""),
+            "status": o.get("status", "active"),
+            "owner_email": owner_email,
+            "members_count": len(members),
+            "events_count": len(event_model.all_events(org_id=oid)),
+            "created_at": event_model.fmt_date(o.get("created_at")),
+        })
+    return jsonify({"orgs": out}), 200
+
+
+@admin_bp.route("/orgs/<org_id>/status", methods=["PATCH"])
+@super_admin_required
+def set_org_status(current_user, org_id):
+    """Suspend or reactivate an org (platform governance). Suspending freezes the org's
+    scans and event creation; it never touches member accounts (attendees stay
+    platform-level)."""
+    org = org_model.find_by_id(org_id)
+    if not org:
+        return jsonify({"error": "Organization not found."}), 404
+    status = (request.get_json(silent=True) or {}).get("status", "")
+    if status not in ("active", "suspended"):
+        return jsonify({"error": "Status must be 'active' or 'suspended'."}), 400
+    org_model.update_org(org_id, {"status": status})
+    audit_model.log(current_user["sub"], "org.suspend" if status == "suspended" else "org.reactivate",
+                    org.get("name", ""), org_id=org_id)
+    return jsonify({"id": org_id, "status": status}), 200
+
+
+# --- User management (super-admin only): track badge counts, promote/demote ---
 
 @admin_bp.route("/users", methods=["GET"])
-@staff_required
+@super_admin_required
 def list_users(current_user):
     counts = redemption_model.counts_by_user()
     out = []
@@ -268,7 +342,7 @@ def list_users(current_user):
 
 
 @admin_bp.route("/users/<user_id>/badges", methods=["GET"])
-@staff_required
+@super_admin_required
 def user_badges(current_user, user_id):
     user = user_model.find_by_id(user_id)
     if not user:
@@ -351,7 +425,7 @@ def user_analytics(current_user, user_id):
 
 
 @admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def set_user_role(current_user, user_id):
     body = request.get_json(silent=True) or {}
     role = (body.get("role") or "").strip().lower()
@@ -369,7 +443,7 @@ def set_user_role(current_user, user_id):
 
 
 @admin_bp.route("/users/<user_id>/disable", methods=["PATCH"])
-@admin_required
+@super_admin_required
 def toggle_disable_user(current_user, user_id):
     if user_id == current_user["sub"]:
         return jsonify({"error": "You can't disable your own account."}), 400
@@ -386,7 +460,7 @@ def toggle_disable_user(current_user, user_id):
 
 
 @admin_bp.route("/users/<user_id>", methods=["DELETE"])
-@admin_required
+@super_admin_required
 def delete_user(current_user, user_id):
     if user_id == current_user["sub"]:
         return jsonify({"error": "You can't delete your own account."}), 400
@@ -395,6 +469,7 @@ def delete_user(current_user, user_id):
         return jsonify({"error": "User not found"}), 404
 
     redemption_model.delete_by_user(user_id)
+    ban_model.delete_by_user(user_id)
     user_model.delete_user(user_id)
     audit_model.log(current_user["sub"], "user.delete", target.get("email", user_id))
     return jsonify({"id": user_id, "deleted": True}), 200

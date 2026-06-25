@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { api, readApiError } from '@/services/api'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
@@ -20,30 +21,35 @@ const pageSize = ref(50)
 const total = ref(0)
 const hasMore = ref(false)
 
-// Human-readable label + accent per audit action emitted by the backend.
-const ACTIONS = {
-  'event.create': { label: 'Event created', cls: 'badge-primary' },
-  'event.start': { label: 'Event started', cls: 'badge-success' },
-  'event.stop': { label: 'Event stopped', cls: 'badge-ghost' },
-  'event.pause': { label: 'Event locked', cls: 'badge-warning' },
-  'event.unpause': { label: 'Event unlocked', cls: 'badge-ghost' },
-  'event.end': { label: 'Event ended', cls: 'badge-error' },
-  'event.reopen': { label: 'Event reopened', cls: 'badge-info' },
-  'badge.create': { label: 'Badge minted', cls: 'badge-secondary' },
-  'badge.bulk_create': { label: 'Badges minted', cls: 'badge-secondary' },
-  'badge.redeem': { label: 'Badge scanned', cls: 'badge-success' },
-  'auth.login': { label: 'Signed in', cls: 'badge-ghost' },
-  'auth.signup': { label: 'Signed up', cls: 'badge-info' },
-  'user.role_change': { label: 'Role changed', cls: 'badge-accent' },
-  'user.disable': { label: 'User disabled', cls: 'badge-warning' },
-  'user.enable': { label: 'User enabled', cls: 'badge-ghost' },
-  'user.delete': { label: 'User deleted', cls: 'badge-error' },
-  'announcement.create': { label: 'Announcement posted', cls: 'badge-info' },
-  'announcement.update': { label: 'Announcement edited', cls: 'badge-ghost' },
-  'announcement.delete': { label: 'Announcement deleted', cls: 'badge-error' },
+// Accent per audit action emitted by the backend. Labels are translated via i18n.
+const ACTION_CLS = {
+  'event.create': 'badge-primary',
+  'event.start': 'badge-success',
+  'event.stop': 'badge-ghost',
+  'event.pause': 'badge-warning',
+  'event.unpause': 'badge-ghost',
+  'event.end': 'badge-error',
+  'event.reopen': 'badge-info',
+  'badge.create': 'badge-secondary',
+  'badge.bulk_create': 'badge-secondary',
+  'badge.redeem': 'badge-success',
+  'auth.login': 'badge-ghost',
+  'auth.signup': 'badge-info',
+  'user.role_change': 'badge-accent',
+  'user.disable': 'badge-warning',
+  'user.enable': 'badge-ghost',
+  'user.delete': 'badge-error',
+  'announcement.create': 'badge-info',
+  'announcement.update': 'badge-ghost',
+  'announcement.delete': 'badge-error',
 }
 
-const actionMeta = (action) => ACTIONS[action] || { label: action, cls: 'badge-ghost' }
+const actionMeta = (action) => {
+  const cls = ACTION_CLS[action] || 'badge-ghost'
+  // Action keys contain dots; i18n keys use underscores to avoid path-splitting.
+  const label = ACTION_CLS[action] ? t(`admin.audit.actions.${action.replace(/\./g, '_')}`) : action
+  return { label, cls }
+}
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -64,7 +70,7 @@ async function load() {
     hasMore.value = !!data?.has_more
     loaded.value = true
   } catch (e) {
-    error.value = readApiError(e, 'Could not load the audit log.')
+    error.value = readApiError(e, t('admin.audit.couldNotLoad'))
   } finally {
     loading.value = false
   }
@@ -106,19 +112,21 @@ onMounted(load)
   <div class="space-y-5 px-4 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
-        <p class="text-xs uppercase tracking-wide text-secondary">Organizer</p>
-        <h1 class="text-2xl font-bold">Audit</h1>
+        <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('admin.organizer') }}</p>
+        <h1 class="text-2xl font-bold">{{ $t('admin.audit.title') }}</h1>
       </div>
-      <button class="btn btn-ghost btn-sm tap-target" @click="logout">Log out</button>
+      <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
     <!-- Admin section nav -->
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
-      <RouterLink to="/admin/events" role="tab" class="tab">Events</RouterLink>
-      <RouterLink to="/admin/users" role="tab" class="tab">Users</RouterLink>
-      <RouterLink to="/admin/audit" role="tab" class="tab tab-active">Audit</RouterLink>
-      <RouterLink to="/admin/org-invites" role="tab" class="tab">Orgs</RouterLink>
-      <RouterLink to="/admin/announcements" role="tab" class="tab">News</RouterLink>
+      <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
+      <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
+      <RouterLink to="/admin/audit" role="tab" class="tab tab-active">{{ $t('tabs.audit') }}</RouterLink>
+      <RouterLink to="/admin/insights" role="tab" class="tab">{{ $t('tabs.insights') }}</RouterLink>
+      <RouterLink to="/admin/orgs" role="tab" class="tab">{{ $t('tabs.orgs') }}</RouterLink>
+      <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
+      <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
     </div>
 
     <!-- Search by user (email/name) or event (name) -->
@@ -127,17 +135,17 @@ onMounted(load)
         v-model="search"
         type="search"
         inputmode="search"
-        placeholder="Search by user or event…"
+        :placeholder="$t('admin.audit.searchPlaceholder')"
         class="input input-bordered input-sm w-full bg-base-100/70"
       />
     </label>
 
     <AlertMessage type="warning" :message="error" />
-    <LoadingSpinner v-if="loading && !loaded" label="Loading audit log…" />
+    <LoadingSpinner v-if="loading && !loaded" :label="$t('admin.audit.loading')" />
 
     <template v-else>
       <p class="text-xs text-base-content/55">
-        Activity across events, badges, scans, logins and roles · {{ pageSize }} per page.
+        {{ $t('admin.audit.summary', { n: pageSize }) }}
       </p>
 
       <section v-if="entries.length" class="space-y-3">
@@ -148,7 +156,7 @@ onMounted(load)
                 {{ actionMeta(e.action).label }}
               </span>
               <p v-if="e.detail" class="mt-2 truncate text-sm font-medium">{{ e.detail }}</p>
-              <p class="mt-1 truncate text-[0.7rem] text-base-content/45">by {{ e.actor_email || e.actor_id }}</p>
+              <p class="mt-1 truncate text-[0.7rem] text-base-content/45">{{ $t('admin.audit.by', { actor: e.actor_email || e.actor_id }) }}</p>
             </div>
             <time class="shrink-0 text-[0.7rem] text-base-content/55">{{ formatTime(e.ts) }}</time>
           </div>
@@ -156,7 +164,7 @@ onMounted(load)
       </section>
 
       <div v-else class="surface p-8 text-center text-sm text-base-content/60">
-        {{ search.trim() ? 'No activity matches your search.' : 'No activity recorded yet.' }}
+        {{ search.trim() ? $t('admin.audit.noMatch') : $t('admin.audit.noneYet') }}
       </div>
 
       <!-- Pager: arrows disabled at the ends -->
@@ -164,16 +172,16 @@ onMounted(load)
         <button
           class="btn btn-circle btn-sm btn-ghost tap-target"
           :disabled="page <= 1 || loading"
-          aria-label="Previous page"
+          :aria-label="$t('admin.audit.prevPage')"
           @click="prevPage"
         >
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <span class="text-xs text-base-content/55">Page {{ page }}<span v-if="total"> · {{ total }} total</span></span>
+        <span class="text-xs text-base-content/55">{{ $t('admin.audit.page') }} {{ page }}<span v-if="total"> · {{ $t('admin.audit.total', { n: total }) }}</span></span>
         <button
           class="btn btn-circle btn-sm btn-ghost tap-target"
           :disabled="!hasMore || loading"
-          aria-label="Next page"
+          :aria-label="$t('admin.audit.nextPage')"
           @click="nextPage"
         >
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>

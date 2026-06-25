@@ -47,6 +47,14 @@ function openAnnouncement(a) {
   if (a.event_id) router.push(`/events/${a.event_id}`)
 }
 
+// Let users collapse the announcements section so the home view isn't bloated on phones.
+// Choice persists across visits.
+const annCollapsed = ref(localStorage.getItem('annCollapsed') === '1')
+function toggleAnnouncements() {
+  annCollapsed.value = !annCollapsed.value
+  try { localStorage.setItem('annCollapsed', annCollapsed.value ? '1' : '0') } catch { /* storage unavailable */ }
+}
+
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const newThisWeek = computed(
   () =>
@@ -214,15 +222,28 @@ async function downloadCard(badge) {
 
     <!-- Announcements — platform-wide, visible to all; unread items flagged -->
     <section v-if="announcements.items.length" class="space-y-3">
-      <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="tap-target flex w-full items-center gap-2"
+        :aria-expanded="!annCollapsed"
+        :aria-label="annCollapsed ? $t('home.expand') : $t('home.minimize')"
+        @click="toggleAnnouncements"
+      >
         <h2 class="font-semibold">{{ $t('home.announcements') }}</h2>
         <span
           v-if="announcements.unreadCount"
           class="badge badge-primary badge-sm font-semibold"
           aria-label="Unread announcements"
         >{{ announcements.unreadCount }}</span>
-      </div>
-      <div class="space-y-2">
+        <svg
+          class="ml-auto h-4 w-4 text-base-content/50 transition-transform"
+          :class="{ '-rotate-90': annCollapsed }"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      <div v-show="!annCollapsed" class="space-y-2">
         <component
           :is="a.event_id ? 'button' : 'div'"
           v-for="a in announcements.items"

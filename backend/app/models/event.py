@@ -49,19 +49,18 @@ def fmt_date(value):
 
 
 def compute_status(start, end, now=None, started=False, paused=False, ended=False):
-    """Derive the lifecycle status from the date window plus moderation overrides.
+    """Derive the lifecycle status. Start/Stop is the MASTER SWITCH: an event is only
+    scannable ('active') once it has been explicitly started. A freshly created event is
+    'upcoming' (closed) until its creator presses Start, and Stop closes it again.
 
-    No dates -> 'active' (an unscheduled event is treated as happening now, so a
-    freshly-created demo event is immediately scannable). Redemption requires 'active'.
+    Dates (`start`/`end`) are informational only — shown in the UI, they do NOT auto-open
+    or auto-close scanning (kept in the signature for callers/back-compat).
 
-    Moderation overrides take precedence over the date window, in this order:
-      - `ended`  -> 'past'    (terminal moderation: appears in past events, not
-                               scannable; reversible only by super admin / owner)
-      - `paused` -> 'locked'  (temporary moderation lock: attendees still see earned
-                               badges but cannot scan; reversible)
-      - `started`-> 'active'  (manual activation: forced scannable regardless of dates)
-    Only one applies — ended wins over paused wins over started. None set => the
-    status follows the dates exactly as before.
+    Precedence, highest first:
+      - `ended`  -> 'past'     (terminal moderation: in past events, not scannable)
+      - `paused` -> 'locked'   (temporary lock: earned badges visible, cannot scan)
+      - `started`-> 'active'   (open for scanning)
+      - otherwise -> 'upcoming' (created but not started → not scannable)
     """
     if ended:
         return "past"
@@ -69,15 +68,7 @@ def compute_status(start, end, now=None, started=False, paused=False, ended=Fals
         return "locked"
     if started:
         return "active"
-    now = now or datetime.now(timezone.utc)
-    today = now.date()
-    start_d = start.date() if isinstance(start, datetime) else None
-    end_d = end.date() if isinstance(end, datetime) else None
-    if start_d and today < start_d:
-        return "upcoming"
-    if end_d and today > end_d:
-        return "past"
-    return "active"
+    return "upcoming"
 
 
 def status_of(event, now=None):
@@ -91,8 +82,11 @@ def status_of(event, now=None):
     )
 
 
+VISIBILITIES = ("public", "unlisted", "scan-only")
+
+
 def create_event(name, description, start_date, end_date, location, prize, created_by,
-                  org_id=None, event_type="uncategorized"):
+                  org_id=None, event_type="uncategorized", visibility="public"):
     result = mongo.db.events.insert_one(
         {
             "name": name,
@@ -104,6 +98,11 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             # Category/class for analytics (e.g. "favorite event type"). Existing
             # events are backfilled as "uncategorized".
             "event_type": event_type or "uncategorized",
+            # Feed visibility (P7): "public" = listed in members'/participants' feeds;
+            # "unlisted" = not listed except to org members, still reachable by link;
+            # "scan-only" = never listed, reachable only via its QR. Governs the LIST,
+            # not hard detail access. Existing events are backfilled as "public".
+            "visibility": visibility if visibility in VISIBILITIES else "public",
             # Authoritative tenant pointer. Optional at the model layer so existing
             # callers don't break; the admin route resolves and passes it.
             "org_id": _oid(org_id) if org_id else None,
@@ -158,6 +157,32 @@ def all_events(org_id=None):
     return list(mongo.db.events.find(query).sort("created_at", -1))
 
 
+def feed_events_for_user(user_id):
+    """The personalized attendee feed (P7): events from orgs the user has interacted
+    with (≥1 redemption) or is a member of. Visibility then filters the LIST:
+      - "public"    -> listed (within scope)
+      - "unlisted"  -> listed only to members of that org
+      - "scan-only" -> never listed (reachable only via its QR)
+    Newest first. Discovery of NEW orgs happens via QR scan / announcements, not here.
+    """
+    from app.models import redemption as redemption_model
+    from app.models import membership as membership_model
+
+    member_orgs = set(membership_model.orgs_for_user(user_id))
+    scope_orgs = set(redemption_model.org_ids_for_user(user_id)) | member_orgs
+    if not scope_orgs:
+        return []
+    cursor = (mongo.db.events.find({"org_id": {"$in": [_oid(o) for o in scope_orgs]}})
+              .sort("created_at", -1))
+    out = []
+    for ev in cursor:
+        vis = ev.get("visibility", "public")
+        org_str = str(ev["org_id"]) if ev.get("org_id") else None
+        if vis == "public" or (vis == "unlisted" and org_str in member_orgs):
+            out.append(ev)
+    return out
+
+
 def event_summary(event, badges_total, badges_earned, org=None):
     """The shape every event-list/detail endpoint shares (matches the frontend contract).
 
@@ -180,6 +205,7 @@ def event_summary(event, badges_total, badges_earned, org=None):
         "badges_earned": badges_earned,
         "completed": badges_total > 0 and badges_earned >= badges_total,
         "event_type": event.get("event_type", "uncategorized"),
+        "visibility": event.get("visibility", "public"),
         "org_id": str(event["org_id"]) if event.get("org_id") else None,
     }
     if org is not None:

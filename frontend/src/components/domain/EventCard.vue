@@ -29,6 +29,10 @@ const status = computed(() => {
   }
 })
 
+const visibilityLabel = computed(() =>
+  props.event.visibility ? t(`visibility.${props.event.visibility}`) : '',
+)
+
 const dateLabel = computed(() => {
   const fmt = (iso) => {
     const d = new Date(iso)
@@ -61,7 +65,13 @@ const dateLabel = computed(() => {
           {{ dateLabel }}
         </p>
       </div>
-      <span class="badge badge-sm shrink-0 border-0" :class="status.cls">{{ status.label }}</span>
+      <div class="flex shrink-0 flex-col items-end gap-1">
+        <span class="badge badge-sm border-0" :class="status.cls">{{ status.label }}</span>
+        <span
+          v-if="event.visibility && event.visibility !== 'public'"
+          class="badge badge-xs badge-ghost capitalize"
+        >{{ visibilityLabel }}</span>
+      </div>
     </div>
 
     <ProgressBar

@@ -87,6 +87,7 @@ def main():
         check("create event with event_type -> 201", r.status_code == 201 and created_event_id)
         r = client.post(f"/admin/events/{created_event_id}/badge", headers=sah, json={"name": "P3 Badge"})
         token = r.get_json().get("token")
+        client.patch(f"/admin/events/{created_event_id}/status", headers=sah, json={"started": True})
         r = client.get(f"/redeem/{created_event_id}/{token}", headers=uh)
         check("scan -> 200 completed (app works)", r.status_code == 200 and r.get_json().get("event_completed"))
         det = client.get(f"/events/{created_event_id}", headers=uh).get_json()

@@ -22,14 +22,18 @@ def _org_lookup(events):
 @events_bp.route("/", methods=["GET"])
 @jwt_required
 def list_events(current_user):
+    # Org-scoped feed (P7): only events from orgs the user has interacted with or is a
+    # member of, filtered by visibility. Suspended orgs are excluded.
     uid = current_user["sub"]
-    events = event_model.all_events()
+    events = event_model.feed_events_for_user(uid)
     orgs = _org_lookup(events)
     out = []
     for ev in events:
+        org = orgs.get(str(ev["org_id"])) if ev.get("org_id") else None
+        if org and org.get("status") == "suspended":
+            continue
         total = badge_model.count_for_event(ev["_id"])
         earned = redemption_model.count_for_event(uid, ev["_id"])
-        org = orgs.get(str(ev["org_id"])) if ev.get("org_id") else None
         out.append(event_model.event_summary(ev, total, earned, org=org))
     return jsonify(out), 200
 
