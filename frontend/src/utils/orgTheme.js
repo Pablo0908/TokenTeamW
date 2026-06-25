@@ -3,16 +3,24 @@
 // colors. Mirrors the appearance hook in stores/settings.js (which sets data-theme +
 // classes); we layer inline --p/--s/--a on top and clear them to revert.
 //
-// DaisyUI colors are HSL channels in the form "H S% L%", consumed as hsl(var(--p)).
+// DaisyUI (v4) colors are HSL channels in the form "H S% L%", consumed as hsl(var(--p)).
 
-function hexToHsl(hex) {
+function parseHex(hex) {
   if (typeof hex !== 'string') return null
   let h = hex.trim().replace('#', '')
   if (h.length === 3) h = h.split('').map((c) => c + c).join('')
-  if (h.length !== 6) return null
-  const r = parseInt(h.slice(0, 2), 16) / 255
-  const g = parseInt(h.slice(2, 4), 16) / 255
-  const b = parseInt(h.slice(4, 6), 16) / 255
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return null
+  return {
+    r: parseInt(h.slice(0, 2), 16) / 255,
+    g: parseInt(h.slice(2, 4), 16) / 255,
+    b: parseInt(h.slice(4, 6), 16) / 255,
+  }
+}
+
+function hexToHsl(hex) {
+  const rgb = parseHex(hex)
+  if (!rgb) return null
+  const { r, g, b } = rgb
   const max = Math.max(r, g, b), min = Math.min(r, g, b)
   let hue = 0, sat = 0
   const l = (max + min) / 2
@@ -25,7 +33,25 @@ function hexToHsl(hex) {
     hue *= 60
     if (hue < 0) hue += 360
   }
-  return { h: Math.round(hue), s: Math.round(sat * 100), l: Math.round(l * 100), lum: l }
+  return { h: Math.round(hue), s: Math.round(sat * 100), l: Math.round(l * 100) }
+}
+
+// WCAG relative luminance (sRGB-linearized). HSL lightness is a poor proxy for perceived
+// brightness — e.g. pure yellow/cyan have lightness 0.5 yet read as "light", so picking the
+// text color from HSL lightness leaves white text on a light button (unreadable). Relative
+// luminance gets this right.
+function relativeLuminance(hex) {
+  const rgb = parseHex(hex)
+  if (!rgb) return null
+  const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  return 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b)
+}
+
+// Readable text on a brand color: 0.179 is the WCAG crossover that maximizes contrast
+// against black vs white.
+function contentChannels(hex) {
+  const lum = relativeLuminance(hex)
+  return lum != null && lum > 0.179 ? '0 0% 13%' : '0 0% 100%'
 }
 
 // DaisyUI variable name per theme key + its "content" (text-on-color) companion.
@@ -35,31 +61,33 @@ const VARS = {
   accent: ['--a', '--ac'],
 }
 
-let applied = false
-
 export function applyOrgTheme(theme) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  let touched = false
+  // For each slot: apply the org color if valid, otherwise REMOVE any prior override so the
+  // base theme shows through. Removing on the empty case is what prevents one org's colors
+  // from bleeding into the next.
   for (const [key, [base, content]] of Object.entries(VARS)) {
     const hsl = theme && hexToHsl(theme[key])
-    if (!hsl) continue
-    root.style.setProperty(base, `${hsl.h} ${hsl.s}% ${hsl.l}%`)
-    // Readable text on the brand color: dark text on light fills, light text on dark.
-    root.style.setProperty(content, hsl.lum > 0.6 ? '0 0% 12%' : '0 0% 100%')
-    touched = true
+    if (hsl) {
+      root.style.setProperty(base, `${hsl.h} ${hsl.s}% ${hsl.l}%`)
+      root.style.setProperty(content, contentChannels(theme[key]))
+    } else {
+      root.style.removeProperty(base)
+      root.style.removeProperty(content)
+    }
   }
-  applied = applied || touched
 }
 
 export function clearOrgTheme() {
-  if (typeof document === 'undefined' || !applied) return
+  if (typeof document === 'undefined') return
+  // Unconditional + idempotent: always restore the base theme. (A guarded clear can get
+  // out of sync across the several screens that apply/clear, leaving colors stuck globally.)
   const root = document.documentElement
   for (const [, [base, content]] of Object.entries(VARS)) {
     root.style.removeProperty(base)
     root.style.removeProperty(content)
   }
-  applied = false
 }
 
 export function hasOrgColors(theme) {

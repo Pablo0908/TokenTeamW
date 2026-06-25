@@ -78,7 +78,8 @@ watch(auditSearch, () => {
 })
 const settings = ref({ name: '', description: '', theme: { primary: '', secondary: '', accent: '', logo_url: '' } })
 
-const newEvent = ref({ name: '', event_type: 'conference', visibility: 'public', date: '', end_date: '' })
+const NEW_EVENT = () => ({ name: '', description: '', event_type: 'conference', visibility: 'public', date: '', end_date: '', location: '', prize: '' })
+const newEvent = ref(NEW_EVENT())
 const showNewEvent = ref(false)
 const inviteEmail = ref('')
 const EVENT_TYPES = ['conference', 'workshop', 'meetup', 'hackathon', 'networking', 'other']
@@ -125,7 +126,7 @@ async function createEvent() {
   if (!newEvent.value.name.trim()) return
   try {
     await api.post(`/orgs/${orgId.value}/event`, { ...newEvent.value, name: newEvent.value.name.trim() })
-    showNewEvent.value = false; newEvent.value = { name: '', event_type: 'conference', visibility: 'public', date: '', end_date: '' }
+    showNewEvent.value = false; newEvent.value = NEW_EVENT()
     await loadTab()
   } catch (e) { error.value = readApiError(e, t('org.couldNotCreateEvent')) }
 }
@@ -316,6 +317,7 @@ onUnmounted(clearOrgTheme)
         </button>
         <div v-if="showNewEvent" class="surface space-y-2 p-4">
           <input v-model="newEvent.name" :placeholder="$t('org.eventName')" class="input input-bordered input-sm w-full bg-base-100/70" />
+          <textarea v-model="newEvent.description" rows="2" :placeholder="$t('admin.eventNew.descriptionLabel')" class="textarea textarea-bordered textarea-sm w-full bg-base-100/70" />
           <select v-model="newEvent.event_type" class="select select-bordered select-sm w-full bg-base-100/70">
             <option v-for="ty in EVENT_TYPES" :key="ty" :value="ty">{{ eventTypeLabel(ty) }}</option>
           </select>
@@ -332,6 +334,8 @@ onUnmounted(clearOrgTheme)
               <input v-model="newEvent.end_date" type="date" class="input input-bordered input-sm w-full bg-base-100/70" />
             </label>
           </div>
+          <input v-model="newEvent.location" :placeholder="$t('admin.eventNew.locationLabel')" class="input input-bordered input-sm w-full bg-base-100/70" />
+          <input v-model="newEvent.prize" :placeholder="$t('admin.eventNew.prizeLabel')" class="input input-bordered input-sm w-full bg-base-100/70" />
           <p class="text-[0.7rem] text-base-content/55">{{ $t('org.startsClosed') }}</p>
           <button class="btn btn-primary btn-sm w-full" @click="createEvent">{{ $t('org.createEvent') }}</button>
         </div>
