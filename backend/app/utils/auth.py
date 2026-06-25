@@ -3,7 +3,7 @@ from functools import wraps
 
 import bcrypt
 import jwt
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, g
 
 
 # --- Passwords (bcrypt, cost factor 12) ---
@@ -21,12 +21,14 @@ def check_password(plain: str, hashed: str) -> bool:
 
 # --- JWT (HS256, 8h expiry) ---
 
-def encode_token(user_id: str, role: str) -> str:
+def encode_token(user_id: str, role: str, token_version: int = 0) -> str:
     hours = int(current_app.config.get("JWT_EXPIRY_HOURS", 8))
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(user_id),
         "role": role,
+        # Session-revocation version: must match the user's current token_version.
+        "tv": int(token_version or 0),
         "iat": now,
         "exp": now + timedelta(hours=hours),
     }
@@ -51,31 +53,20 @@ def jwt_required(f):
             return jsonify({"error": "Your session has expired. Please sign in again."}), 401
         except jwt.InvalidTokenError:
             return jsonify({"error": "Invalid session. Please sign in again."}), 401
+
+        # Re-validate the account on EVERY request so disabling, deleting, or a
+        # password change / explicit revocation takes effect immediately (not only at
+        # the token's 8h expiry). The fresh doc is stashed on g for decorators/handlers.
+        from app.models import user as user_model
+        user = user_model.find_by_id(payload.get("sub"))
+        if not user:
+            return jsonify({"error": "Invalid session. Please sign in again."}), 401
+        if user.get("disabled"):
+            return jsonify({"error": "This account has been disabled."}), 403
+        if int(payload.get("tv", 0)) != int(user.get("token_version", 0)):
+            return jsonify({"error": "Your session is no longer valid. Please sign in again."}), 401
+        g.current_user_doc = user
         return f(*args, current_user=payload, **kwargs)
-
-    return decorated
-
-
-def admin_required(f):
-    @jwt_required
-    @wraps(f)
-    def decorated(*args, current_user, **kwargs):
-        if current_user.get("role") != "admin":
-            return jsonify({"error": "Admin access required."}), 403
-        return f(*args, current_user=current_user, **kwargs)
-
-    return decorated
-
-
-def staff_required(f):
-    """Admin OR assistant. Used for read-only staff views (user directory, badge
-    tokens/QRs); write operations stay behind admin_required."""
-    @jwt_required
-    @wraps(f)
-    def decorated(*args, current_user, **kwargs):
-        if current_user.get("role") not in ("admin", "assistant"):
-            return jsonify({"error": "Staff access required."}), 403
-        return f(*args, current_user=current_user, **kwargs)
 
     return decorated
 
@@ -87,7 +78,8 @@ def super_admin_required(f):
     @wraps(f)
     def decorated(*args, current_user, **kwargs):
         from app.models import user as user_model
-        if not user_model.is_super_admin(user_model.find_by_id(current_user["sub"])):
+        actor = getattr(g, "current_user_doc", None) or user_model.find_by_id(current_user["sub"])
+        if not user_model.is_super_admin(actor):
             return jsonify({"error": "Super admin access required."}), 403
         return f(*args, current_user=current_user, **kwargs)
 
@@ -116,7 +108,7 @@ def org_role_required(*roles):
             from app.models import badge as badge_model
             from app.models import membership as membership_model
 
-            actor = user_model.find_by_id(current_user["sub"])
+            actor = getattr(g, "current_user_doc", None) or user_model.find_by_id(current_user["sub"])
             if user_model.is_super_admin(actor):
                 return f(*args, current_user=current_user, **kwargs)
 

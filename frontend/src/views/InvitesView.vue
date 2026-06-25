@@ -1,11 +1,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api, readApiError } from '@/services/api'
 import { useOrgContextStore } from '@/stores/orgContext'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 
+const route = useRoute()
 const router = useRouter()
 const orgContext = useOrgContextStore()
 
@@ -36,11 +37,11 @@ async function load() {
   }
 }
 
-async function accept(inv) {
-  accepting.value = inv.id
+async function acceptToken(token, id = 'link') {
+  accepting.value = id
   error.value = ''
   try {
-    const { data } = await api.post('/invites/accept', { token: inv.token })
+    const { data } = await api.post('/invites/accept', { token })
     await orgContext.load()
     if (data.org?.id) orgContext.setActiveOrg(data.org.id)
     if (data.type === 'create_org') router.push('/org/settings')
@@ -52,8 +53,18 @@ async function accept(inv) {
     accepting.value = null
   }
 }
+const accept = (inv) => acceptToken(inv.token, inv.id)
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  // Deep link from an invite email: /invites?token=… → accept it automatically.
+  // (Unauthenticated visitors are bounced through login first, then land back here.)
+  const token = route.query.token
+  if (token) {
+    router.replace({ path: '/invites' }) // drop the token from the URL
+    await acceptToken(String(token))
+  }
+})
 </script>
 
 <template>

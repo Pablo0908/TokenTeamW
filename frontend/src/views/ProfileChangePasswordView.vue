@@ -62,11 +62,13 @@ async function submit() {
   loading.value = true
   error.value = ''
   try {
-    await api.put('/me/password', {
+    const { data } = await api.put('/me/password', {
       email: form.email.trim().toLowerCase(),
       code: form.code.trim(),
       new_password: form.newPwd,
     })
+    // The change revoked old sessions; keep this device signed in with the fresh token.
+    if (data?.token) auth.setToken(data.token)
     success.value = true
     setTimeout(() => router.replace('/profile/settings'), 1500)
   } catch (e) {

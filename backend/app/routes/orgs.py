@@ -14,6 +14,25 @@ from app.models import ban as ban_model
 from app.models import analytics as analytics_model
 from app.utils.auth import jwt_required, super_admin_required, org_role_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
+from app.utils.email import send_invite_email
+
+
+def _send_invite_safe(email, token, invite_type, org_name=None, inviter=None):
+    """Fire the invite email without blocking the request on SMTP issues (mirrors the
+    OTP call sites). The in-app inbox still works regardless of delivery."""
+    try:
+        send_invite_email(email, token, invite_type, org_name=org_name, inviter=inviter)
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).error("Failed to send invite email to %s: %s", email, exc)
+
+
+def _display_name(user_id):
+    u = user_model.find_by_id(user_id)
+    if not u:
+        return None
+    full = " ".join(p for p in (u.get("name"), u.get("lastname")) if p).strip()
+    return full or u.get("email")
 
 # Org self-service: the in-app invite inbox, org-creation/join invites, org settings,
 # member management, and the org-scoped management panel. The existing /admin/* routes
@@ -80,6 +99,7 @@ def create_org_invite(current_user):
         return jsonify({"error": "An invitee email is required."}), 400
     inv = invite_model.create("create_org", email, invited_by=current_user["sub"])
     audit_model.log(current_user["sub"], "invite.create_org", email)
+    _send_invite_safe(email, inv["token"], "create_org", inviter=_display_name(current_user["sub"]))
     return jsonify(invite_model.public(inv)), 201
 
 
@@ -123,12 +143,16 @@ def update_org(current_user, org_id):
         fields["name"] = (body.get("name") or "").strip()
     if "description" in body:
         fields["description"] = (body.get("description") or "").strip()
+    if "theme" in body:
+        fields["theme"] = body.get("theme")  # sanitized in the model
     if not fields:
         return jsonify({"error": "Nothing to update."}), 400
     org_model.update_org(org_id, fields)
     audit_model.log(current_user["sub"], "org.update", ", ".join(fields), org_id=org_id)
-    return jsonify({**org_model.public_org(org_model.find_by_id(org_id)),
-                    "description": fields.get("description", "")}), 200
+    fresh = org_model.find_by_id(org_id)
+    return jsonify({**org_model.public_org(fresh),
+                    "description": fresh.get("description", ""),
+                    "status": fresh.get("status", "active")}), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/members", methods=["GET"])
@@ -185,6 +209,9 @@ def create_join_invite(current_user, org_id):
         return jsonify({"error": "An invitee email is required."}), 400
     inv = invite_model.create("org_join", email, invited_by=current_user["sub"], org_id=org_id, role="admin")
     audit_model.log(current_user["sub"], "invite.org_join", email, org_id=org_id)
+    org = org_model.find_by_id(org_id)
+    _send_invite_safe(email, inv["token"], "org_join",
+                      org_name=(org or {}).get("name"), inviter=_display_name(current_user["sub"]))
     return jsonify(invite_model.public(inv)), 201
 
 

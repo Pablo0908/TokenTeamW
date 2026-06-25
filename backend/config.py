@@ -32,6 +32,13 @@ class Config:
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5173")
     CORS_ORIGINS = _cors_origins()
 
+    # Cap request bodies to bound abuse (covers the base64 avatar/logo uploads). 3 MB.
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(3 * 1024 * 1024)))
+
+    # Rate-limit storage. Default in-memory for dev; point at Redis in production
+    # (e.g. redis://host:6379) so limits hold across workers/instances.
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
     # Email (2FA OTP). Leave blank in .env to log codes to the console instead of emailing.

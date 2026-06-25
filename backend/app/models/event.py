@@ -213,5 +213,6 @@ def event_summary(event, badges_total, badges_earned, org=None):
             "id": str(org["_id"]),
             "name": org.get("name", ""),
             "slug": org.get("slug", ""),
+            "theme": org.get("theme") or {},
         }
     return summary

@@ -7,7 +7,7 @@ from app import mongo
 from app.models import user as user_model
 from app.models import membership as membership_model
 from app.models import organization as org_model
-from app.utils.auth import jwt_required, hash_password
+from app.utils.auth import jwt_required, hash_password, encode_token
 from app.utils.email import send_reset_email
 from app.routes.auth import _validate_password
 
@@ -34,6 +34,7 @@ def my_orgs(current_user):
                 "slug": org.get("slug", ""),
                 "status": org.get("status", "active"),
                 "role": m.get("role"),
+                "theme": org.get("theme") or {},
             })
     return jsonify({
         "platform_role": actor.get("platform_role") if actor else None,
@@ -149,4 +150,8 @@ def change_password(current_user):
         return jsonify({"error": pwd_error}), 400
 
     user_model.update_password(current_user["sub"], hash_password(new_pwd))
-    return jsonify({"message": "Password updated successfully."}), 200
+    # update_password bumped token_version (revoking other sessions). Hand the current
+    # device a fresh token so it stays signed in.
+    fresh = user_model.find_by_id(current_user["sub"])
+    new_token = encode_token(current_user["sub"], fresh.get("role", "attendee"), fresh.get("token_version", 0))
+    return jsonify({"message": "Password updated successfully.", "token": new_token}), 200
