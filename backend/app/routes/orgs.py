@@ -1,3 +1,4 @@
+import re
 import secrets
 
 from flask import Blueprint, request, jsonify
@@ -539,6 +540,11 @@ def org_audit(current_user, org_id):
         page = max(1, int(request.args.get("page", 1)))
     except (TypeError, ValueError):
         page = 1
-    entries, total = audit_model.query({"org_id": str(org_id)}, page, audit_model.PAGE_SIZE)
+    flt = {"org_id": str(org_id)}
+    q = (request.args.get("q") or "").strip()
+    if q:
+        rx = {"$regex": re.escape(q), "$options": "i"}
+        flt["$or"] = [{"action": rx}, {"actor_email": rx}, {"detail": rx}]
+    entries, total = audit_model.query(flt, page, audit_model.PAGE_SIZE)
     return jsonify({"entries": entries, "page": page, "page_size": audit_model.PAGE_SIZE,
                     "total": total, "has_more": page * audit_model.PAGE_SIZE < total}), 200

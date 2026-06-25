@@ -8,6 +8,7 @@ import ActivityChart from '@/components/domain/ActivityChart.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import { t } from '@/i18n'
+import { eventTypeLabel } from '@/utils/labels'
 
 const periodLabel = (p) => t(`dateRange.${p}`)
 
@@ -103,8 +104,8 @@ onMounted(() => {
         <div class="grid grid-cols-2 gap-3">
           <div class="surface p-4">
             <p class="text-[0.65rem] uppercase tracking-wide text-base-content/45">{{ $t('admin.userDetail.favoriteType') }}</p>
-            <p class="mt-1 truncate font-semibold capitalize">
-              {{ favorite ? favorite.event_type : '—' }}
+            <p class="mt-1 truncate font-semibold">
+              {{ favorite ? eventTypeLabel(favorite.event_type) : '—' }}
               <span v-if="favorite?.tie" class="text-[0.6rem] font-normal text-base-content/45">{{ $t('admin.userDetail.tie') }}</span>
             </p>
           </div>

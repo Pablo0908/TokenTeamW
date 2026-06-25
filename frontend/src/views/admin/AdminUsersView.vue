@@ -18,6 +18,16 @@ const sorted = computed(() =>
   [...users.users].sort((a, b) => (b.badges_count ?? 0) - (a.badges_count ?? 0)),
 )
 
+// Free-text search over name + email (case-insensitive).
+const search = ref('')
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return sorted.value
+  return sorted.value.filter((u) =>
+    [u.name, u.lastname, u.email].filter(Boolean).join(' ').toLowerCase().includes(q),
+  )
+})
+
 const isSelf = (u) => u.id === auth.user?.id
 
 // Grant or revoke platform super-admin. (No global "admin" tier — org admin is per-org.)
@@ -101,10 +111,18 @@ onMounted(() => users.fetchUsers())
         </div>
       </section>
 
+      <!-- Search -->
+      <input
+        v-model="search"
+        type="search"
+        :placeholder="$t('admin.searchUsers')"
+        class="input input-bordered input-sm w-full bg-base-100/70"
+      />
+
       <!-- User list -->
-      <section v-if="sorted.length" class="space-y-3">
+      <section v-if="filtered.length" class="space-y-3">
         <div
-          v-for="u in sorted"
+          v-for="u in filtered"
           :key="u.id"
           class="surface p-4"
           :class="u.disabled ? 'opacity-60' : ''"

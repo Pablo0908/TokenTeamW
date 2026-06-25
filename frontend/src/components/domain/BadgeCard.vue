@@ -74,7 +74,7 @@ const earnedDate = computed(() => {
     <span
       v-if="earned"
       class="text-[0.7rem] text-base-content/50"
-    >{{ earnedDate || 'Earned' }}</span>
+    >{{ earnedDate || $t('badges.earned') }}</span>
     <span
       v-else
       class="inline-flex items-center gap-1 rounded-full bg-base-300/70 px-2 py-0.5 text-[0.65rem] text-base-content/50"
@@ -82,7 +82,7 @@ const earnedDate = computed(() => {
       <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75M6 10.5h12a1.5 1.5 0 011.5 1.5v6A1.5 1.5 0 0118 19.5H6A1.5 1.5 0 014.5 18v-6A1.5 1.5 0 016 10.5z" />
       </svg>
-      Locked
+      {{ $t('events.status.locked') }}
     </span>
   </component>
 </template>

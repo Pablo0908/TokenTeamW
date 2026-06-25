@@ -12,6 +12,7 @@ import DateRangePicker from '@/components/domain/DateRangePicker.vue'
 import OrgOnboarding from '@/components/domain/OrgOnboarding.vue'
 import VerifierPanel from '@/components/domain/VerifierPanel.vue'
 import { t } from '@/i18n'
+import { roleLabel, eventTypeLabel, inviteStatusLabel } from '@/utils/labels'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,7 +59,23 @@ const events = ref([])
 const members = ref([])
 const invites = ref([])
 const participants = ref([])
+const participantSearch = ref('')
+const filteredParticipants = computed(() => {
+  const q = participantSearch.value.trim().toLowerCase()
+  if (!q) return participants.value
+  return participants.value.filter((p) =>
+    [p.name, p.lastname, p.email].filter(Boolean).join(' ').toLowerCase().includes(q),
+  )
+})
 const audit = ref({ entries: [], page: 1, has_more: false, total: 0 })
+const auditSearch = ref('')
+let auditDebounce = null
+watch(auditSearch, () => {
+  clearTimeout(auditDebounce)
+  auditDebounce = setTimeout(() => {
+    if (tab.value === 'audit') { audit.value.page = 1; loadTab() }
+  }, 350)
+})
 const settings = ref({ name: '', description: '', theme: { primary: '', secondary: '', accent: '', logo_url: '' } })
 
 const newEvent = ref({ name: '', event_type: 'conference', visibility: 'public', date: '', end_date: '' })
@@ -91,7 +108,7 @@ async function loadTab() {
       members.value = (await api.get(`${base}/members`)).data.members || []
       invites.value = (await api.get(`${base}/invites`)).data.invites || []
     } else if (tab.value === 'participants') participants.value = (await api.get(`${base}/participants`)).data.participants || []
-    else if (tab.value === 'audit') audit.value = (await api.get(`${base}/audit`, { params: { page: audit.value.page } })).data
+    else if (tab.value === 'audit') audit.value = (await api.get(`${base}/audit`, { params: { page: audit.value.page, q: auditSearch.value.trim() || undefined } })).data
     else if (tab.value === 'settings') {
       const o = (await api.get(base)).data
       settings.value = {
@@ -182,7 +199,7 @@ onUnmounted(clearOrgTheme)
           class="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-base-300"
         />
         <h1 class="truncate text-2xl font-bold">{{ activeOrg?.name || $t('org.defaultName') }}</h1>
-        <span v-if="activeOrg" class="badge badge-sm badge-ghost capitalize">{{ activeOrg.role }}</span>
+        <span v-if="activeOrg" class="badge badge-sm badge-ghost">{{ roleLabel(activeOrg.role) }}</span>
         <span v-if="orgContext.isSuperAdmin" class="badge badge-sm badge-secondary">{{ $t('roles.superAdmin') }}</span>
       </div>
       <!-- Active-org switcher (only when in more than one org) -->
@@ -192,7 +209,7 @@ onUnmounted(clearOrgTheme)
         :value="orgId"
         @change="orgContext.setActiveOrg($event.target.value); loadTab()"
       >
-        <option v-for="o in orgContext.orgs" :key="o.id" :value="o.id">{{ o.name }} ({{ o.role }})</option>
+        <option v-for="o in orgContext.orgs" :key="o.id" :value="o.id">{{ o.name }} ({{ roleLabel(o.role) }})</option>
       </select>
     </header>
 
@@ -299,8 +316,8 @@ onUnmounted(clearOrgTheme)
         </button>
         <div v-if="showNewEvent" class="surface space-y-2 p-4">
           <input v-model="newEvent.name" :placeholder="$t('org.eventName')" class="input input-bordered input-sm w-full bg-base-100/70" />
-          <select v-model="newEvent.event_type" class="select select-bordered select-sm w-full bg-base-100/70 capitalize">
-            <option v-for="ty in EVENT_TYPES" :key="ty" :value="ty">{{ ty }}</option>
+          <select v-model="newEvent.event_type" class="select select-bordered select-sm w-full bg-base-100/70">
+            <option v-for="ty in EVENT_TYPES" :key="ty" :value="ty">{{ eventTypeLabel(ty) }}</option>
           </select>
           <select v-model="newEvent.visibility" class="select select-bordered select-sm w-full bg-base-100/70">
             <option v-for="v in VISIBILITIES" :key="v.value" :value="v.value">{{ v.label }}</option>
@@ -326,7 +343,7 @@ onUnmounted(clearOrgTheme)
           @click="router.push(`/org/events/${ev.id}`)"
         >
           <div class="min-w-0"><p class="truncate font-medium">{{ ev.name }}</p>
-            <p class="text-[0.7rem] text-base-content/45 capitalize">{{ ev.event_type }} · {{ ev.badges_total }} {{ $t('org.unitBadges') }}</p></div>
+            <p class="text-[0.7rem] text-base-content/45">{{ eventTypeLabel(ev.event_type) }} · {{ ev.badges_total }} {{ $t('org.unitBadges') }}</p></div>
           <div class="flex shrink-0 items-center gap-2">
             <span class="badge badge-sm" :class="ev.status === 'active' ? 'badge-primary' : 'badge-ghost'">{{ $t('events.status.' + ev.status) }}</span>
             <svg class="h-4 w-4 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>
@@ -352,9 +369,9 @@ onUnmounted(clearOrgTheme)
               <p class="truncate text-[0.7rem] text-base-content/45">{{ m.email }}</p></div>
             <div class="flex items-center gap-2">
               <select v-if="isOwner && m.role !== 'owner'" class="select select-bordered select-xs bg-base-100/70" :value="m.role" @change="setRole(m.user_id, $event.target.value)">
-                <option value="admin">admin</option><option value="staff">staff</option>
+                <option value="admin">{{ roleLabel('admin') }}</option><option value="staff">{{ roleLabel('staff') }}</option>
               </select>
-              <span v-else class="badge badge-sm capitalize">{{ m.role }}</span>
+              <span v-else class="badge badge-sm">{{ roleLabel(m.role) }}</span>
               <button v-if="isOwner && m.role !== 'owner'" class="btn btn-ghost btn-xs text-error" @click="removeMember(m.user_id)">{{ $t('org.remove') }}</button>
             </div>
           </div>
@@ -362,7 +379,7 @@ onUnmounted(clearOrgTheme)
         <div v-if="invites.length" class="space-y-2">
           <p class="text-xs uppercase tracking-wide text-base-content/45">{{ $t('org.pendingInvites') }}</p>
           <div v-for="inv in invites" :key="inv.id" class="surface flex items-center justify-between gap-2 p-3">
-            <p class="truncate text-sm">{{ inv.email }} <span class="badge badge-xs" :class="inv.status === 'pending' ? 'badge-warning' : 'badge-ghost'">{{ $t('admin.codes.status' + inv.status.charAt(0).toUpperCase() + inv.status.slice(1)) }}</span></p>
+            <p class="truncate text-sm">{{ inv.email }} <span class="badge badge-xs" :class="inv.status === 'pending' ? 'badge-warning' : 'badge-ghost'">{{ inviteStatusLabel(inv.status) }}</span></p>
             <button v-if="inv.status === 'pending'" class="btn btn-ghost btn-xs text-error" @click="revokeInvite(inv.id)">{{ $t('org.revoke') }}</button>
           </div>
         </div>
@@ -370,7 +387,13 @@ onUnmounted(clearOrgTheme)
 
       <!-- PARTICIPANTS -->
       <section v-else-if="tab === 'participants'" class="space-y-2">
-        <div v-for="p in participants" :key="p.id" class="surface flex items-center justify-between gap-2 p-3">
+        <input
+          v-model="participantSearch"
+          type="search"
+          :placeholder="$t('org.searchPeople')"
+          class="input input-bordered input-sm w-full bg-base-100/70"
+        />
+        <div v-for="p in filteredParticipants" :key="p.id" class="surface flex items-center justify-between gap-2 p-3">
           <div class="min-w-0">
             <p class="truncate text-sm font-medium">
               {{ p.name }} {{ p.lastname }}
@@ -393,6 +416,12 @@ onUnmounted(clearOrgTheme)
 
       <!-- AUDIT -->
       <section v-else-if="tab === 'audit'" class="space-y-3">
+        <input
+          v-model="auditSearch"
+          type="search"
+          :placeholder="$t('org.searchAudit')"
+          class="input input-bordered input-sm w-full bg-base-100/70"
+        />
         <div v-for="(e, i) in audit.entries" :key="i" class="surface p-3">
           <p class="text-sm font-medium">{{ auditActionLabel(e.action) }}</p>
           <p v-if="e.detail" class="truncate text-xs text-base-content/60">{{ e.detail }}</p>

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useEventsStore } from '@/stores/events'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import { t } from '@/i18n'
+import { eventTypeLabel } from '@/utils/labels'
 
 const router = useRouter()
 const events = useEventsStore()
@@ -78,8 +79,8 @@ async function submit() {
 
       <label class="form-control w-full">
         <span class="label-text mb-1 text-base-content/70">{{ $t('admin.eventNew.typeLabel') }}</span>
-        <select v-model="form.event_type" class="select select-bordered w-full bg-base-100/70 capitalize">
-          <option v-for="t in EVENT_TYPES" :key="t" :value="t" class="capitalize">{{ t }}</option>
+        <select v-model="form.event_type" class="select select-bordered w-full bg-base-100/70">
+          <option v-for="ty in EVENT_TYPES" :key="ty" :value="ty">{{ eventTypeLabel(ty) }}</option>
         </select>
       </label>
 
