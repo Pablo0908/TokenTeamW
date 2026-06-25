@@ -1,14 +1,16 @@
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, readApiError } from '@/services/api'
 import { useOrgContextStore } from '@/stores/orgContext'
+import { applyOrgTheme, clearOrgTheme } from '@/utils/orgTheme'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import StatTile from '@/components/domain/StatTile.vue'
 import ActivityChart from '@/components/domain/ActivityChart.vue'
 import DateRangePicker from '@/components/domain/DateRangePicker.vue'
 import OrgOnboarding from '@/components/domain/OrgOnboarding.vue'
+import VerifierPanel from '@/components/domain/VerifierPanel.vue'
 import { t } from '@/i18n'
 
 const route = useRoute()
@@ -19,10 +21,12 @@ const orgId = computed(() => orgContext.activeOrgId)
 const activeOrg = computed(() => orgContext.activeOrg)
 const isOwner = computed(() => orgContext.isActiveOwner)
 const isAdmin = computed(() => orgContext.isActiveAdmin) // owner or admin
+const isStaff = computed(() => orgContext.isActiveStaff) // owner, admin or staff
 
 const TABS = computed(() => [
   { key: 'dashboard', label: t('tabs.dashboard'), show: true },
   { key: 'events', label: t('tabs.events'), show: true },
+  { key: 'verifier', label: t('tabs.verifier'), show: isStaff.value },
   { key: 'members', label: t('tabs.members'), show: isAdmin.value },
   { key: 'participants', label: t('tabs.people'), show: true },
   { key: 'audit', label: t('tabs.audit'), show: isAdmin.value },
@@ -55,7 +59,7 @@ const members = ref([])
 const invites = ref([])
 const participants = ref([])
 const audit = ref({ entries: [], page: 1, has_more: false, total: 0 })
-const settings = ref({ name: '', description: '' })
+const settings = ref({ name: '', description: '', theme: { primary: '', secondary: '', accent: '', logo_url: '' } })
 
 const newEvent = ref({ name: '', event_type: 'conference', visibility: 'public', date: '', end_date: '' })
 const showNewEvent = ref(false)
@@ -90,7 +94,11 @@ async function loadTab() {
     else if (tab.value === 'audit') audit.value = (await api.get(`${base}/audit`, { params: { page: audit.value.page } })).data
     else if (tab.value === 'settings') {
       const o = (await api.get(base)).data
-      settings.value = { name: o.name || '', description: o.description || '' }
+      settings.value = {
+        name: o.name || '',
+        description: o.description || '',
+        theme: { primary: '', secondary: '', accent: '', logo_url: '', ...(o.theme || {}) },
+      }
     }
   } catch (e) { error.value = readApiError(e, t('org.couldNotLoadSection')) }
   finally { loading.value = false }
@@ -131,9 +139,17 @@ async function banParticipant(uid, banned) {
 }
 async function saveSettings() {
   try {
-    await api.patch(`/orgs/${orgId.value}`, { name: settings.value.name.trim(), description: settings.value.description })
+    await api.patch(`/orgs/${orgId.value}`, {
+      name: settings.value.name.trim(),
+      description: settings.value.description,
+      theme: settings.value.theme,
+    })
     await orgContext.load()
+    applyOrgTheme(orgContext.activeOrg?.theme) // reflect the saved colors immediately
   } catch (e) { error.value = readApiError(e, t('org.couldNotSaveSettings')) }
+}
+function resetTheme() {
+  settings.value.theme = { primary: '', secondary: '', accent: '', logo_url: '' }
 }
 function setDashPeriod(p) {
   if (p === dashPeriod.value) return
@@ -148,6 +164,10 @@ function auditPage(delta) {
 
 watch([orgId, tab], loadTab)
 onMounted(loadTab)
+
+// Apply the active org's brand colors while the panel is open; restore on leave.
+watch(() => activeOrg.value?.theme, (th) => applyOrgTheme(th || {}), { immediate: true, deep: true })
+onUnmounted(clearOrgTheme)
 </script>
 
 <template>
@@ -155,8 +175,15 @@ onMounted(loadTab)
     <header>
       <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('org.eyebrow') }}</p>
       <div class="flex items-center gap-2">
+        <img
+          v-if="activeOrg?.theme?.logo_url"
+          :src="activeOrg.theme.logo_url"
+          alt=""
+          class="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-base-300"
+        />
         <h1 class="truncate text-2xl font-bold">{{ activeOrg?.name || $t('org.defaultName') }}</h1>
         <span v-if="activeOrg" class="badge badge-sm badge-ghost capitalize">{{ activeOrg.role }}</span>
+        <span v-if="orgContext.isSuperAdmin" class="badge badge-sm badge-secondary">{{ $t('roles.superAdmin') }}</span>
       </div>
       <!-- Active-org switcher (only when in more than one org) -->
       <select
@@ -308,6 +335,11 @@ onMounted(loadTab)
         <p v-if="!events.length" class="surface p-6 text-center text-sm text-base-content/50">{{ $t('org.noEventsYet') }}</p>
       </section>
 
+      <!-- VERIFIER (staff+) — scan an attendee's prize-claim QR and hand over the prize. -->
+      <section v-else-if="tab === 'verifier'" class="surface p-4">
+        <VerifierPanel />
+      </section>
+
       <!-- MEMBERS -->
       <section v-else-if="tab === 'members'" class="space-y-4">
         <div class="surface flex gap-2 p-4">
@@ -384,6 +416,37 @@ onMounted(loadTab)
           <span class="label-text mb-1 text-base-content/70">{{ $t('org.description') }}</span>
           <textarea v-model="settings.description" rows="3" class="textarea textarea-bordered w-full bg-base-100/70" />
         </label>
+
+        <!-- Branding (per-org theme) -->
+        <div class="surface space-y-3 p-4">
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">{{ $t('org.theme') }}</p>
+            <button class="btn btn-ghost btn-xs" @click="resetTheme">{{ $t('org.resetTheme') }}</button>
+          </div>
+          <p class="text-[0.7rem] text-base-content/55">{{ $t('org.themeHint') }}</p>
+          <div class="grid grid-cols-3 gap-3">
+            <label class="form-control">
+              <span class="label-text mb-1 text-xs text-base-content/60">{{ $t('org.primary') }}</span>
+              <input v-model="settings.theme.primary" type="color" class="h-9 w-full cursor-pointer rounded bg-base-100/70" />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-1 text-xs text-base-content/60">{{ $t('org.secondary') }}</span>
+              <input v-model="settings.theme.secondary" type="color" class="h-9 w-full cursor-pointer rounded bg-base-100/70" />
+            </label>
+            <label class="form-control">
+              <span class="label-text mb-1 text-xs text-base-content/60">{{ $t('org.accent') }}</span>
+              <input v-model="settings.theme.accent" type="color" class="h-9 w-full cursor-pointer rounded bg-base-100/70" />
+            </label>
+          </div>
+          <label class="form-control w-full">
+            <span class="label-text mb-1 text-base-content/70">{{ $t('org.logoUrl') }}</span>
+            <div class="flex items-center gap-2">
+              <input v-model="settings.theme.logo_url" type="url" placeholder="https://…/logo.png" class="input input-bordered input-sm w-full bg-base-100/70" />
+              <img v-if="settings.theme.logo_url" :src="settings.theme.logo_url" alt="" class="h-9 w-9 shrink-0 rounded object-cover ring-1 ring-base-300" />
+            </div>
+          </label>
+        </div>
+
         <button class="btn btn-primary w-full tap-target" @click="saveSettings">{{ $t('org.save') }}</button>
       </section>
     </template>

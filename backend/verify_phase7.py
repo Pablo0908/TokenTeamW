@@ -44,6 +44,14 @@ def main():
     try:
         for em in emails.values():
             mongo.db.users.delete_one({"email": em})
+        # Idempotent: clear this script's own org fixture if an earlier run was interrupted.
+        for o in mongo.db.organizations.find({"slug": f"{SUFFIX}-a"}):
+            for e in mongo.db.events.find({"org_id": o["_id"]}, {"_id": 1}):
+                mongo.db.badges.delete_many({"event_id": e["_id"]})
+                mongo.db.redemptions.delete_many({"event_id": e["_id"]})
+                mongo.db.events.delete_one({"_id": e["_id"]})
+            mongo.db.memberships.delete_many({"org_id": o["_id"]})
+            mongo.db.organizations.delete_one({"_id": o["_id"]})
         for k, em in emails.items():
             uids[k] = user_model.create_user(k.title(), "VS", em, hash_password("TestPass1!"), role="attendee")
 

@@ -34,9 +34,11 @@ const routes = [
   { path: '/admin/orgs', name: 'admin-orgs', component: () => import('@/views/admin/AdminOrgsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/org-invites', name: 'admin-org-invites', component: () => import('@/views/admin/AdminOrgInvitesView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/announcements', name: 'admin-announcements', component: () => import('@/views/admin/AdminAnnouncementsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  // Global prize verifier — super-admin can hand over prizes for any org's event.
+  { path: '/admin/verifier', name: 'admin-verifier', component: () => import('@/views/admin/AdminVerifierView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
 
   // Org-scoped panel — any member of the active org (tabs gate by role in-view).
-  { path: '/org/:tab(dashboard|events|members|participants|audit|settings)?', name: 'org-panel', component: () => import('@/views/OrgPanelView.vue'), meta: { requiresAuth: true, requiresOrgMember: true } },
+  { path: '/org/:tab(dashboard|events|verifier|members|participants|audit|settings)?', name: 'org-panel', component: () => import('@/views/OrgPanelView.vue'), meta: { requiresAuth: true, requiresOrgMember: true } },
   // Org event detail — reuses the platform event-detail view in org-scoped mode
   // (same badge management: single, bulk, QR sheet) against the active org.
   { path: '/org/events/:id', name: 'org-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresOrgMember: true, orgScoped: true } },

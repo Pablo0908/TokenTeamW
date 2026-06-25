@@ -127,6 +127,7 @@ onMounted(load)
       <RouterLink to="/admin/orgs" role="tab" class="tab">{{ $t('tabs.orgs') }}</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
       <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
+      <RouterLink to="/admin/verifier" role="tab" class="tab">{{ $t('tabs.verifier') }}</RouterLink>
     </div>
 
     <!-- Search by user (email/name) or event (name) -->
