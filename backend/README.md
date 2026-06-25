@@ -75,7 +75,7 @@ Base URL = `VITE_API_URL` (no `/api` prefix). All errors are `{"error": "..."}`.
 | POST | `/admin/events/<id>/badge` | admin | create badge → generates UUID token + QR (`qr_url`, `qr_image`) |
 | GET | `/admin/events/<id>/badges` | admin | badges with live `redeemed_by`/`total_attendees` |
 | GET | `/admin/users` | admin | **all users with `badges_count`** (badge tracking) |
-| PATCH | `/admin/users/<id>/role` | admin | **promote/demote** (`{role: "admin"\|"attendee"}`) |
+| PATCH | `/admin/users/<id>/super-admin` | super_admin | **grant/revoke platform super-admin** (`{super_admin: true\|false}`; can't change your own) |
 | GET | `/health` | public | keepalive ping |
 
 **QR strategy:** each badge gets a UUID `token`; the QR encodes
