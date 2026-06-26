@@ -45,6 +45,19 @@ def find_by_event(event_id, org_id=None):
     return list(mongo.db.badges.find(query).sort("created_at", 1))
 
 
+def map_by_events(event_ids):
+    """{event_id_str: [badge docs]} for many events in ONE query — the batch form of
+    find_by_event, used to avoid a query-per-event when scanning the whole catalog
+    (streak/collection computation). Per-event badges keep created_at order."""
+    oids = [_oid(e) for e in event_ids]
+    out = {}
+    if not oids:
+        return out
+    for b in mongo.db.badges.find({"event_id": {"$in": oids}}).sort("created_at", 1):
+        out.setdefault(str(b["event_id"]), []).append(b)
+    return out
+
+
 def find_by_token(event_id, token):
     return mongo.db.badges.find_one({"event_id": _oid(event_id), "token": token})
 

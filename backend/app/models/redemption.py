@@ -55,6 +55,19 @@ def redeemed_badge_map(user_id, event_id):
     return {str(doc["badge_id"]): doc.get("redeemed_at") for doc in cursor}
 
 
+def redeemed_map_by_events(user_id, event_ids=None):
+    """Batch form of redeemed_badge_map: {event_id_str: {badge_id_str: redeemed_at}} for this
+    user in ONE query. event_ids=None returns the user's redemptions across ALL events; a list
+    scopes to those events. Avoids a query-per-event when scanning the whole catalog."""
+    query = {"user_id": _oid(user_id)}
+    if event_ids is not None:
+        query["event_id"] = {"$in": [_oid(e) for e in event_ids]}
+    out = {}
+    for doc in mongo.db.redemptions.find(query):
+        out.setdefault(str(doc["event_id"]), {})[str(doc["badge_id"])] = doc.get("redeemed_at")
+    return out
+
+
 def favorite_event_type(user_id, org_ids=None):
     """The event_type this user has redeemed most (mode over their redemptions joined
     to events). `org_ids` (strings) scopes to a tenant set for an org admin; None = all.
@@ -140,6 +153,19 @@ def counts_by_badge(event_id):
     compute each badge's rarity without a query per badge."""
     pipeline = [
         {"$match": {"event_id": _oid(event_id)}},
+        {"$group": {"_id": "$badge_id", "count": {"$sum": 1}}},
+    ]
+    return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}
+
+
+def counts_by_badge_for_events(event_ids):
+    """Batch form of counts_by_badge: {badge_id_str: redemption_count} across many events in
+    ONE aggregation. badge_ids are globally unique, so a single flat map serves all events."""
+    oids = [_oid(e) for e in event_ids]
+    if not oids:
+        return {}
+    pipeline = [
+        {"$match": {"event_id": {"$in": oids}}},
         {"$group": {"_id": "$badge_id", "count": {"$sum": 1}}},
     ]
     return {str(doc["_id"]): doc["count"] for doc in mongo.db.redemptions.aggregate(pipeline)}
