@@ -31,7 +31,7 @@ const TABS = computed(() => [
   { key: 'members', label: t('tabs.members'), show: isAdmin.value },
   { key: 'participants', label: t('tabs.people'), show: true },
   { key: 'audit', label: t('tabs.audit'), show: isAdmin.value },
-  { key: 'settings', label: t('tabs.settings'), show: isOwner.value },
+  { key: 'settings', label: t('tabs.settings'), show: isAdmin.value },
 ])
 const tab = computed(() => {
   const t = route.params.tab || 'dashboard'
@@ -77,6 +77,15 @@ watch(auditSearch, () => {
   }, 350)
 })
 const settings = ref({ name: '', description: '', theme: { primary: '', secondary: '', accent: '', logo_url: '' } })
+const settingsSaved = ref(false)
+
+function pickLogo(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (ev) => { settings.value.theme.logo_url = ev.target.result }
+  reader.readAsDataURL(file)
+}
 
 const NEW_EVENT = () => ({ name: '', description: '', event_type: 'conference', visibility: 'public', date: '', end_date: '', location: '', prize: '' })
 const newEvent = ref(NEW_EVENT())
@@ -163,7 +172,9 @@ async function saveSettings() {
       theme: settings.value.theme,
     })
     await orgContext.load()
-    applyOrgTheme(orgContext.activeOrg?.theme) // reflect the saved colors immediately
+    applyOrgTheme(orgContext.activeOrg?.theme)
+    settingsSaved.value = true
+    setTimeout(() => { settingsSaved.value = false }, 2500)
   } catch (e) { error.value = readApiError(e, t('org.couldNotSaveSettings')) }
 }
 function resetTheme() {
@@ -446,47 +457,76 @@ onUnmounted(clearOrgTheme)
       </section>
 
       <!-- SETTINGS -->
-      <section v-else-if="tab === 'settings'" class="space-y-3 mx-auto w-full max-w-2xl">
-        <label class="form-control w-full">
-          <span class="label-text mb-1 text-base-content/70">{{ $t('org.orgName') }}</span>
-          <input v-model="settings.name" class="input input-bordered w-full bg-base-100/70" />
-        </label>
-        <label class="form-control w-full">
-          <span class="label-text mb-1 text-base-content/70">{{ $t('org.description') }}</span>
-          <textarea v-model="settings.description" rows="3" class="textarea textarea-bordered w-full bg-base-100/70" />
-        </label>
+      <section v-else-if="tab === 'settings'" class="mx-auto w-full max-w-2xl space-y-4">
 
-        <!-- Branding (per-org theme) -->
-        <div class="surface space-y-3 p-4">
+        <!-- Logo / identidad -->
+        <div class="surface p-5 space-y-4">
+          <h2 class="font-semibold text-base">{{ $t('org.identity') }}</h2>
+
+          <!-- Logo upload -->
+          <div class="flex flex-col sm:flex-row items-center gap-4">
+            <div class="relative shrink-0">
+              <div class="h-20 w-20 rounded-2xl overflow-hidden ring-2 ring-base-300 bg-base-200 flex items-center justify-center">
+                <img v-if="settings.theme.logo_url" :src="settings.theme.logo_url" alt="" class="h-full w-full object-cover" />
+                <svg v-else class="h-8 w-8 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+              <label class="absolute -bottom-1 -right-1 grid h-7 w-7 cursor-pointer place-items-center rounded-full bg-primary shadow ring-2 ring-base-100 transition-transform active:scale-90">
+                <svg class="h-3.5 w-3.5 text-primary-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+                </svg>
+                <input type="file" accept="image/*" class="sr-only" @change="pickLogo" />
+              </label>
+            </div>
+            <div class="flex-1 w-full space-y-2">
+              <label class="form-control w-full">
+                <span class="label-text text-xs text-base-content/60 mb-1">{{ $t('org.orgName') }}</span>
+                <input v-model="settings.name" class="input input-bordered w-full bg-base-100/70" :placeholder="$t('org.orgName')" />
+              </label>
+              <p class="text-[0.7rem] text-base-content/45">{{ $t('org.logoHint') }}</p>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <label class="form-control w-full">
+            <span class="label-text text-xs text-base-content/60 mb-1">{{ $t('org.description') }}</span>
+            <textarea v-model="settings.description" rows="3" class="textarea textarea-bordered w-full bg-base-100/70" :placeholder="$t('org.descriptionPlaceholder')" />
+          </label>
+        </div>
+
+        <!-- Colores / branding -->
+        <div class="surface p-5 space-y-3">
           <div class="flex items-center justify-between">
-            <p class="font-semibold">{{ $t('org.theme') }}</p>
+            <h2 class="font-semibold text-base">{{ $t('org.theme') }}</h2>
             <button class="btn btn-ghost btn-xs" @click="resetTheme">{{ $t('org.resetTheme') }}</button>
           </div>
           <p class="text-[0.7rem] text-base-content/55">{{ $t('org.themeHint') }}</p>
           <div class="grid grid-cols-3 gap-3">
             <label class="form-control">
               <span class="label-text mb-1 text-xs text-base-content/60">{{ $t('org.primary') }}</span>
-              <input v-model="settings.theme.primary" type="color" class="h-9 w-full cursor-pointer rounded bg-base-100/70" />
+              <input v-model="settings.theme.primary" type="color" class="h-10 w-full cursor-pointer rounded-lg bg-base-100/70 p-1" />
             </label>
             <label class="form-control">
               <span class="label-text mb-1 text-xs text-base-content/60">{{ $t('org.secondary') }}</span>
-              <input v-model="settings.theme.secondary" type="color" class="h-9 w-full cursor-pointer rounded bg-base-100/70" />
+              <input v-model="settings.theme.secondary" type="color" class="h-10 w-full cursor-pointer rounded-lg bg-base-100/70 p-1" />
             </label>
             <label class="form-control">
               <span class="label-text mb-1 text-xs text-base-content/60">{{ $t('org.accent') }}</span>
-              <input v-model="settings.theme.accent" type="color" class="h-9 w-full cursor-pointer rounded bg-base-100/70" />
+              <input v-model="settings.theme.accent" type="color" class="h-10 w-full cursor-pointer rounded-lg bg-base-100/70 p-1" />
             </label>
           </div>
-          <label class="form-control w-full">
-            <span class="label-text mb-1 text-base-content/70">{{ $t('org.logoUrl') }}</span>
-            <div class="flex items-center gap-2">
-              <input v-model="settings.theme.logo_url" type="url" placeholder="https://…/logo.png" class="input input-bordered input-sm w-full bg-base-100/70" />
-              <img v-if="settings.theme.logo_url" :src="settings.theme.logo_url" alt="" class="h-9 w-9 shrink-0 rounded object-cover ring-1 ring-base-300" />
-            </div>
-          </label>
         </div>
 
-        <button class="btn btn-primary w-full tap-target" @click="saveSettings">{{ $t('org.save') }}</button>
+        <!-- Guardar -->
+        <button
+          class="btn btn-primary w-full tap-target"
+          :class="{ 'btn-success': settingsSaved }"
+          @click="saveSettings"
+        >
+          <svg v-if="settingsSaved" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          {{ settingsSaved ? $t('org.saved') : $t('org.save') }}
+        </button>
       </section>
     </template>
   </div>

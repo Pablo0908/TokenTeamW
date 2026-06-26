@@ -2,9 +2,11 @@
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAnnouncementsStore } from '@/stores/announcements'
+import { useOrgContextStore } from '@/stores/orgContext'
 
 const route = useRoute()
 const anns = useAnnouncementsStore()
+const orgContext = useOrgContextStore()
 
 onMounted(() => {
   if (!anns.loaded) anns.fetchAnnouncements()
@@ -24,7 +26,7 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
 <template>
   <nav class="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
     <div class="mx-auto max-w-md px-4 pb-3">
-      <div class="surface flex items-center justify-around rounded-3xl px-1.5 py-1.5 shadow-2xl shadow-black/40">
+      <div class="surface flex items-center justify-around rounded-3xl px-1.5 py-1.5 shadow-2xl shadow-black/40" :class="orgContext.isSuperAdmin ? 'gap-0' : ''">
         <RouterLink
           v-for="item in items"
           :key="item.name"
@@ -59,6 +61,22 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
             />
           </span>
           <span class="relative text-[0.625rem] font-medium leading-none">{{ $t('nav.' + item.name) }}</span>
+        </RouterLink>
+
+        <!-- Admin tab — solo super_admin -->
+        <RouterLink
+          v-if="orgContext.isSuperAdmin"
+          to="/admin/events"
+          class="tap-target relative flex flex-1 flex-col items-center gap-1 rounded-2xl py-2 transition-colors"
+          :class="route.path.startsWith('/admin') ? 'text-primary' : 'text-base-content/55'"
+          :aria-label="$t('nav.admin')"
+          :aria-current="route.path.startsWith('/admin') ? 'page' : undefined"
+        >
+          <span v-if="route.path.startsWith('/admin')" class="absolute inset-0 rounded-2xl bg-primary/10" aria-hidden="true" />
+          <svg class="relative h-6 w-6" :class="{ 'drop-shadow-[0_0_8px_rgba(45,212,191,0.55)]': route.path.startsWith('/admin') }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+          <span class="relative text-[0.625rem] font-medium leading-none">{{ $t('nav.admin') }}</span>
         </RouterLink>
       </div>
     </div>

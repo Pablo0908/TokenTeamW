@@ -1,10 +1,18 @@
 <script setup>
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAnnouncementsStore } from '@/stores/announcements'
+import { useOrgContextStore } from '@/stores/orgContext'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 
 const route = useRoute()
 const anns = useAnnouncementsStore()
+const orgContext = useOrgContextStore()
+
+const orgInitials = computed(() => {
+  const name = orgContext.activeOrg?.name || ''
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
+})
 
 // Same destinations + glyphs as the mobile bottom bar (NavBar.vue), laid out vertically.
 const items = [
@@ -22,8 +30,24 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
   <aside
     class="sticky top-0 z-30 hidden h-dvh w-64 shrink-0 flex-col border-r border-base-300/40 bg-base-100/40 px-3 py-6 backdrop-blur lg:flex"
   >
-    <RouterLink :to="{ name: 'home' }" class="mb-7 flex items-center px-2" aria-label="Lyfter">
-      <BrandLogo :size="34" wordmark-class="text-xl" />
+    <!-- Org branding when active, Lyfter otherwise -->
+    <RouterLink :to="{ name: 'home' }" class="mb-7 flex items-center gap-3 px-2 min-w-0">
+      <template v-if="orgContext.activeOrg">
+        <img
+          v-if="orgContext.activeOrg.theme?.logo_url"
+          :src="orgContext.activeOrg.theme.logo_url"
+          :alt="orgContext.activeOrg.name"
+          class="h-9 w-9 shrink-0 rounded-xl object-contain"
+        />
+        <span
+          v-else
+          class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/20 text-sm font-bold text-primary"
+        >{{ orgInitials }}</span>
+        <span class="truncate text-base font-bold leading-tight">{{ orgContext.activeOrg.name }}</span>
+      </template>
+      <template v-else>
+        <BrandLogo :size="34" wordmark-class="text-xl" />
+      </template>
     </RouterLink>
 
     <nav class="flex flex-1 flex-col gap-1.5">
@@ -53,6 +77,23 @@ const isActive = (name) => route.name === name || (name === 'events' && route.na
         </span>
         <span class="text-sm font-medium">{{ $t('nav.' + item.name) }}</span>
       </RouterLink>
+
+      <!-- Admin panel — only for super_admin -->
+      <div v-if="orgContext.isSuperAdmin" class="mt-2 border-t border-base-300/30 pt-2">
+        <RouterLink
+          to="/admin/events"
+          class="tap-target relative flex items-center justify-start gap-3 rounded-2xl px-3 py-2.5 transition-colors"
+          :class="route.path.startsWith('/admin')
+            ? 'bg-primary/10 text-primary'
+            : 'text-base-content/60 hover:bg-base-100/60 hover:text-base-content'"
+          :aria-current="route.path.startsWith('/admin') ? 'page' : undefined"
+        >
+          <svg class="h-6 w-6" :class="{ 'drop-shadow-[0_0_8px_rgba(45,212,191,0.55)]': route.path.startsWith('/admin') }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+          <span class="text-sm font-medium">{{ $t('nav.admin') }}</span>
+        </RouterLink>
+      </div>
     </nav>
   </aside>
 </template>
