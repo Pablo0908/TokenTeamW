@@ -74,7 +74,7 @@ onMounted(() => users.fetchUsers())
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('roles.superAdmin') }}</p>
@@ -84,7 +84,7 @@ onMounted(() => users.fetchUsers())
     </header>
 
     <!-- Admin section nav -->
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab tab-active">{{ $t('tabs.users') }}</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
@@ -116,11 +116,11 @@ onMounted(() => users.fetchUsers())
         v-model="search"
         type="search"
         :placeholder="$t('admin.searchUsers')"
-        class="input input-bordered input-sm w-full bg-base-100/70"
+        class="input input-bordered input-sm w-full max-w-md bg-base-100/70"
       />
 
       <!-- User list -->
-      <section v-if="filtered.length" class="space-y-3">
+      <section v-if="filtered.length" class="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div
           v-for="u in filtered"
           :key="u.id"

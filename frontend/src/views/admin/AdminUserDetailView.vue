@@ -49,7 +49,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <button
       class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70"
       @click="router.push('/admin/users')"
@@ -85,7 +85,7 @@ onMounted(() => {
       <section v-if="analytics" class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-semibold">{{ $t('admin.userDetail.activity') }}</h2>
-          <div role="tablist" class="tabs tabs-boxed tabs-xs bg-base-300/40">
+          <div role="tablist" class="tabs tabs-boxed tabs-xs bg-base-300/40 flex-nowrap overflow-x-auto">
             <button
               v-for="p in PERIODS"
               :key="p"
@@ -119,7 +119,7 @@ onMounted(() => {
       <!-- Progress per event -->
       <section class="space-y-3">
         <h2 class="font-semibold">{{ $t('admin.userDetail.progressByEvent') }}</h2>
-        <div v-if="events.length" class="space-y-3">
+        <div v-if="events.length" class="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div v-for="ev in events" :key="ev.event_id" class="surface p-4">
             <div class="mb-2 flex items-center justify-between gap-2">
               <p class="truncate font-medium">{{ ev.event }}</p>
@@ -137,7 +137,7 @@ onMounted(() => {
       <!-- Claimed badges -->
       <section class="space-y-3">
         <h2 class="font-semibold">{{ $t('admin.userDetail.claimedBadges') }}</h2>
-        <div v-if="claimed.length" class="grid grid-cols-3 gap-3">
+        <div v-if="claimed.length" class="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           <BadgeCard v-for="b in claimed" :key="b.id" :badge="b" />
         </div>
         <p v-else class="surface p-6 text-center text-sm text-base-content/50">{{ $t('admin.userDetail.none') }}</p>

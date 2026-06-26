@@ -45,7 +45,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('admin.platform') }}</p>
@@ -54,7 +54,7 @@ onMounted(load)
       <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
@@ -72,7 +72,7 @@ onMounted(load)
     <AlertMessage type="warning" :message="error" />
     <LoadingSpinner v-if="loading && !loaded" :label="$t('admin.loading')" />
 
-    <section v-else-if="orgs.length" class="space-y-2">
+    <section v-else-if="orgs.length" class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-3 xl:grid-cols-3">
       <div v-for="o in orgs" :key="o.id" class="surface flex items-center justify-between gap-2 p-3">
         <div class="min-w-0">
           <p class="truncate text-sm font-medium">

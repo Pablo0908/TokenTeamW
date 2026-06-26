@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
+import AuthSplit from '@/components/ui/AuthSplit.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 
 const router = useRouter()
@@ -87,9 +88,9 @@ async function resendCode() {
 </script>
 
 <template>
-  <div class="flex min-h-dvh flex-col justify-center px-6 py-10">
+  <AuthSplit>
     <div class="mb-6 flex flex-col items-center gap-4 text-center">
-      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" :float="true" />
+      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop lg:hidden" :float="true" />
       <div>
         <h1 class="text-2xl font-bold">
           {{ step === 'otp' ? $t('auth.twoFaTitle') : $t('auth.registerTitle') }}
@@ -229,5 +230,5 @@ async function resendCode() {
       {{ $t('auth.haveAccount') }}
       <RouterLink to="/login" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
     </p>
-  </div>
+  </AuthSplit>
 </template>

@@ -61,7 +61,7 @@ async function downloadCard(badge) {
 </script>
 
 <template>
-  <div class="space-y-6 px-4 pb-4 pt-6">
+  <div class="space-y-6 px-4 lg:px-8 pb-4 pt-6">
     <PullToRefresh :on-refresh="onRefresh" />
     <header>
       <h1 class="text-2xl font-bold">{{ $t('badges.title') }}</h1>
@@ -80,7 +80,7 @@ async function downloadCard(badge) {
           <span class="text-xs text-base-content/55">{{ group.badges_earned }}/{{ group.badges_total }}</span>
         </div>
         <ProgressBar :value="group.badges_earned" :max="group.badges_total" :show-count="false" />
-        <div class="grid grid-cols-4 gap-2.5">
+        <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
           <BadgeCard
             v-for="b in group.badges"
             :key="b.id"

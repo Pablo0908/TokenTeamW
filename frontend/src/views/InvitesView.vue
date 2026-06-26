@@ -72,7 +72,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 pb-10 pt-6 lg:px-8">
     <header class="flex items-center gap-3">
       <button class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70" @click="router.push('/profile')">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
@@ -84,7 +84,7 @@ onMounted(async () => {
     <LoadingSpinner v-if="loading && !loaded" :label="$t('invites.loading')" />
 
     <template v-else>
-      <section v-if="invites.length" class="space-y-3">
+      <section v-if="invites.length" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <div v-for="inv in invites" :key="inv.id" class="surface flex items-center justify-between gap-3 p-4">
           <div class="min-w-0">
             <span class="badge badge-sm" :class="typeMeta(inv.type).cls">{{ typeMeta(inv.type).label }}</span>

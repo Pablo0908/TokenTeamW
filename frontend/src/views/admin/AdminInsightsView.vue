@@ -40,7 +40,7 @@ function logout() { auth.logout(); router.push('/login') }
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('admin.platform') }}</p>
@@ -49,7 +49,7 @@ function logout() { auth.logout(); router.push('/login') }
       <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
@@ -73,19 +73,22 @@ function logout() { auth.logout(); router.push('/login') }
         <StatTile :value="data.totals.orgs" :label="$t('admin.insights.totalOrgs')" tone="primary" />
       </div>
 
-      <div class="surface space-y-2 p-4">
-        <h2 class="font-semibold">{{ $t('admin.insights.scansOverTime') }}</h2>
-        <ActivityChart :activity="data.scans_over_time" :period="data.period" />
-      </div>
-
-      <div class="surface space-y-2 p-4">
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold">{{ $t('admin.insights.users') }}</h2>
-          <span class="text-[0.65rem] text-base-content/45">{{ $t('admin.insights.usersNote') }}</span>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="surface space-y-2 p-4">
+          <h2 class="font-semibold">{{ $t('admin.insights.scansOverTime') }}</h2>
+          <ActivityChart :activity="data.scans_over_time" :period="data.period" />
         </div>
-        <ActivityChart :series="userSeries" :period="data.period" />
+
+        <div class="surface space-y-2 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">{{ $t('admin.insights.users') }}</h2>
+            <span class="text-[0.65rem] text-base-content/45">{{ $t('admin.insights.usersNote') }}</span>
+          </div>
+          <ActivityChart :series="userSeries" :period="data.period" />
+        </div>
       </div>
 
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div class="surface p-4">
         <h2 class="mb-2 font-semibold">{{ $t('admin.insights.topOrgs') }}</h2>
         <div v-if="data.org_leaderboard.length" class="space-y-1.5">
@@ -119,6 +122,7 @@ function logout() { auth.logout(); router.push('/login') }
           </div>
         </div>
         <p v-else class="py-4 text-center text-sm text-base-content/50">{{ $t('admin.insights.noScansInRange') }}</p>
+      </div>
       </div>
     </template>
   </div>

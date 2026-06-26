@@ -6,6 +6,7 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import { isMock } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
+import AuthSplit from '@/components/ui/AuthSplit.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 import PasswordInput from '@/components/ui/PasswordInput.vue'
 
@@ -76,9 +77,9 @@ function backToCredentials() {
 </script>
 
 <template>
-  <div class="flex min-h-dvh flex-col justify-center px-6 py-10">
+  <AuthSplit>
     <div class="mb-8 flex flex-col items-center gap-4 text-center">
-      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop" :float="true" />
+      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop lg:hidden" :float="true" />
       <div>
         <h1 class="text-2xl font-bold">
           {{ step === 'otp' ? $t('auth.twoFaTitle') : $t('auth.loginTitle') }}
@@ -184,5 +185,5 @@ function backToCredentials() {
       Demo mode is on. Any password works — sign in with an email containing
       <span class="font-semibold text-secondary">"admin"</span> to open the organizer panel.
     </p>
-  </div>
+  </AuthSplit>
 </template>

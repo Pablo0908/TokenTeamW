@@ -20,7 +20,7 @@ function logout() {
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('roles.superAdmin') }}</p>
@@ -30,7 +30,7 @@ function logout() {
     </header>
 
     <!-- Admin section nav -->
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <RouterLink to="/admin/events" role="tab" class="tab tab-active">{{ $t('tabs.events') }}</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
@@ -51,7 +51,7 @@ function logout() {
     <AlertMessage type="warning" :message="events.error || ''" />
     <LoadingSpinner v-if="events.loading && !events.loaded" :label="$t('admin.loadingEvents')" />
 
-    <div v-else-if="events.events.length" class="space-y-3">
+    <div v-else-if="events.events.length" class="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
       <EventCard
         v-for="ev in events.events"
         :key="ev.id"
