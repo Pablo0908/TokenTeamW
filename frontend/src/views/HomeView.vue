@@ -181,9 +181,9 @@ async function downloadCard(badge) {
     <AlertMessage type="warning" :message="badges.error || ''" />
 
     <!-- Stats -->
-    <section class="space-y-3">
+    <section class="space-y-2">
       <StreakCard :value="streak" :label="$t('home.streak')" />
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto w-full">
         <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" :label="$t('home.badges')" tone="primary" />
         <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" :label="$t('home.events')" tone="secondary" />
       </div>
