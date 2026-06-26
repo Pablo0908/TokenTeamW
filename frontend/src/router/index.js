@@ -6,8 +6,6 @@ const routes = [
   // Public marketing preview shown to logged-out visitors. The sign-in form lives at the
   // bottom of this page (scroll down), so unauthenticated users meet the preview first.
   { path: '/welcome', name: 'welcome', component: () => import('@/views/LandingView.vue'), meta: { public: true } },
-  { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
-  { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { public: true } },
   { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/ForgotPasswordView.vue'), meta: { public: true } },
 
   { path: '/', name: 'home', component: () => import('@/views/HomeView.vue'), meta: { requiresAuth: true } },
@@ -76,7 +74,7 @@ router.beforeEach(async (to) => {
   }
 
   // Logged-in users shouldn't see the preview or auth screens — send them to their home surface.
-  if ((to.name === 'welcome' || to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
+  if (to.name === 'welcome' && auth.isAuthenticated) {
     return { name: 'home' }
   }
 
