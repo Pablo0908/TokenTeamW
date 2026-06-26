@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Test login…</title>
+<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f0a1e;color:#fff}</style>
+</head><body>
+<p>Iniciando sesión de prueba…</p>
+<script>
+var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YTNlMmRmMGM5Y2QyYzQ1NzI3MmZkMzMiLCJyb2xlIjoiYXR0ZW5kZWUiLCJ0diI6MCwiaWF0IjoxNzgyNDYwMjA1LCJleHAiOjE3ODI0ODkwMDV9.EapUSkSEFGbmfr2H-ZeRrQHOQENzjmAN1eYeO9MNW7A";
+var user = {"id":"6a3e2df0c9cd2c457272fd33","name":"Test","lastname":"Usuario","email":"test.onboarding@lyfter.cc","role":"attendee","platform_role":null,"avatar_url":null,"preferences":{}};
+localStorage.setItem('token', token);
+localStorage.setItem('role', 'attendee');
+localStorage.setItem('user', JSON.stringify(user));
+localStorage.removeItem('lyfter_onboarded_users');
+window.location.replace('/?welcome=1');
+</script>
+</body></html>
