@@ -4,8 +4,32 @@ import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr, parseaddr
 
 log = logging.getLogger(__name__)
+
+
+def _from_header(user: str) -> str:
+    """A well-formed From header value.
+
+    Tolerates a MAIL_FROM that omits the angle brackets around the address
+    (e.g. 'Lyfter lyfterbadges@gmail.com'), which is malformed per RFC 5322 and
+    gets the message spam-filtered or dropped. Normalizes it to
+    'Lyfter <lyfterbadges@gmail.com>'. Falls back to the bare authenticated address.
+    """
+    raw = (os.getenv("MAIL_FROM") or "").strip()
+    if not raw:
+        return user
+    name, addr = parseaddr(raw)
+    if "@" not in addr:
+        # No real address parsed (brackets missing): split the last whitespace token
+        # as the address and treat the rest as the display name.
+        head, _, tail = raw.rpartition(" ")
+        if "@" in tail:
+            name, addr = head.strip(), tail.strip()
+        else:
+            return user
+    return formataddr((name, addr))
 
 
 def send_otp(to_email: str, code: str) -> None:
@@ -19,11 +43,10 @@ def send_otp(to_email: str, code: str) -> None:
         return
 
     port = int(os.getenv("MAIL_PORT", "587"))
-    from_addr = os.getenv("MAIL_FROM") or user
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"Your Lyfter code: {code}"
-    msg["From"] = from_addr
+    msg["From"] = _from_header(user)
     msg["To"] = to_email
 
     html = f"""
@@ -49,7 +72,9 @@ def send_otp(to_email: str, code: str) -> None:
         smtp.ehlo()
         smtp.starttls(context=ctx)
         smtp.login(user, password)
-        smtp.sendmail(from_addr, to_email, msg.as_string())
+        # Envelope sender must be the bare authenticated address; Gmail rejects/ignores
+        # anything else and a display-name string here is invalid.
+        smtp.sendmail(user, to_email, msg.as_string())
 
 
 def send_invite_email(to_email: str, token: str, invite_type: str = "org_join",
@@ -78,11 +103,10 @@ def send_invite_email(to_email: str, token: str, invite_type: str = "org_join",
         return
 
     port = int(os.getenv("MAIL_PORT", "587"))
-    from_addr = os.getenv("MAIL_FROM") or user
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = from_addr
+    msg["From"] = _from_header(user)
     msg["To"] = to_email
 
     html = f"""
@@ -108,7 +132,7 @@ def send_invite_email(to_email: str, token: str, invite_type: str = "org_join",
         smtp.ehlo()
         smtp.starttls(context=ctx)
         smtp.login(user, password)
-        smtp.sendmail(from_addr, to_email, msg.as_string())
+        smtp.sendmail(user, to_email, msg.as_string())
 
 
 def send_reset_email(to_email: str, code: str) -> None:
@@ -121,11 +145,10 @@ def send_reset_email(to_email: str, code: str) -> None:
         return
 
     port = int(os.getenv("MAIL_PORT", "587"))
-    from_addr = os.getenv("MAIL_FROM") or user
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"Reset your Lyfter password: {code}"
-    msg["From"] = from_addr
+    msg["From"] = _from_header(user)
     msg["To"] = to_email
 
     html = f"""
@@ -151,4 +174,4 @@ def send_reset_email(to_email: str, code: str) -> None:
         smtp.ehlo()
         smtp.starttls(context=ctx)
         smtp.login(user, password)
-        smtp.sendmail(from_addr, to_email, msg.as_string())
+        smtp.sendmail(user, to_email, msg.as_string())
