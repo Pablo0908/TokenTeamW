@@ -248,7 +248,7 @@ def org_dashboard(current_user, org_id):
     org = org_model.find_by_id(org_id)
     # Event status breakdown — small N, so iterate the org's events once.
     events = {"total": 0, "active": 0, "upcoming": 0, "locked": 0, "past": 0}
-    for ev in event_model.all_events(org_id=org_id):
+    for ev in event_model.all_events(org_id=org_id, exclude_platform=True):
         events["total"] += 1
         st = event_model.status_of(ev)
         if st in events:
@@ -284,7 +284,7 @@ def org_insights(current_user, org_id):
     # Chronological per-event attendance for context (all_events is newest-first).
     events = [{"id": str(ev["_id"]), "name": ev.get("name", ""),
                "attendees": attendance.get(str(ev["_id"]), 0)}
-              for ev in reversed(event_model.all_events(org_id=org_id))]
+              for ev in reversed(event_model.all_events(org_id=org_id, exclude_platform=True))]
 
     return jsonify({
         "period": period,
@@ -304,7 +304,7 @@ def org_insights(current_user, org_id):
 @org_role_required("owner", "admin", "staff")
 def org_events(current_user, org_id):
     out = []
-    for ev in event_model.all_events(org_id=org_id):
+    for ev in event_model.all_events(org_id=org_id, exclude_platform=True):
         total = badge_model.count_for_event(ev["_id"])
         out.append(event_model.event_summary(ev, total, 0))
     return jsonify(out), 200

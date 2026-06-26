@@ -86,7 +86,8 @@ VISIBILITIES = ("public", "unlisted", "scan-only")
 
 
 def create_event(name, description, start_date, end_date, location, prize, created_by,
-                  org_id=None, event_type="uncategorized", visibility="public"):
+                  org_id=None, event_type="uncategorized", visibility="public",
+                  platform_event=False):
     result = mongo.db.events.insert_one(
         {
             "name": name,
@@ -106,6 +107,10 @@ def create_event(name, description, start_date, end_date, location, prize, creat
             # Authoritative tenant pointer. Optional at the model layer so existing
             # callers don't break; the admin route resolves and passes it.
             "org_id": _oid(org_id) if org_id else None,
+            # True = created from the platform (super-admin) panel. Such events are
+            # platform-level and are excluded from org control panels/dashboards, which
+            # show only events an org created for itself. False = an org's own event.
+            "platform_event": bool(platform_event),
             # Manual activation override (see compute_status). False = status follows
             # the date window; True = forced active/scannable now.
             "started": False,
@@ -159,10 +164,14 @@ def _set_flag(event_id, field, value):
         return False
 
 
-def all_events(org_id=None):
+def all_events(org_id=None, exclude_platform=False):
     """All events, newest first. When org_id is given, scope to that tenant;
-    omitted = current global behavior, unchanged."""
+    omitted = current global behavior, unchanged. exclude_platform=True drops
+    platform (super-admin-panel) events — used by org-scoped views, which must show
+    only events the org created for itself."""
     query = {"org_id": _oid(org_id)} if org_id else {}
+    if exclude_platform:
+        query["platform_event"] = {"$ne": True}
     return list(mongo.db.events.find(query).sort("created_at", -1))
 
 

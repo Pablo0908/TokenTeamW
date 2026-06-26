@@ -51,6 +51,9 @@ def create_event(current_user):
         org_id=org_id,
         event_type=(body.get("event_type") or "uncategorized").strip().lower(),
         visibility=(body.get("visibility") or "public").strip().lower(),
+        # Created from the platform panel -> platform-level. Org control panels exclude
+        # these; only events an org creates for itself (via /orgs/<id>/event) show there.
+        platform_event=True,
     )
     audit_model.log(current_user["sub"], "event.create", name, org_id=org_id, event_id=event_id)
     return jsonify({"id": event_id, "name": name}), 201
@@ -315,7 +318,7 @@ def list_orgs(current_user):
             "status": o.get("status", "active"),
             "owner_email": owner_email,
             "members_count": len(members),
-            "events_count": len(event_model.all_events(org_id=oid)),
+            "events_count": len(event_model.all_events(org_id=oid, exclude_platform=True)),
             "created_at": event_model.fmt_date(o.get("created_at")),
         })
     return jsonify({"orgs": out}), 200
