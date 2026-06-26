@@ -10,10 +10,11 @@ from config import Config
 
 
 # Module-level so routes can import it with: from app import limiter
+# storage_uri is taken from app.config["RATELIMIT_STORAGE_URI"] at init_app() time
+# (default memory:// for dev; set to Redis in production).
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["300 per day", "60 per hour"],
-    storage_uri="memory://",
 )
 
 
@@ -72,7 +73,7 @@ def create_app(config_class=Config):
 
     # Indexes are created once at startup (not per-request).
     from app.models import (user, event, badge, redemption, otp, audit, organization,
-                            membership, invite, announcement, ban)
+                            membership, invite, announcement, ban, prize_claim)
 
     user.create_indexes()
     event.create_indexes()
@@ -85,6 +86,7 @@ def create_app(config_class=Config):
     invite.create_indexes()
     announcement.create_indexes()
     ban.create_indexes()
+    prize_claim.create_indexes()
     mongo.db.reset_codes.create_index("created_at", expireAfterSeconds=600)
     mongo.db.reset_codes.create_index("email", unique=True)
     mongo.db.change_pwd_codes.create_index("created_at", expireAfterSeconds=600)
@@ -99,8 +101,9 @@ def create_app(config_class=Config):
     from app.routes.me import me_bp
     from app.routes.orgs import orgs_bp
     from app.routes.announcements import announcements_bp
+    from app.routes.claims import claims_bp
 
-    for blueprint in (auth_bp, events_bp, badges_bp, redemptions_bp, admin_bp, share_bp, me_bp, orgs_bp, announcements_bp):
+    for blueprint in (auth_bp, events_bp, badges_bp, redemptions_bp, admin_bp, share_bp, me_bp, orgs_bp, announcements_bp, claims_bp):
         app.register_blueprint(blueprint)
 
     @app.route("/health")
@@ -115,6 +118,10 @@ def create_app(config_class=Config):
     @app.errorhandler(405)
     def method_not_allowed(_):
         return jsonify({"error": "Method not allowed"}), 405
+
+    @app.errorhandler(413)
+    def payload_too_large(_):
+        return jsonify({"error": "Request too large."}), 413
 
     @app.errorhandler(Exception)
     def handle_exception(exc):

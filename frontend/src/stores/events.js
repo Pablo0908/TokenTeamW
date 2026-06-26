@@ -122,6 +122,19 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
+  // Permanently delete an event (and its badges/scans/claims, server-side cascade).
+  // orgId routes to the org path; otherwise the platform /admin path (super admin).
+  async function deleteEvent(eventId, orgId = null) {
+    error.value = null
+    try {
+      await api.delete(badgeBase(eventId, orgId))
+      return true
+    } catch (e) {
+      error.value = readApiError(e, 'Could not delete the event.')
+      throw e
+    }
+  }
+
   async function fetchAdminBadges(eventId, orgId = null) {
     error.value = null
     try {
@@ -151,6 +164,7 @@ export const useEventsStore = defineStore('events', () => {
     setEventStarted,
     setEventPaused,
     setEventEnded,
+    deleteEvent,
     fetchAdminBadges,
   }
 })

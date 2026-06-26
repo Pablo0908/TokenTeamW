@@ -11,6 +11,7 @@ from app.models import organization as org_model
 from app.models import membership as membership_model
 from app.models import ban as ban_model
 from app.models import analytics as analytics_model
+from app.models import prize_claim as prize_claim_model
 from app.utils.auth import jwt_required, super_admin_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
 
@@ -218,6 +219,27 @@ def end_event(current_user, event_id):
     return jsonify({"id": event_id, "ended": ended, "status": event_model.status_of(ev)}), 200
 
 
+@admin_bp.route("/events/<event_id>", methods=["DELETE"])
+@super_admin_required
+def delete_event(current_user, event_id):
+    """Permanently delete an ENDED (past) event and everything tied to it — its badges,
+    redemptions (scanned badges) and prize claims. Super admins may delete ANY event,
+    including org events. Only ended events qualify, so an event can't vanish mid-run.
+    Never automatic (no TTL/cron) — a deliberate human action only."""
+    ev = event_model.find_by_id(event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    if not ev.get("ended"):
+        return jsonify({"error": "Only ended (past) events can be deleted. End the event first."}), 409
+    badge_model.delete_by_event(event_id)
+    redemption_model.delete_by_event(event_id)
+    prize_claim_model.delete_by_event(event_id)
+    event_model.delete_event(event_id)
+    audit_model.log(current_user["sub"], "event.delete", ev.get("name", ""),
+                    org_id=ev.get("org_id"), event_id=event_id)
+    return jsonify({"id": event_id, "deleted": True}), 200
+
+
 @admin_bp.route("/events/<event_id>/badges", methods=["GET"])
 @super_admin_required
 def list_badges(current_user, event_id):
@@ -332,7 +354,7 @@ def list_users(current_user):
                 "name": u.get("name", ""),
                 "lastname": u.get("lastname", ""),
                 "email": u.get("email", ""),
-                "role": u.get("role", "attendee"),
+                "super_admin": user_model.is_super_admin(u),
                 "disabled": bool(u.get("disabled", False)),
                 "badges_count": counts.get(uid, 0),
                 "created_at": event_model.fmt_date(u.get("created_at")),
@@ -379,7 +401,7 @@ def user_badges(current_user, user_id):
                 "name": user.get("name", ""),
                 "lastname": user.get("lastname", ""),
                 "email": user.get("email", ""),
-                "role": user.get("role", "attendee"),
+                "super_admin": user_model.is_super_admin(user),
                 "badges_count": redemption_model.count_for_user(user_id),
             },
             "events": events,
@@ -424,22 +446,28 @@ def user_analytics(current_user, user_id):
     return jsonify(payload), 200
 
 
-@admin_bp.route("/users/<user_id>/role", methods=["PATCH"])
+@admin_bp.route("/users/<user_id>/super-admin", methods=["PATCH"])
 @super_admin_required
-def set_user_role(current_user, user_id):
+def set_user_super_admin(current_user, user_id):
+    """Promote/demote a user to/from platform super_admin. There is no global "admin" tier
+    anymore — regular admin is org-scoped (a membership role); super_admin is the only
+    platform tier and is granted here by an existing super admin."""
     body = request.get_json(silent=True) or {}
-    role = (body.get("role") or "").strip().lower()
-    if role not in ("admin", "attendee", "assistant"):
-        return jsonify({"error": "Role must be 'admin', 'assistant' or 'attendee'."}), 400
+    make_super = bool(body.get("super_admin"))
+    # Block changing your own status: prevents self-lockout and, since you can't self-demote,
+    # the platform can never be left with zero super admins.
     if user_id == current_user["sub"]:
-        return jsonify({"error": "You can’t change your own role."}), 400
+        return jsonify({"error": "You can’t change your own super-admin status."}), 400
     target = user_model.find_by_id(user_id)
     if not target:
         return jsonify({"error": "User not found"}), 404
 
-    user_model.set_role(user_id, role)
-    audit_model.log(current_user["sub"], "user.role_change", f"{target.get('email', user_id)} → {role}")
-    return jsonify({"id": user_id, "role": role}), 200
+    user_model.set_platform_role(user_id, "super_admin" if make_super else None)
+    # platform_role is re-read from the DB on every request (super_admin_required), so a
+    # demotion takes effect immediately — no token revocation needed.
+    detail = f"{target.get('email', user_id)} → {'super_admin' if make_super else 'removed'}"
+    audit_model.log(current_user["sub"], "user.role_change", detail)
+    return jsonify({"id": user_id, "super_admin": make_super}), 200
 
 
 @admin_bp.route("/users/<user_id>/disable", methods=["PATCH"])

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -9,9 +10,32 @@ from app import mongo
 # redemptions) hang off an org. Attendee accounts stay platform-level, so they are
 # NOT modelled here — org membership for staff/admins lives in `memberships`.
 #
-# `theme` is intentionally an empty object for now: Phase 1 only fixes its SHAPE.
-# Per-org theme values are deferred to the theming phase (P7).
-_THEME_SHAPE = {}
+# `theme` is per-org white-label: brand colors + a logo. Empty strings mean "fall back
+# to the platform (Lyfter) default". Sanitized on write — never trust client input.
+_THEME_KEYS = ("primary", "secondary", "accent", "logo_url")
+_THEME_SHAPE = {k: "" for k in _THEME_KEYS}
+_HEX_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+_MAX_LOGO_LEN = 1_000_000  # allow a small data: URL or an external link
+
+
+def sanitize_theme(raw):
+    """Whitelist + validate a client-supplied theme. Unknown keys dropped; invalid hex
+    colors and oversized/odd logo URLs become "" (fall back to the platform default)."""
+    out = dict(_THEME_SHAPE)
+    if not isinstance(raw, dict):
+        return out
+    for key in ("primary", "secondary", "accent"):
+        val = raw.get(key)
+        if isinstance(val, str) and _HEX_RE.match(val.strip()):
+            out[key] = val.strip().lower()
+    logo = raw.get("logo_url")
+    if isinstance(logo, str):
+        logo = logo.strip()
+        if logo and len(logo) <= _MAX_LOGO_LEN and (logo.startswith("https://")
+                                                    or logo.startswith("http://")
+                                                    or logo.startswith("data:image/")):
+            out["logo_url"] = logo
+    return out
 
 
 def create_indexes():
@@ -28,7 +52,7 @@ def create_org(name, slug, created_by=None, description="", theme=None, status="
             "name": name,
             "slug": slug,
             "description": description or "",
-            "theme": dict(theme) if isinstance(theme, dict) else dict(_THEME_SHAPE),
+            "theme": sanitize_theme(theme),
             "status": status,
             "created_by": _oid(created_by) if created_by else None,
             "created_at": datetime.now(timezone.utc),
@@ -45,8 +69,11 @@ def find_by_id(org_id):
 
 
 def update_org(org_id, fields):
-    """Patch whitelisted org fields (name/description). Returns matched count > 0."""
+    """Patch whitelisted org fields (name/description/status/theme). Theme is sanitized.
+    Returns matched count > 0."""
     allowed = {k: v for k, v in fields.items() if k in ("name", "description", "status", "theme")}
+    if "theme" in allowed:
+        allowed["theme"] = sanitize_theme(allowed["theme"])
     if not allowed:
         return False
     res = mongo.db.organizations.update_one({"_id": _oid(org_id)}, {"$set": allowed})
@@ -89,4 +116,5 @@ def public_org(org):
         "id": str(org["_id"]),
         "name": org.get("name", ""),
         "slug": org.get("slug", ""),
+        "theme": {**_THEME_SHAPE, **(org.get("theme") or {})},
     }

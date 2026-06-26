@@ -52,7 +52,7 @@ function logout() {
 
     <!-- Profile & Security section -->
     <section class="space-y-2">
-      <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-base-content/40 px-1">Profile &amp; Security</p>
+      <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-base-content/40 px-1">{{ $t('settings.profileSecurity') }}</p>
 
       <div class="surface overflow-hidden divide-y divide-base-300/40">
         <!-- Edit profile -->

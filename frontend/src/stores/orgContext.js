@@ -19,6 +19,8 @@ export const useOrgContextStore = defineStore('orgContext', () => {
   const activeRole = computed(() => activeOrg.value?.role || null)
   const isActiveOwner = computed(() => activeRole.value === 'owner')
   const isActiveAdmin = computed(() => activeRole.value === 'owner' || activeRole.value === 'admin')
+  // Any in-org role (owner/admin/staff) — the prize-verifier tier (staff can hand over prizes).
+  const isActiveStaff = computed(() => ['owner', 'admin', 'staff'].includes(activeRole.value))
 
   function persist() {
     if (activeOrgId.value) localStorage.setItem('activeOrgId', activeOrgId.value)
@@ -66,7 +68,7 @@ export const useOrgContextStore = defineStore('orgContext', () => {
 
   return {
     platformRole, orgs, activeOrgId, loaded, loading,
-    isSuperAdmin, isOrgMember, activeOrg, activeRole, isActiveOwner, isActiveAdmin,
+    isSuperAdmin, isOrgMember, activeOrg, activeRole, isActiveOwner, isActiveAdmin, isActiveStaff,
     load, ensureLoaded, setActiveOrg, reset,
   }
 })

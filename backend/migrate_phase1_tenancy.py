@@ -6,16 +6,18 @@ Makes the existing single-brand data tenant-ready WITHOUT changing end-user beha
     EVENT, onto badges and redemptions,
   - backfill org_id (and event_id shape) onto historical audit_log entries,
   - add platform_role: None to users for shape consistency,
-  - DEV-ONLY: promote existing admins to super_admin (guarded — see below),
   - backfill org #1 memberships from the legacy global role.
 
-Targets whatever DB the backend .env points at. This is a DEV database operation
-(FLASK_ENV must not be "production" for the super_admin promotion to run).
+NOTE: the old "auto-promote admins to super_admin" step was REMOVED — it was a security
+risk. Platform owners are named explicitly and granted in-app via
+PATCH /admin/users/<id>/super-admin by an existing super admin. This migration never
+elevates anyone.
+
+Targets whatever DB the backend .env points at (a DEV database operation).
 
 Usage:
-    python migrate_phase1_tenancy.py                          # forward migration
-    python migrate_phase1_tenancy.py --promote-dev-superadmins  # + dev super_admin promotion
-    python migrate_phase1_tenancy.py --rollback              # undo (unset fields, drop org #1 + its memberships)
+    python migrate_phase1_tenancy.py             # forward migration
+    python migrate_phase1_tenancy.py --rollback  # undo (unset fields, drop org #1 + its memberships)
 
 Safe to run repeatedly: every step only touches documents not already migrated.
 """
@@ -63,7 +65,7 @@ def _ensure_org_one():
     return ObjectId(org_id)
 
 
-def forward(promote_superadmins):
+def forward():
     print(f"\n=== Phase 1 migration (FORWARD) — DB='{mongo.db.name}' FLASK_ENV='{FLASK_ENV}' ===")
     _counts("before")
 
@@ -121,22 +123,10 @@ def forward(promote_superadmins):
     )
     print(f"  users: set platform_role:None on {r.modified_count}")
 
-    # 7) ───── DEV-ONLY SUPER_ADMIN PROMOTION ─── REMOVE BEFORE PRODUCTION ─────────
-    #    The dev admin accounts are disposable test accounts. In a real deployment the
-    #    platform owner must be named explicitly; this block must NOT auto-promote.
-    if promote_superadmins:
-        if IS_PRODUCTION:
-            sys.exit(
-                "REFUSING to auto-promote super_admins: FLASK_ENV=production. "
-                "Name the platform owner explicitly instead of running this block."
-            )
-        r = mongo.db.users.update_many(
-            {"role": "admin"}, {"$set": {"platform_role": "super_admin"}}
-        )
-        print(f"  [DEV] promoted {r.modified_count} admin(s) -> platform_role=super_admin")
-    else:
-        print("  super_admin promotion SKIPPED (pass --promote-dev-superadmins to enable; dev only)")
-    # ─────────────────────────────────────────────────────────────────────────────
+    # 7) Super-admin promotion is intentionally NOT performed here. Auto-promoting admins
+    #    to super_admin was a security risk and has been removed. Platform owners are named
+    #    explicitly and granted in-app (PATCH /admin/users/<id>/super-admin) by an existing
+    #    super admin. This migration never elevates anyone.
 
     # 8) Memberships from the legacy global role.
     admins = list(mongo.db.users.find({"role": "admin"}, {"_id": 1}))
@@ -237,7 +227,7 @@ def run():
     if "--rollback" in sys.argv:
         rollback()
     else:
-        forward(promote_superadmins="--promote-dev-superadmins" in sys.argv)
+        forward()
 
 
 if __name__ == "__main__":

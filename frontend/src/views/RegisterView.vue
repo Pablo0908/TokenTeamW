@@ -219,7 +219,7 @@ async function resendCode() {
     <div v-if="step === 'form'" class="mt-6 flex flex-col gap-3">
       <div class="flex items-center gap-3 text-xs text-base-content/40">
         <span class="flex-1 border-t border-base-content/10" />
-        <span>or</span>
+        <span>{{ $t('common.or') }}</span>
         <span class="flex-1 border-t border-base-content/10" />
       </div>
       <GoogleSignInButton @credential="handleGoogle" />

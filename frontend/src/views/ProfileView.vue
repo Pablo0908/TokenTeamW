@@ -27,6 +27,7 @@ const fullName = computed(() =>
 
 onMounted(() => {
   if (!badges.loaded) badges.fetchMyBadges()
+  orgContext.ensureLoaded() // so the super-admin tag + panel links reflect platform status
 })
 
 function accEnter(el) {
@@ -80,7 +81,10 @@ function accAfterLeave(el) {
           >{{ initials }}</span>
         </span>
         <div class="min-w-0 flex-1">
-          <p class="font-semibold">{{ fullName }}</p>
+          <p class="flex items-center gap-2 font-semibold">
+            {{ fullName }}
+            <span v-if="orgContext.isSuperAdmin" class="badge badge-sm badge-secondary">{{ $t('roles.superAdmin') }}</span>
+          </p>
           <p class="truncate text-sm text-base-content/55">{{ auth.user?.email }}</p>
         </div>
         <svg class="h-4 w-4 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -300,8 +304,8 @@ function accAfterLeave(el) {
         </svg>
       </span>
       <div class="flex-1">
-        <p class="text-sm font-semibold">Invitations</p>
-        <p class="text-xs text-base-content/50">View &amp; manage your invites</p>
+        <p class="text-sm font-semibold">{{ $t('profile.invitations') }}</p>
+        <p class="text-xs text-base-content/50">{{ $t('profile.invitationsHint') }}</p>
       </div>
       <svg class="h-4 w-4 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 18l6-6-6-6"/>
@@ -312,7 +316,7 @@ function accAfterLeave(el) {
       {{ $t('profile.openAdmin') }}
     </RouterLink>
     <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
-      Manage organization
+      {{ $t('profile.manageOrg') }}
     </RouterLink>
   </div>
 </template>

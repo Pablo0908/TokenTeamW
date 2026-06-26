@@ -62,6 +62,7 @@ onMounted(load)
       <RouterLink to="/admin/orgs" role="tab" class="tab tab-active">{{ $t('tabs.orgs') }}</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
       <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
+      <RouterLink to="/admin/verifier" role="tab" class="tab">{{ $t('tabs.verifier') }}</RouterLink>
     </div>
 
     <p class="text-xs text-base-content/55">

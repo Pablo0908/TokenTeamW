@@ -164,6 +164,18 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('user', JSON.stringify(user.value))
   }
 
+  // Swap in a freshly-issued token (e.g. after a password change revokes old sessions)
+  // so the current device stays signed in without a full re-login.
+  function setToken(newToken) {
+    if (!newToken) return
+    token.value = newToken
+    try {
+      const payload = JSON.parse(atob(newToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+      role.value = payload.role ?? role.value
+    } catch { /* keep current role */ }
+    persist()
+  }
+
   function setRedirect(path) {
     redirectAfterLogin.value = path
     localStorage.setItem('redirectAfterLogin', path)
@@ -197,6 +209,7 @@ export const useAuthStore = defineStore('auth', () => {
     resendOtp,
     logout,
     updateUser,
+    setToken,
     setRedirect,
     consumeRedirect,
   }

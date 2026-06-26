@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, computed, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
@@ -14,24 +13,28 @@ const users = useUsersStore()
 const updatingId = ref(null)
 const confirmModal = ref(null) // { type: 'disable'|'enable'|'delete', user: {...} }
 
-// Most-active attendees first so admins can see badge collection at a glance.
+// Most-active attendees first so super admins can see badge collection at a glance.
 const sorted = computed(() =>
   [...users.users].sort((a, b) => (b.badges_count ?? 0) - (a.badges_count ?? 0)),
 )
 
+// Free-text search over name + email (case-insensitive).
+const search = ref('')
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return sorted.value
+  return sorted.value.filter((u) =>
+    [u.name, u.lastname, u.email].filter(Boolean).join(' ').toLowerCase().includes(q),
+  )
+})
+
 const isSelf = (u) => u.id === auth.user?.id
 
-// Admin sees "Organizer"; assistant sees "Assistant".
-const roleLabel = computed(() => (auth.isAdmin ? t('admin.organizer') : t('profile.assistant')))
-const roleBadgeClass = (role) =>
-  role === 'admin' ? 'badge-secondary' : role === 'assistant' ? 'badge-accent' : 'badge-ghost'
-
-// Admin-only: set any user to attendee / assistant / admin.
-async function changeRole(u, role) {
-  if (role === u.role) return
+// Grant or revoke platform super-admin. (No global "admin" tier — org admin is per-org.)
+async function toggleSuperAdmin(u) {
   updatingId.value = u.id
   try {
-    await users.setRole(u.id, role)
+    await users.setSuperAdmin(u.id, !u.super_admin)
   } catch {
     /* error surfaced via store */
   } finally {
@@ -74,7 +77,7 @@ onMounted(() => users.fetchUsers())
   <div class="space-y-5 px-4 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
-        <p class="text-xs uppercase tracking-wide text-secondary">{{ roleLabel }}</p>
+        <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('roles.superAdmin') }}</p>
         <h1 class="text-2xl font-bold">{{ $t('admin.users.title') }}</h1>
       </div>
       <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
@@ -84,11 +87,12 @@ onMounted(() => users.fetchUsers())
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
       <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab tab-active">{{ $t('tabs.users') }}</RouterLink>
-      <RouterLink v-if="auth.isAdmin" to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
+      <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
       <RouterLink to="/admin/insights" role="tab" class="tab">{{ $t('tabs.insights') }}</RouterLink>
       <RouterLink to="/admin/orgs" role="tab" class="tab">{{ $t('tabs.orgs') }}</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
       <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
+      <RouterLink to="/admin/verifier" role="tab" class="tab">{{ $t('tabs.verifier') }}</RouterLink>
     </div>
 
     <AlertMessage type="warning" :message="users.error || ''" />
@@ -96,14 +100,10 @@ onMounted(() => users.fetchUsers())
 
     <template v-else>
       <!-- Summary -->
-      <section class="grid grid-cols-3 gap-3">
+      <section class="grid grid-cols-2 gap-3">
         <div class="surface-soft rounded-2xl p-3 text-center">
-          <p class="text-2xl font-bold text-secondary">{{ users.adminCount }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.users.admins') }}</p>
-        </div>
-        <div class="surface-soft rounded-2xl p-3 text-center">
-          <p class="text-2xl font-bold text-accent">{{ users.assistantCount }}</p>
-          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.users.assistants') }}</p>
+          <p class="text-2xl font-bold text-secondary">{{ users.superAdminCount }}</p>
+          <p class="text-[0.7rem] uppercase tracking-wide text-base-content/55">{{ $t('admin.users.superAdmins') }}</p>
         </div>
         <div class="surface-soft rounded-2xl p-3 text-center">
           <p class="text-2xl font-bold text-success">{{ users.attendeeCount }}</p>
@@ -111,10 +111,18 @@ onMounted(() => users.fetchUsers())
         </div>
       </section>
 
+      <!-- Search -->
+      <input
+        v-model="search"
+        type="search"
+        :placeholder="$t('admin.searchUsers')"
+        class="input input-bordered input-sm w-full bg-base-100/70"
+      />
+
       <!-- User list -->
-      <section v-if="sorted.length" class="space-y-3">
+      <section v-if="filtered.length" class="space-y-3">
         <div
-          v-for="u in sorted"
+          v-for="u in filtered"
           :key="u.id"
           class="surface p-4"
           :class="u.disabled ? 'opacity-60' : ''"
@@ -126,7 +134,7 @@ onMounted(() => users.fetchUsers())
             <div class="min-w-0 flex-1">
               <p class="flex items-center gap-2 truncate font-medium">
                 {{ [u.name, u.lastname].filter(Boolean).join(' ') || u.email }}
-                <span class="badge badge-sm" :class="roleBadgeClass(u.role)">{{ u.role }}</span>
+                <span v-if="u.super_admin" class="badge badge-sm badge-secondary">{{ $t('roles.superAdmin') }}</span>
                 <span v-if="u.disabled" class="badge badge-sm badge-error">{{ $t('admin.users.disabled') }}</span>
                 <span v-if="isSelf(u)" class="badge badge-sm badge-outline">{{ $t('admin.users.you') }}</span>
               </p>
@@ -145,21 +153,17 @@ onMounted(() => users.fetchUsers())
                 <path d="M9 5l7 7-7 7" />
               </svg>
             </RouterLink>
-            <!-- Admins can set any role; assistants view only (no control). -->
-            <div v-if="auth.isAdmin && !isSelf(u)" class="flex items-center gap-2">
+            <!-- Super admins manage the platform tier (grant/revoke) + account status. -->
+            <div v-if="!isSelf(u)" class="flex flex-wrap items-center gap-2">
               <span v-if="updatingId === u.id" class="loading loading-spinner loading-xs text-primary" />
               <template v-else>
-                <select
-                  class="select select-bordered select-xs flex-1 min-w-0 bg-base-100/70"
-                  :value="u.role"
-                  :disabled="updatingId === u.id"
-                  :aria-label="$t('admin.users.changeRole')"
-                  @change="(e) => changeRole(u, e.target.value)"
+                <button
+                  class="btn btn-xs shrink-0"
+                  :class="u.super_admin ? 'btn-outline' : 'btn-secondary'"
+                  @click="toggleSuperAdmin(u)"
                 >
-                  <option value="attendee">{{ $t('admin.users.roleAttendee') }}</option>
-                  <option value="assistant">{{ $t('admin.users.roleAssistant') }}</option>
-                  <option value="admin">{{ $t('admin.users.roleAdmin') }}</option>
-                </select>
+                  {{ u.super_admin ? $t('admin.users.revokeSuperAdmin') : $t('admin.users.makeSuperAdmin') }}
+                </button>
                 <button
                   class="btn btn-xs shrink-0"
                   :class="u.disabled ? 'btn-success' : 'btn-warning'"

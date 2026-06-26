@@ -1,7 +1,6 @@
 <script setup>
-import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { reactive, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
 import { useOrgContextStore } from '@/stores/orgContext'
 import QRDisplay from '@/components/domain/QRDisplay.vue'
@@ -10,10 +9,10 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import { printQrSheet } from '@/utils/qrSheet'
 import { t } from '@/i18n'
+import { applyOrgTheme, clearOrgTheme } from '@/utils/orgTheme'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
 const events = useEventsStore()
 const orgContext = useOrgContextStore()
 const id = route.params.id
@@ -23,10 +22,10 @@ const id = route.params.id
 // endpoints and authorizes on the org role; otherwise it keeps the legacy /admin path.
 const isOrgMode = computed(() => route.meta.orgScoped === true)
 const orgId = computed(() => (isOrgMode.value ? orgContext.activeOrgId : null))
-const canManage = computed(() => (isOrgMode.value ? orgContext.isActiveAdmin : auth.isAdmin))
+const canManage = computed(() => (isOrgMode.value ? orgContext.isActiveAdmin : orgContext.isSuperAdmin))
 // Ending an event is restricted to super admins and org owners (not org admins).
 const canEnd = computed(() =>
-  isOrgMode.value ? (orgContext.isActiveOwner || orgContext.isSuperAdmin) : auth.isAdmin,
+  isOrgMode.value ? (orgContext.isActiveOwner || orgContext.isSuperAdmin) : orgContext.isSuperAdmin,
 )
 const backTo = computed(() => (isOrgMode.value ? '/org/events' : '/admin/events'))
 
@@ -127,6 +126,23 @@ function toggleEnded() {
   runModeration(() => events.setEventEnded(id, ending, orgId.value))
 }
 
+// Permanent delete — only for ENDED (past) events, owner/admin (or super admin on any
+// event). Second confirmation before the irreversible cascade (badges + scans + claims).
+const deleting = ref(false)
+async function deleteEventConfirmed() {
+  if (!ev.value || deleting.value) return
+  if (!window.confirm(t('admin.eventDetail.confirmDelete', { name: ev.value.name }))) return
+  deleting.value = true
+  try {
+    await events.deleteEvent(id, orgId.value)
+    router.push(backTo.value)
+  } catch {
+    /* error surfaced via store */
+  } finally {
+    deleting.value = false
+  }
+}
+
 async function addBadge() {
   badgeTouched.value = true
   if (!form.name.trim()) return
@@ -180,12 +196,15 @@ async function exportSheet() {
   }
 }
 
+// Theme the event detail with the owning org's brand colors while open.
+watch(() => ev.value?.org?.theme, (th) => applyOrgTheme(th || {}), { deep: true })
+
 onMounted(async () => {
   await refresh()
   // Near-real-time redemption counts (PRD §4.2 dashboard polling).
   poll = setInterval(() => events.fetchAdminBadges(id, orgId.value), 4000)
 })
-onBeforeUnmount(() => clearInterval(poll))
+onBeforeUnmount(() => { clearInterval(poll); clearOrgTheme() })
 </script>
 
 <template>
@@ -431,6 +450,23 @@ onBeforeUnmount(() => clearInterval(poll))
           </div>
         </div>
         <p v-else class="text-sm text-base-content/50">{{ $t('admin.eventDetail.noBadges') }}</p>
+      </section>
+
+      <!-- Danger zone: permanently delete a past (ended) event. Only owner/admin (or a
+           super admin on any event); a past event is the prerequisite so nothing is
+           deleted from under attendees mid-run. -->
+      <section v-if="canManage && ev.ended" class="surface space-y-2 border border-error/40 p-4">
+        <p class="font-semibold text-error">{{ $t('admin.eventDetail.dangerZone') }}</p>
+        <p class="text-xs text-base-content/60">{{ $t('admin.eventDetail.deleteHint') }}</p>
+        <button
+          type="button"
+          class="btn btn-error btn-sm mt-1 w-full tap-target"
+          :disabled="deleting"
+          @click="deleteEventConfirmed"
+        >
+          <span v-if="deleting" class="loading loading-spinner loading-xs" />
+          {{ $t('admin.eventDetail.deleteEvent') }}
+        </button>
       </section>
     </template>
   </div>

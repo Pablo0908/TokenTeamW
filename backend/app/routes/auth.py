@@ -29,7 +29,7 @@ _PWD_SPECIAL = re.compile(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?`~]")
 def _session_response(user):
     """The authenticated session shape shared by login / verify-2fa / google /
     registration completion. Centralised so the payload can't drift between them."""
-    token = encode_token(str(user["_id"]), user["role"])
+    token = encode_token(str(user["_id"]), user["role"], user.get("token_version", 0))
     return {
         "token": token,
         "role": user["role"],
@@ -169,6 +169,8 @@ def google_auth():
         family = info.get("family_name", "")
         user_id = user_model.create_user(given, family, email, hashed_password="", role="attendee")
         user = user_model.find_by_email(email)
+    elif user.get("disabled"):
+        return jsonify({"error": "This account has been disabled."}), 403
 
     audit_model.log(str(user["_id"]), "auth.login", actor_role=user["role"], actor_email=user["email"])
     return jsonify(_session_response(user)), 200

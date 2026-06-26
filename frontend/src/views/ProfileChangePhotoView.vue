@@ -115,8 +115,8 @@ const initials = (() => {
         <svg class="h-9 w-9 text-base-content/35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
         </svg>
-        <span class="text-sm font-medium">Tap to choose an image</span>
-        <span class="text-xs text-base-content/40">PNG, JPG — max 1 MB</span>
+        <span class="text-sm font-medium">{{ $t('settings.photoTapChoose') }}</span>
+        <span class="text-xs text-base-content/40">{{ $t('settings.photoFormatHint') }}</span>
         <input type="file" accept="image/*" class="hidden" @change="onFileChange" />
       </label>
 
@@ -130,7 +130,7 @@ const initials = (() => {
             :placeholder="$t('settings.photoUrlPlaceholder')"
             class="input input-bordered flex-1 bg-base-100/70 text-sm"
           />
-          <button type="button" class="btn btn-outline btn-sm tap-target" @click="applyUrl">Preview</button>
+          <button type="button" class="btn btn-outline btn-sm tap-target" @click="applyUrl">{{ $t('settings.photoPreview') }}</button>
         </div>
       </div>
 

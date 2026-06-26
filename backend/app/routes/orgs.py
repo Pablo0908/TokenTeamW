@@ -1,3 +1,4 @@
+import re
 import secrets
 
 from flask import Blueprint, request, jsonify
@@ -12,8 +13,28 @@ from app.models import redemption as redemption_model
 from app.models import audit as audit_model
 from app.models import ban as ban_model
 from app.models import analytics as analytics_model
+from app.models import prize_claim as prize_claim_model
 from app.utils.auth import jwt_required, super_admin_required, org_role_required
 from app.utils.qr import generate_badge_token, build_redeem_url, generate_qr_data_url
+from app.utils.email import send_invite_email
+
+
+def _send_invite_safe(email, token, invite_type, org_name=None, inviter=None):
+    """Fire the invite email without blocking the request on SMTP issues (mirrors the
+    OTP call sites). The in-app inbox still works regardless of delivery."""
+    try:
+        send_invite_email(email, token, invite_type, org_name=org_name, inviter=inviter)
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).error("Failed to send invite email to %s: %s", email, exc)
+
+
+def _display_name(user_id):
+    u = user_model.find_by_id(user_id)
+    if not u:
+        return None
+    full = " ".join(p for p in (u.get("name"), u.get("lastname")) if p).strip()
+    return full or u.get("email")
 
 # Org self-service: the in-app invite inbox, org-creation/join invites, org settings,
 # member management, and the org-scoped management panel. The existing /admin/* routes
@@ -80,6 +101,7 @@ def create_org_invite(current_user):
         return jsonify({"error": "An invitee email is required."}), 400
     inv = invite_model.create("create_org", email, invited_by=current_user["sub"])
     audit_model.log(current_user["sub"], "invite.create_org", email)
+    _send_invite_safe(email, inv["token"], "create_org", inviter=_display_name(current_user["sub"]))
     return jsonify(invite_model.public(inv)), 201
 
 
@@ -123,12 +145,16 @@ def update_org(current_user, org_id):
         fields["name"] = (body.get("name") or "").strip()
     if "description" in body:
         fields["description"] = (body.get("description") or "").strip()
+    if "theme" in body:
+        fields["theme"] = body.get("theme")  # sanitized in the model
     if not fields:
         return jsonify({"error": "Nothing to update."}), 400
     org_model.update_org(org_id, fields)
     audit_model.log(current_user["sub"], "org.update", ", ".join(fields), org_id=org_id)
-    return jsonify({**org_model.public_org(org_model.find_by_id(org_id)),
-                    "description": fields.get("description", "")}), 200
+    fresh = org_model.find_by_id(org_id)
+    return jsonify({**org_model.public_org(fresh),
+                    "description": fresh.get("description", ""),
+                    "status": fresh.get("status", "active")}), 200
 
 
 @orgs_bp.route("/orgs/<org_id>/members", methods=["GET"])
@@ -185,6 +211,9 @@ def create_join_invite(current_user, org_id):
         return jsonify({"error": "An invitee email is required."}), 400
     inv = invite_model.create("org_join", email, invited_by=current_user["sub"], org_id=org_id, role="admin")
     audit_model.log(current_user["sub"], "invite.org_join", email, org_id=org_id)
+    org = org_model.find_by_id(org_id)
+    _send_invite_safe(email, inv["token"], "org_join",
+                      org_name=(org or {}).get("name"), inviter=_display_name(current_user["sub"]))
     return jsonify(invite_model.public(inv)), 201
 
 
@@ -469,6 +498,27 @@ def org_end_event(current_user, org_id, event_id):
     return jsonify({"id": event_id, "ended": ended, "status": event_model.status_of(ev)}), 200
 
 
+@orgs_bp.route("/orgs/<org_id>/events/<event_id>", methods=["DELETE"])
+@org_role_required("owner", "admin")
+def org_delete_event(current_user, org_id, event_id):
+    """Permanently delete one of this org's ENDED (past) events and everything tied to it:
+    badges, redemptions (scanned badges) and prize claims. Owner/admin only (super_admin
+    passes too — they can moderate any org's events); never automatic. Only ended events
+    can be deleted, so an event can't disappear from attendees mid-run."""
+    ev = _org_event_or_404(org_id, event_id)
+    if not ev:
+        return jsonify({"error": "Event not found"}), 404
+    if not ev.get("ended"):
+        return jsonify({"error": "Only ended (past) events can be deleted. End the event first."}), 409
+    badge_model.delete_by_event(event_id)
+    redemption_model.delete_by_event(event_id)
+    prize_claim_model.delete_by_event(event_id)
+    event_model.delete_event(event_id)
+    audit_model.log(current_user["sub"], "event.delete", ev.get("name", ""),
+                    org_id=org_id, event_id=event_id)
+    return jsonify({"id": event_id, "deleted": True}), 200
+
+
 @orgs_bp.route("/orgs/<org_id>/participants", methods=["GET"])
 @org_role_required("owner", "admin", "staff")
 def org_participants(current_user, org_id):
@@ -512,6 +562,11 @@ def org_audit(current_user, org_id):
         page = max(1, int(request.args.get("page", 1)))
     except (TypeError, ValueError):
         page = 1
-    entries, total = audit_model.query({"org_id": str(org_id)}, page, audit_model.PAGE_SIZE)
+    flt = {"org_id": str(org_id)}
+    q = (request.args.get("q") or "").strip()
+    if q:
+        rx = {"$regex": re.escape(q), "$options": "i"}
+        flt["$or"] = [{"action": rx}, {"actor_email": rx}, {"detail": rx}]
+    entries, total = audit_model.query(flt, page, audit_model.PAGE_SIZE)
     return jsonify({"entries": entries, "page": page, "page_size": audit_model.PAGE_SIZE,
                     "total": total, "has_more": page * audit_model.PAGE_SIZE < total}), 200

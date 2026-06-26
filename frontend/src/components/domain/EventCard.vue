@@ -33,6 +33,10 @@ const visibilityLabel = computed(() =>
   props.event.visibility ? t(`visibility.${props.event.visibility}`) : '',
 )
 
+// Per-org branding on the card: a left accent strip + the org's logo.
+const accent = computed(() => props.event.org?.theme?.accent || props.event.org?.theme?.primary || '')
+const orgLogo = computed(() => props.event.org?.theme?.logo_url || '')
+
 const dateLabel = computed(() => {
   const fmt = (iso) => {
     const d = new Date(iso)
@@ -53,11 +57,15 @@ const dateLabel = computed(() => {
     type="button"
     class="surface w-full space-y-3 p-4 text-left transition-transform"
     :class="clickable ? 'active:scale-[0.98]' : ''"
+    :style="accent ? { borderLeft: `3px solid ${accent}` } : {}"
     @click="clickable && $emit('select', event)"
   >
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <h3 class="truncate font-semibold text-base-content">{{ event.name }}</h3>
+        <h3 class="flex items-center gap-1.5 truncate font-semibold text-base-content">
+          <img v-if="orgLogo" :src="orgLogo" alt="" class="h-4 w-4 shrink-0 rounded object-cover" />
+          {{ event.name }}
+        </h3>
         <p class="mt-0.5 flex items-center gap-1.5 text-xs text-base-content/55">
           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6.75 3v2.25M17.25 3v2.25M3 7.5h18M5.25 5.25h13.5A2.25 2.25 0 0121 7.5v11.25A2.25 2.25 0 0118.75 21H5.25A2.25 2.25 0 013 18.75V7.5a2.25 2.25 0 012.25-2.25z" />

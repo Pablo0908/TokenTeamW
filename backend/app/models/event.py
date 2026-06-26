@@ -127,6 +127,15 @@ def find_by_id(event_id):
         return None
 
 
+def delete_event(event_id):
+    """Remove the event document itself. Cascading of its badges/redemptions/claims is the
+    caller's responsibility (the delete route does the full cascade)."""
+    try:
+        return mongo.db.events.delete_one({"_id": _oid(event_id)}).deleted_count
+    except Exception:
+        return 0
+
+
 def set_started(event_id, started: bool):
     """Flip the manual activation override. Returns matched count > 0."""
     return _set_flag(event_id, "started", started)
@@ -213,5 +222,6 @@ def event_summary(event, badges_total, badges_earned, org=None):
             "id": str(org["_id"]),
             "name": org.get("name", ""),
             "slug": org.get("slug", ""),
+            "theme": org.get("theme") or {},
         }
     return summary

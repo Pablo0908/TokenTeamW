@@ -102,6 +102,9 @@ def create_user(name, lastname, email, password_hash, role="attendee"):
             # at self-registration). Kept on every new doc for shape consistency.
             "platform_role": None,
             "preferences": dict(DEFAULT_PREFERENCES),
+            # Bumped to invalidate all outstanding JWTs (session revocation). A token
+            # carries the version it was minted with; jwt_required rejects stale ones.
+            "token_version": 0,
             "created_at": datetime.now(timezone.utc),
         }
     )
@@ -170,9 +173,20 @@ def mark_announcements_seen(user_id):
         return False
 
 
+def bump_token_version(user_id):
+    """Invalidate every outstanding JWT for a user (session revocation)."""
+    try:
+        return mongo.db.users.update_one({"_id": _oid(user_id)}, {"$inc": {"token_version": 1}}).matched_count > 0
+    except Exception:
+        return False
+
+
 def set_disabled(user_id, disabled: bool):
     try:
-        result = mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"disabled": disabled}})
+        update = {"$set": {"disabled": disabled}}
+        if disabled:
+            update["$inc"] = {"token_version": 1}  # revoke the disabled user's sessions now
+        result = mongo.db.users.update_one({"_id": _oid(user_id)}, update)
         return result.matched_count > 0
     except Exception:
         return False
@@ -188,7 +202,11 @@ def update_avatar(user_id, avatar_url):
 
 
 def update_password(user_id, hashed_password):
-    mongo.db.users.update_one({"_id": _oid(user_id)}, {"$set": {"hashed_password": hashed_password}})
+    # Changing the password revokes all existing sessions (token_version bump).
+    mongo.db.users.update_one(
+        {"_id": _oid(user_id)},
+        {"$set": {"hashed_password": hashed_password}, "$inc": {"token_version": 1}},
+    )
 
 
 def delete_user(user_id):

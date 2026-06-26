@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { t } from '@/i18n'
+import { eventTypeLabel } from '@/utils/labels'
 import { useAuthStore } from '@/stores/auth'
 import { api, readApiError } from '@/services/api'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
@@ -56,6 +57,7 @@ function logout() { auth.logout(); router.push('/login') }
       <RouterLink to="/admin/orgs" role="tab" class="tab">{{ $t('tabs.orgs') }}</RouterLink>
       <RouterLink to="/admin/org-invites" role="tab" class="tab">{{ $t('tabs.codes') }}</RouterLink>
       <RouterLink to="/admin/announcements" role="tab" class="tab">{{ $t('tabs.news') }}</RouterLink>
+      <RouterLink to="/admin/verifier" role="tab" class="tab">{{ $t('tabs.verifier') }}</RouterLink>
     </div>
 
     <DateRangePicker @change="onRange" />
@@ -108,7 +110,7 @@ function logout() { auth.logout(); router.push('/login') }
         <div v-if="mix.length" class="space-y-2">
           <div v-for="m in mix" :key="m.event_type">
             <div class="mb-0.5 flex justify-between text-xs">
-              <span class="capitalize text-base-content/70">{{ m.event_type }}</span>
+              <span class="text-base-content/70">{{ eventTypeLabel(m.event_type) }}</span>
               <span class="text-base-content/50">{{ m.count }}</span>
             </div>
             <div class="h-2 overflow-hidden rounded-full bg-base-300/50">

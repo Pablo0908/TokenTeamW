@@ -60,6 +60,11 @@ def count_for_event(event_id):
     return mongo.db.badges.count_documents({"event_id": _oid(event_id)})
 
 
+def delete_by_event(event_id):
+    """Remove all badges for an event (cascade when the event is deleted)."""
+    return mongo.db.badges.delete_many({"event_id": _oid(event_id)}).deleted_count
+
+
 def count_for_org(org_id):
     """Total badges minted across an org's events (uses the denormalized org_id)."""
     return mongo.db.badges.count_documents({"org_id": _oid(org_id)})
