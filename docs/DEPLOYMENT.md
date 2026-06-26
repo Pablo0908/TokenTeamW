@@ -24,7 +24,7 @@ DB: **separate `beeworking_prod` database in the same Atlas cluster** · Install
 | `JWT_EXPIRY_HOURS` | `8` |
 | `FRONTEND_URL` | `https://<app>.vercel.app` |
 | `CORS_ORIGINS` | `https://<app>.vercel.app` (prod origin ONLY — no localhost) |
-| `GOOGLE_CLIENT_ID` | the public Google OAuth client ID (matches frontend) |
+| `GOOGLE_CLIENT_ID` | *(OPTIONAL)* public Google OAuth client ID — omit to ship without Google sign-in |
 | `MAIL_HOST` / `MAIL_PORT` | `smtp.gmail.com` / `587` |
 | `MAIL_USER` / `MAIL_PASSWORD` | the Lyfter mailbox + app password |
 | `MAIL_FROM` | `Lyfter <lyfterbadges@gmail.com>` (angle brackets required) |
@@ -39,10 +39,17 @@ DB: **separate `beeworking_prod` database in the same Atlas cluster** · Install
 |---|---|
 | `VITE_API_URL` | `https://<api>.onrender.com` (the Render backend URL) |
 | `VITE_USE_MOCK` | `false` |
-| `VITE_GOOGLE_CLIENT_ID` | the public Google OAuth client ID (matches backend) |
+| `VITE_GOOGLE_CLIENT_ID` | *(OPTIONAL)* matches backend `GOOGLE_CLIENT_ID`; omit to hide the Google button |
 | `VITE_PUBLIC_URL` | `https://<app>.vercel.app` |
 
 - Build: `npm run build` · Output: `dist/` · Framework preset: Vite (root dir `frontend/`).
+
+## Google Sign-In is OPTIONAL
+Email/password + 2FA is the primary auth and works fully on its own. If `GOOGLE_CLIENT_ID`
+(backend) / `VITE_GOOGLE_CLIENT_ID` (frontend) are left unset, the "or / Continue with
+Google" block is hidden entirely (no dead button) and `/auth/google` returns 503. Add the
+two vars later — no redeploy of the rest is needed beyond rebuilding the frontend — once a
+(free) Google OAuth client is set up and the prod origin is an Authorized JavaScript origin.
 
 ## Production super admins (Stage 4, explicit designation only)
 `santimenac23@gmail.com` and `pablofori09@gmail.com` — set via `PATCH /admin/users/<id>/super-admin`
