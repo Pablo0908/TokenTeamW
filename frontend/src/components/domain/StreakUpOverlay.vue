@@ -19,12 +19,28 @@ const badges = useBadgesStore()
 
 const visible = ref(false) // drives the enter/leave (fade) transition of the whole overlay
 const displayNum = ref(0) // the number currently shown; changing it triggers the out-in swap
+const stars = ref(0) // star rating earned for the NEW streak (1–6)
+const showStars = ref(false) // gates the staggered star reveal until after the number lands
+
+// Star rating, scaled to the streak: the higher the streak, the more stars. The 6th is a
+// rare "bonus" star (streak ≥ 50) with its own special animation.
+function starsForStreak(n) {
+  if (n >= 50) return 6
+  if (n >= 25) return 5
+  if (n >= 14) return 4
+  if (n >= 7) return 3
+  if (n >= 3) return 2
+  if (n >= 1) return 1
+  return 0
+}
 
 // Sequence timing (ms) — grouped here so the whole choreography is easy to read and tune.
 const FADE_IN = 450 // matches .streakup enter transition
 const HOLD_FROM = 800 // how long the old number lingers before it burns off
 const SWAP = 1050 // out-in number transition: old leaves (~450) then new enters (~550)
-const HOLD_TO = 1300 // how long the new number is celebrated before fade-out
+const STAR_STAGGER = 160 // ms between each star popping in
+const STAR_POP = 480 // ms for one star's pop-in animation
+const HOLD_AFTER_STARS = 1200 // how long the completed rating is held before fade-out
 
 let runToken = 0
 let timers = []
@@ -34,6 +50,8 @@ const wait = (ms) => new Promise((resolve) => { timers.push(setTimeout(resolve, 
 async function play(from, to) {
   const token = ++runToken
   clearTimers()
+  stars.value = starsForStreak(to)
+  showStars.value = false
   displayNum.value = from
   visible.value = true
 
@@ -41,7 +59,12 @@ async function play(from, to) {
   if (token !== runToken) return
   displayNum.value = to // → out-in swap: old number burns off, new number ignites
 
-  await wait(SWAP + HOLD_TO)
+  await wait(SWAP)
+  if (token !== runToken) return
+  showStars.value = true // reveal the rating; stars pop in one by one (staggered in CSS)
+
+  const revealMs = Math.max(0, stars.value - 1) * STAR_STAGGER + STAR_POP
+  await wait(revealMs + HOLD_AFTER_STARS)
   if (token !== runToken) return
   visible.value = false // leave transition fades the overlay out; cleanup in onClosed()
 }
@@ -51,6 +74,7 @@ function skip() {
   runToken++ // cancel any pending steps
   clearTimers()
   displayNum.value = badges.streakCelebration?.to ?? displayNum.value
+  showStars.value = true
   visible.value = false
 }
 
@@ -58,6 +82,7 @@ function skip() {
 // can't race the fade-out.
 function onClosed() {
   clearTimers()
+  showStars.value = false
   badges.clearStreakCelebration()
 }
 
@@ -90,6 +115,21 @@ onUnmounted(clearTimers)
             <span :key="displayNum" class="streakup-num">{{ displayNum }}</span>
           </transition>
           <span class="streakup-label">{{ $t('home.streak') }}</span>
+
+          <!-- star rating: 1–6 stars based on the streak; the 6th is a special bonus star -->
+          <div v-if="showStars" class="streakup-stars" aria-hidden="true">
+            <span
+              v-for="i in stars"
+              :key="i"
+              class="star"
+              :class="{ bonus: stars === 6 && i === 6 }"
+              :style="{ animationDelay: (i - 1) * 0.16 + 's' }"
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+              </svg>
+            </span>
+          </div>
         </div>
       </div>
     </transition>
@@ -159,6 +199,49 @@ onUnmounted(clearTimers)
   color: rgba(170, 230, 224, 0.65);
 }
 
+/* ---- star rating ---- */
+.streakup-stars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+  min-height: 1px;
+}
+.star {
+  position: relative;
+  display: inline-flex;
+  width: clamp(26px, 8.5vw, 40px);
+  transform-origin: 50% 60%;
+  animation: star-pop 0.48s cubic-bezier(0.2, 0.8, 0.3, 1.5) both;
+}
+.star svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: #ffcf4a;
+  filter: drop-shadow(0 0 6px rgba(255, 200, 70, 0.85));
+}
+
+/* the 6th "bonus" star (streak ≥ 50): bigger, brighter, with a continuous shimmer + halo burst */
+.star.bonus {
+  width: clamp(34px, 11vw, 54px);
+}
+.star.bonus svg {
+  fill: #fff3c4;
+  animation: bonus-shimmer 1.5s ease-in-out infinite;
+}
+.star.bonus::after {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 220, 90, 0.55) 0%, transparent 68%);
+  z-index: -1;
+  animation: bonus-burst 1.6s ease-in-out infinite;
+}
+
 /* ---- whole-overlay fade ---- */
 .streakup-enter-active,
 .streakup-leave-active { transition: opacity 0.45s ease; }
@@ -200,9 +283,27 @@ onUnmounted(clearTimers)
   100% { transform: scale(1, 1) rotate(0deg);        filter: brightness(1)    drop-shadow(0 0 10px rgba(48, 214, 204, 0.6)); }
 }
 
+@keyframes star-pop {
+  0%   { opacity: 0; transform: scale(0) rotate(-35deg); }
+  60%  { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+/* bonus star shimmer: glow + fill brighten/dim, like it's catching the light */
+@keyframes bonus-shimmer {
+  0%, 100% { fill: #ffe9a8; filter: drop-shadow(0 0 6px rgba(255, 210, 90, 0.85)) brightness(1); }
+  50%      { fill: #fffbe8; filter: drop-shadow(0 0 16px rgba(255, 225, 120, 1)) brightness(1.35); }
+}
+@keyframes bonus-burst {
+  0%, 100% { opacity: 0.4;  transform: scale(0.85); }
+  50%      { opacity: 0.85; transform: scale(1.15); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .streakup-flame,
-  .streakup-glow { animation: none; }
+  .streakup-glow,
+  .star,
+  .star.bonus svg,
+  .star.bonus::after { animation: none; }
   .num-leave-active { animation: num-burn-reduced 0.3s ease both; }
   .num-enter-active { animation: num-ignite-reduced 0.3s ease both; }
   @keyframes num-burn-reduced { to { opacity: 0; } }
