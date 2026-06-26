@@ -164,8 +164,8 @@ function goAuth(mode) {
 
     <div class="lp-step" style="flex:1;max-width:300px;text-align:center;position:relative;z-index:1;">
       <div style="width:56px;height:56px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;background:rgba(0,212,193,0.12);border:2px solid #00d4c1;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#00d4c1;box-shadow:0 0 24px rgba(0,212,193,0.3);">2</div>
-      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;">Escanea en cada booth</h3>
-      <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;">Los participantes escanean en cada booth.</p>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;">Escanea en cada estacion</h3>
+      <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;">Los participantes escanean el QR en cada estacion del evento.</p>
     </div>
 
     <div class="lp-step" style="flex:1;max-width:300px;text-align:center;position:relative;z-index:1;">
