@@ -229,7 +229,7 @@ onUnmounted(clearTimers)
   width: clamp(34px, 11vw, 54px);
 }
 .star.bonus svg {
-  fill: #fff3c4;
+  fill: #c77dff; /* the bonus 6th star is purple, not gold */
   animation: bonus-shimmer 1.5s ease-in-out infinite;
 }
 .star.bonus::after {
@@ -237,7 +237,7 @@ onUnmounted(clearTimers)
   position: absolute;
   inset: -45%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 220, 90, 0.55) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(180, 110, 255, 0.6) 0%, transparent 68%);
   z-index: -1;
   animation: bonus-burst 1.6s ease-in-out infinite;
 }
@@ -290,8 +290,8 @@ onUnmounted(clearTimers)
 }
 /* bonus star shimmer: glow + fill brighten/dim, like it's catching the light */
 @keyframes bonus-shimmer {
-  0%, 100% { fill: #ffe9a8; filter: drop-shadow(0 0 6px rgba(255, 210, 90, 0.85)) brightness(1); }
-  50%      { fill: #fffbe8; filter: drop-shadow(0 0 16px rgba(255, 225, 120, 1)) brightness(1.35); }
+  0%, 100% { fill: #c77dff; filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.85)) brightness(1); }
+  50%      { fill: #f0ddff; filter: drop-shadow(0 0 16px rgba(190, 120, 255, 1)) brightness(1.35); }
 }
 @keyframes bonus-burst {
   0%, 100% { opacity: 0.4;  transform: scale(0.85); }
