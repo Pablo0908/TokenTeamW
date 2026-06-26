@@ -9,6 +9,10 @@ import AuthSplit from '@/components/ui/AuthSplit.vue'
 import AppPreview from '@/components/ui/AppPreview.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 
+// Google Sign-In is optional: the whole "or / Google" block is hidden unless a client
+// ID is configured, so a deployment without Google OAuth shows only email/password + 2FA.
+const googleEnabled = !!import.meta.env.VITE_GOOGLE_CLIENT_ID
+
 // `embedded` renders just the centered form (no AuthSplit two-column hero) — used when
 // this view is dropped into the landing page. In that mode the "sign in" link toggles
 // the landing's auth panel to log-in instead of navigating away.
@@ -234,7 +238,7 @@ async function resendCode() {
       </div>
     </form>
 
-    <div v-if="step === 'form'" class="mt-6 flex flex-col gap-3">
+    <div v-if="step === 'form' && googleEnabled" class="mt-6 flex flex-col gap-3">
       <div class="flex items-center gap-3 text-xs text-base-content/40">
         <span class="flex-1 border-t border-base-content/10" />
         <span>{{ $t('common.or') }}</span>

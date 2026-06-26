@@ -30,8 +30,11 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- Renders nothing unless a Google client ID is configured, so an unconfigured
+       deployment shows no dead button (the visible layer is pointer-events-none and
+       only works because Google's real button sits behind it). -->
   <!-- Custom button visible on top; Google's official iframe sits behind at opacity-0 but still receives clicks -->
-  <div class="relative w-full" style="height:40px">
+  <div v-if="clientId" class="relative w-full" style="height:40px">
     <!-- Visible custom button -->
     <div class="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 rounded-xl border border-base-content/15 bg-base-100/60 px-4 text-sm font-medium text-base-content backdrop-blur-sm">
       <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">

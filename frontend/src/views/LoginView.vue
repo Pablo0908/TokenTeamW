@@ -11,6 +11,10 @@ import AppPreview from '@/components/ui/AppPreview.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 import PasswordInput from '@/components/ui/PasswordInput.vue'
 
+// Google Sign-In is optional: the whole "or / Google" block is hidden unless a client
+// ID is configured, so a deployment without Google OAuth shows only email/password + 2FA.
+const googleEnabled = !!import.meta.env.VITE_GOOGLE_CLIENT_ID
+
 // `embedded` renders just the centered form (no AuthSplit two-column hero) — used when
 // this view is dropped into the landing page, which already has its own marketing hero.
 const props = defineProps({ embedded: { type: Boolean, default: false } })
@@ -185,7 +189,7 @@ function backToCredentials() {
       </div>
     </form>
 
-    <div v-if="step === 'credentials'" class="mt-6 flex flex-col gap-3">
+    <div v-if="step === 'credentials' && googleEnabled" class="mt-6 flex flex-col gap-3">
       <div class="flex items-center gap-3 text-xs text-base-content/40">
         <span class="flex-1 border-t border-base-content/10" />
         <span>{{ $t('common.or') }}</span>
