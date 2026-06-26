@@ -57,12 +57,18 @@ no separate prod DB) · Install path: **PWA**.
 ## Vercel — frontend project env vars (build-time, `VITE_*`)
 | Var | Value |
 |---|---|
-| `VITE_API_URL` | `https://<api>.onrender.com` (the Render backend URL) |
+| `VITE_API_URL` | `https://tokenteamw-api-to8q.onrender.com` (live Render backend) |
 | `VITE_USE_MOCK` | `false` |
 | `VITE_GOOGLE_CLIENT_ID` | *(OPTIONAL)* matches backend `GOOGLE_CLIENT_ID`; omit to hide the Google button |
-| `VITE_PUBLIC_URL` | `https://<app>.vercel.app` |
+| `VITE_PUBLIC_URL` | `https://tokenteamww.vercel.app` (live Vercel frontend) |
 
-- Build: `npm run build` · Output: `dist/` · Framework preset: Vite (root dir `frontend/`).
+- **Framework:** Vite · **Root Directory:** `frontend` · **Build:** `npm run build` · **Output:** `dist` · **Production branch:** `main`.
+- `frontend/vercel.json` provides the SPA rewrite (all routes -> index.html) for Vue Router.
+
+## Live production URLs
+- Backend (Render, free): `https://tokenteamw-api-to8q.onrender.com` — `/health` returns `{"status":"ok"}`.
+- Frontend (Vercel): `https://tokenteamww.vercel.app`
+- Backend `CORS_ORIGINS` + `FRONTEND_URL` are set to the Vercel URL (verified via the CORS header).
 
 ## Google Sign-In is OPTIONAL
 Email/password + 2FA is the primary auth and works fully on its own. If `GOOGLE_CLIENT_ID`

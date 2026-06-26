@@ -176,24 +176,17 @@ def all_events(org_id=None, exclude_platform=False):
 
 
 def feed_events_for_user(user_id):
-    """The personalized attendee feed (P7): events from orgs the user has interacted
-    with (≥1 redemption) or is a member of. Visibility then filters the LIST:
-      - "public"    -> listed (within scope)
-      - "unlisted"  -> listed only to members of that org
+    """The attendee events feed. Visibility governs listing:
+      - "public"    -> listed to EVERYONE (global discovery — no org scoping)
+      - "unlisted"  -> listed only to members of that event's org
       - "scan-only" -> never listed (reachable only via its QR)
-    Newest first. Discovery of NEW orgs happens via QR scan / announcements, not here.
+    Newest first.
     """
-    from app.models import redemption as redemption_model
     from app.models import membership as membership_model
 
     member_orgs = set(membership_model.orgs_for_user(user_id))
-    scope_orgs = set(redemption_model.org_ids_for_user(user_id)) | member_orgs
-    if not scope_orgs:
-        return []
-    cursor = (mongo.db.events.find({"org_id": {"$in": [_oid(o) for o in scope_orgs]}})
-              .sort("created_at", -1))
     out = []
-    for ev in cursor:
+    for ev in mongo.db.events.find({}).sort("created_at", -1):
         vis = ev.get("visibility", "public")
         org_str = str(ev["org_id"]) if ev.get("org_id") else None
         if vis == "public" or (vis == "unlisted" and org_str in member_orgs):

@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from flask import Blueprint, jsonify
 
 from app.models import event as event_model
@@ -13,56 +11,28 @@ badges_bp = Blueprint("badges", __name__)
 
 
 def compute_streak(uid):
-    """Consecutive-event-day streak for a participant.
+    """Streak for a participant = the number of events they have FULLY completed
+    (earned every badge of the event). Each completed event adds +1, regardless of the
+    event's start/end dates. Events with no badges can't be completed and don't count.
 
-    An "event-day" is a calendar day on which at least one badge-bearing event was
-    hosted (keyed by the event's start_date). Walking those days oldest → newest:
-      • completing an event (earning all of its badges) adds +1 per completed event;
-      • a *past* event-day on which the user completed none of that day's events
-        resets the running streak to 0 ("missed a day");
-      • the current day never resets — it can only add, since it isn't over yet.
-
-    Two events on the same day therefore can't break the streak as long as the user
-    completes at least one (the day still has a completion), and completing both adds
-    +2. The returned value is the running total after the most recent event-day: the
-    length of the current unbroken run, measured in completed events.
-
-    Events with no start_date (unscheduled) and events with no badges (can't be
-    completed) do not participate — they never count as a breakable event-day.
+    Loads events once, then their badges and this user's redemptions in two BATCH
+    queries, so the whole streak costs 3 queries instead of 2-per-event.
     """
-    today = datetime.now(timezone.utc).date()
-    # Only past/today events participate. Load them once, then their badges and this user's
-    # redemptions in two more BATCH queries — so the whole streak costs 3 queries instead of
-    # 2-per-event (the per-event form timed out for users with many event-days).
-    relevant = [
-        ev for ev in event_model.all_events()
-        if isinstance(ev.get("start_date"), datetime) and ev["start_date"].date() <= today
-    ]
+    relevant = event_model.all_events()
     event_ids = [ev["_id"] for ev in relevant]
     badges_by_event = badge_model.map_by_events(event_ids)
     redeemed_by_event = redemption_model.redeemed_map_by_events(uid, event_ids)
 
-    # day -> count of events completed that day. A day present as a key is an event-day.
-    per_day = {}
+    streak = 0
     for ev in relevant:
         badges = badges_by_event.get(str(ev["_id"]), [])
         total = len(badges)
         if total == 0:
-            continue  # a badge-less event can't be completed, so it's not an event-day
-        day = ev["start_date"].date()
-        per_day.setdefault(day, 0)
+            continue  # a badge-less event can't be completed
         redeemed = redeemed_by_event.get(str(ev["_id"]), {})
         earned = sum(1 for b in badges if str(b["_id"]) in redeemed)
         if earned >= total:
-            per_day[day] += 1
-
-    streak = 0
-    for day in sorted(per_day):
-        completed = per_day[day]
-        if completed > 0 or day == today:
-            streak += completed
-        else:
-            streak = 0  # past event-day with no completion → streak breaks
+            streak += 1
     return streak
 
 

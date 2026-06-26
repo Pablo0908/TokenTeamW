@@ -19,7 +19,11 @@ export function readApiError(e, fallback) {
 function createRealApi() {
   const instance = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
-    timeout: 15000,
+    // 60s, not 15s: a Render free-tier instance that has spun down takes ~30-60s to
+    // cold-start. A short timeout makes that first request fail and show "server down";
+    // 60s lets it wait for the wake and succeed. Keep the backend warm (uptime pinger)
+    // to avoid the wait entirely.
+    timeout: 60000,
   })
 
   // Attach the JWT to every request.
