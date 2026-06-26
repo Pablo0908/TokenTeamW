@@ -31,21 +31,27 @@ def compute_streak(uid):
     completed) do not participate — they never count as a breakable event-day.
     """
     today = datetime.now(timezone.utc).date()
+    # Only past/today events participate. Load them once, then their badges and this user's
+    # redemptions in two more BATCH queries — so the whole streak costs 3 queries instead of
+    # 2-per-event (the per-event form timed out for users with many event-days).
+    relevant = [
+        ev for ev in event_model.all_events()
+        if isinstance(ev.get("start_date"), datetime) and ev["start_date"].date() <= today
+    ]
+    event_ids = [ev["_id"] for ev in relevant]
+    badges_by_event = badge_model.map_by_events(event_ids)
+    redeemed_by_event = redemption_model.redeemed_map_by_events(uid, event_ids)
+
     # day -> count of events completed that day. A day present as a key is an event-day.
     per_day = {}
-    for ev in event_model.all_events():
-        start = ev.get("start_date")
-        if not isinstance(start, datetime):
-            continue
-        day = start.date()
-        if day > today:
-            continue  # upcoming events haven't happened yet
-        badges = badge_model.find_by_event(ev["_id"])
+    for ev in relevant:
+        badges = badges_by_event.get(str(ev["_id"]), [])
         total = len(badges)
         if total == 0:
             continue  # a badge-less event can't be completed, so it's not an event-day
+        day = ev["start_date"].date()
         per_day.setdefault(day, 0)
-        redeemed = redemption_model.redeemed_badge_map(uid, ev["_id"])
+        redeemed = redeemed_by_event.get(str(ev["_id"]), {})
         earned = sum(1 for b in badges if str(b["_id"]) in redeemed)
         if earned >= total:
             per_day[day] += 1
@@ -72,16 +78,21 @@ def my_streak(current_user):
 def my_badges(current_user):
     uid = current_user["sub"]
     total_attendees = user_model.count_attendees()
+    # "My badges" is the user's own collection: only events where they've earned at least one
+    # badge (keeps it personal; org-scoped feed, P7). Derive those events from the user's
+    # redemptions, then load badges + rarity counts in BATCH — a handful of queries instead of
+    # 3-per-event over the whole catalog (which timed out once a user had many badges).
+    redeemed_by_event = redemption_model.redeemed_map_by_events(uid)
+    relevant_ids = list(redeemed_by_event.keys())
+    badges_by_event = badge_model.map_by_events(relevant_ids)
+    badge_counts = redemption_model.counts_by_badge_for_events(relevant_ids)
     out = []
     for ev in event_model.all_events():
-        badges = badge_model.find_by_event(ev["_id"])
-        redeemed = redemption_model.redeemed_badge_map(uid, ev["_id"])
-        # "My badges" is the user's own collection: only events where they've earned at
-        # least one badge. This keeps it personal and avoids listing every org's events
-        # (org-scoped feed, P7). Earned events always appear regardless of visibility.
+        redeemed = redeemed_by_event.get(str(ev["_id"]))
+        # Earned events always appear regardless of visibility.
         if not redeemed:
             continue
-        badge_counts = redemption_model.counts_by_badge(ev["_id"])
+        badges = badges_by_event.get(str(ev["_id"]), [])
         total = len(badges)
         earned = sum(1 for b in badges if str(b["_id"]) in redeemed)
         out.append(
