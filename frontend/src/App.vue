@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/ui/NavBar.vue'
 import SideNav from '@/components/ui/SideNav.vue'
@@ -16,6 +16,22 @@ const settings = useSettingsStore()
 const redeemQueue = useRedeemQueueStore()
 const auth = useAuthStore()
 const orgContext = useOrgContextStore()
+
+// Keep the browser tab title and favicon in sync with the active organisation.
+watchEffect(() => {
+  const org = orgContext.activeOrg
+  document.title = org ? `${org.name} · Badges` : 'Lyfter · Badges'
+
+  const faviconUrl = org?.theme?.logo_url || '/favicon.png'
+  let link = document.querySelector("link[rel='icon']")
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+  }
+  link.href = faviconUrl
+  link.type = faviconUrl === '/favicon.png' ? 'image/png' : 'image/x-icon'
+})
 
 // Load the platform/org context whenever the user is authenticated; clear on logout.
 watch(
