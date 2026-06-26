@@ -67,7 +67,6 @@ function accAfterLeave(el) {
         to="/profile/settings"
         class="surface flex items-center gap-3 p-4 transition-transform active:scale-[0.98]"
       >
-        <!-- Avatar or initials -->
         <span class="relative h-11 w-11 shrink-0">
           <img
             v-if="auth.user?.avatar_url"
@@ -101,7 +100,7 @@ function accAfterLeave(el) {
       <div class="surface p-4">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-secondary/15 drop-shadow-[0_0_6px_rgba(167,139,250,0.3)]">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-secondary/25 drop-shadow-[0_0_8px_rgba(167,139,250,0.45)]">
               <svg class="h-4 w-4 text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
               </svg>
@@ -133,7 +132,7 @@ function accAfterLeave(el) {
           @click="showAccessibility = !showAccessibility"
         >
           <div class="flex items-center gap-3">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-accent/15 drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-accent/25 drop-shadow-[0_0_8px_rgba(251,191,36,0.45)]">
               <svg class="h-4 w-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="7" r="4"/><path d="M4 21v-1a8 8 0 0116 0v1"/>
               </svg>
@@ -312,9 +311,6 @@ function accAfterLeave(el) {
       </svg>
     </RouterLink>
 
-    <RouterLink v-if="orgContext.isSuperAdmin" to="/admin/events" class="btn btn-outline w-full tap-target">
-      {{ $t('profile.openAdmin') }}
-    </RouterLink>
     <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
       {{ $t('profile.manageOrg') }}
     </RouterLink>

@@ -21,6 +21,7 @@ const video = ref(null)
 const state = ref('scanning') // scanning | working | result
 const camError = ref('')
 const flash = ref('')
+const flashKind = ref('')
 const result = ref(null)
 const secure = typeof window !== 'undefined' ? window.isSecureContext : true
 
@@ -122,6 +123,9 @@ async function redeemAndShow(eventId, token) {
     }
     // Earn chime — opt-out via Settings → extra effects.
     if (settings.effects) playEarnChime(completed)
+    flashKind.value = 'success'
+    setTimeout(() => (flashKind.value = ''), 600)
+    navigator.vibrate?.([80, 40, 160])
   } else if (res.offline) {
     // No connection — save the scan and tell the user it'll sync automatically.
     redeemQueue.enqueue(eventId, token)
@@ -130,12 +134,16 @@ async function redeemAndShow(eventId, token) {
       title: t('outcome.queuedTitle'),
       message: t('outcome.queuedMsg'),
     }
+    navigator.vibrate?.(40)
   } else {
     result.value = outcomeFor(res.status) || {
       kind: 'error',
       title: t('scan.failTitle'),
       message: res.error || t('outcome.genericMsg'),
     }
+    flashKind.value = 'error'
+    setTimeout(() => (flashKind.value = ''), 600)
+    navigator.vibrate?.(60)
   }
   state.value = 'result'
 }
@@ -205,13 +213,22 @@ onBeforeUnmount(() => {
         <!-- viewfinder frame -->
         <div class="pointer-events-none absolute inset-0 grid place-items-center">
           <div class="relative h-3/5 w-3/5">
-            <span class="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-2 border-t-2 border-primary" />
-            <span class="absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-2 border-t-2 border-primary" />
-            <span class="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-2 border-l-2 border-primary" />
-            <span class="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-2 border-r-2 border-primary" />
+            <span class="corner absolute left-0 top-0 h-9 w-9 rounded-tl-lg border-l-[3px] border-t-[3px] border-primary" />
+            <span class="corner absolute right-0 top-0 h-9 w-9 rounded-tr-lg border-r-[3px] border-t-[3px] border-primary" />
+            <span class="corner absolute bottom-0 left-0 h-9 w-9 rounded-bl-lg border-b-[3px] border-l-[3px] border-primary" />
+            <span class="corner absolute bottom-0 right-0 h-9 w-9 rounded-br-lg border-b-[3px] border-r-[3px] border-primary" />
             <span v-if="!camError" class="scanline absolute inset-x-2 top-0 h-0.5 rounded bg-primary/80" />
           </div>
         </div>
+
+        <!-- Flash overlay on scan result -->
+        <transition name="flash-fade">
+          <div
+            v-if="flashKind"
+            class="absolute inset-0 pointer-events-none rounded-inherit"
+            :class="flashKind === 'success' ? 'bg-success/30' : 'bg-error/30'"
+          />
+        </transition>
 
         <div v-if="state === 'working'" class="absolute inset-0 grid place-items-center bg-base-300/70 backdrop-blur-sm">
           <span class="loading loading-spinner loading-lg text-primary" />
@@ -246,11 +263,12 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Result -->
-    <div v-else class="flex flex-col items-center gap-5 py-6 text-center">
+    <transition name="result-in">
+    <div v-if="state === 'result'" class="flex flex-col items-center gap-5 py-6 text-center">
       <div
-        class="grid h-28 w-28 place-items-center rounded-full text-6xl shadow-2xl"
+        class="grid h-32 w-32 place-items-center rounded-full text-6xl shadow-2xl"
         :class="{
-          'bg-gradient-to-br from-success/30 to-primary/20 shadow-success/30': celebrating,
+          'bg-gradient-to-br from-success/30 to-primary/20 shadow-success/30 animate-bounce ring-4 ring-success/30': celebrating,
           'bg-warning/15 shadow-warning/20': result.kind === 'duplicate',
           'bg-info/15 shadow-info/20': result.kind === 'queued',
           'bg-error/15 shadow-error/20': result.kind === 'error',
@@ -283,6 +301,7 @@ onBeforeUnmount(() => {
         <button class="btn btn-ghost w-full tap-target" @click="scanAgain">{{ $t('redeem.scanAnother') }}</button>
       </div>
     </div>
+    </transition>
   </div>
 </template>
 
@@ -304,5 +323,29 @@ onBeforeUnmount(() => {
   .scanline {
     animation: none;
   }
+}
+
+.corner {
+  transition: opacity 0.3s;
+  animation: corner-breathe 2s ease-in-out infinite;
+}
+@keyframes corner-breathe {
+  0%, 100% { opacity: 0.55; box-shadow: 0 0 0px rgba(45,212,191,0); }
+  50%       { opacity: 1;    box-shadow: 0 0 12px 2px rgba(45,212,191,0.55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corner {
+    animation: none;
+  }
+}
+
+.flash-fade-enter-active { transition: opacity 0.15s ease; }
+.flash-fade-leave-active { transition: opacity 0.5s ease; }
+.flash-fade-enter-from, .flash-fade-leave-to { opacity: 0; }
+
+.result-in-enter-active { animation: result-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes result-pop {
+  from { opacity: 0; transform: scale(0.85) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 </style>
