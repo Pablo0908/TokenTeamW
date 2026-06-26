@@ -1,0 +1,147 @@
+<script setup>
+import { computed, watch, watchEffect } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import NavBar from '@/components/ui/NavBar.vue'
+import SideNav from '@/components/ui/SideNav.vue'
+import BrandBackground from '@/components/ui/BrandBackground.vue'
+import StreakUpOverlay from '@/components/domain/StreakUpOverlay.vue'
+import { useSettingsStore } from '@/stores/settings'
+import { useRedeemQueueStore } from '@/stores/redeemQueue'
+import { useAuthStore } from '@/stores/auth'
+import { useOrgContextStore } from '@/stores/orgContext'
+
+const route = useRoute()
+const router = useRouter()
+const settings = useSettingsStore()
+const redeemQueue = useRedeemQueueStore()
+const auth = useAuthStore()
+const orgContext = useOrgContextStore()
+
+// Keep the browser tab title and favicon in sync with the active organisation.
+watchEffect(() => {
+  const org = orgContext.activeOrg
+  document.title = org ? `${org.name} · Badges` : 'Lyfter · Badges'
+
+  const faviconUrl = org?.theme?.logo_url || '/favicon.png'
+  let link = document.querySelector("link[rel='icon']")
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+  }
+  link.href = faviconUrl
+  link.type = faviconUrl === '/favicon.png' ? 'image/png' : 'image/x-icon'
+})
+
+// Load the platform/org context whenever the user is authenticated; clear on logout.
+watch(
+  () => auth.isAuthenticated,
+  (authed) => {
+    if (authed) { if (!orgContext.loaded) orgContext.load() }
+    else orgContext.reset()
+  },
+  { immediate: true },
+)
+
+// Auto-dismiss the offline-sync toast a few seconds after it appears.
+watch(
+  () => redeemQueue.syncMessage,
+  (msg) => {
+    if (msg) setTimeout(() => redeemQueue.clearMessage(), 4000)
+  },
+)
+
+// The admin/org panels hide the bottom bar and show a "Back to app" button instead.
+const isPanel = computed(
+  () => route.meta.requiresSuperAdmin || route.meta.requiresStaff || route.meta.requiresAdmin || route.meta.requiresOrgMember,
+)
+// Bottom tab bar shows only on authenticated participant screens (not the panel area).
+const showNav = computed(() => route.meta.requiresAuth && !isPanel.value)
+const showAdminClose = computed(() => isPanel.value)
+
+// Global colour adjustment (Settings → saturation/contrast). A fixed, click-through
+// backdrop-filter layer re-renders everything behind it — applying `filter` to an
+// ancestor instead would make the fixed BrandBackground scroll with the page.
+const filterActive = computed(() => settings.saturation !== 1 || settings.contrast !== 1)
+const filterCss = computed(() => `saturate(${settings.saturation}) contrast(${settings.contrast})`)
+
+// Content width by surface: panels go wide; the participant app gets a roomy desktop
+// column (paired with the side nav); auth/public screens span the full width.
+const contentMax = computed(() =>
+  isPanel.value
+    ? 'max-w-md lg:max-w-5xl xl:max-w-6xl'
+    : showNav.value
+      ? 'max-w-md md:max-w-3xl lg:max-w-7xl'
+      : 'max-w-none',
+)
+</script>
+
+<template>
+  <div class="min-h-dvh w-full">
+    <div
+      v-if="filterActive"
+      class="pointer-events-none fixed inset-0 z-[45]"
+      aria-hidden="true"
+      :style="{ backdropFilter: filterCss, WebkitBackdropFilter: filterCss }"
+    />
+    <BrandBackground />
+    <div class="relative z-10 flex min-h-dvh w-full">
+      <SideNav v-if="showNav" />
+      <div class="flex min-h-dvh min-w-0 flex-1 flex-col bg-base-200/30">
+        <main class="flex-1" :class="(showNav || showAdminClose) ? 'pb-24 lg:pb-8' : ''">
+          <div class="mx-auto w-full" :class="contentMax">
+            <RouterView v-slot="{ Component }">
+              <transition name="screen" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </RouterView>
+          </div>
+        </main>
+        <NavBar v-if="showNav" class="lg:hidden" />
+      <div v-if="showAdminClose" class="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
+        <div class="mx-auto max-w-md flex justify-center pb-4 anim-rise">
+          <div class="relative">
+            <!-- Ambient glow orb behind the button -->
+            <div class="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-xl" aria-hidden="true" />
+            <button
+              class="surface relative overflow-hidden flex items-center gap-2.5 rounded-full border-primary/30 px-6 py-3 shadow-2xl shadow-black/50 tap-target anim-pulse-glow transition-all duration-150 active:scale-95"
+              @click="router.push('/')"
+            >
+              <!-- Shimmer sweep using the existing shine keyframe -->
+              <span
+                class="pointer-events-none absolute inset-0 rounded-full"
+                style="background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.08) 50%, transparent 65%); animation: shine 3.5s ease-in-out 1s infinite;"
+                aria-hidden="true"
+              />
+              <svg
+                class="relative h-4 w-4 text-primary drop-shadow-[0_0_8px_rgba(45,212,191,0.9)]"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              >
+                <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span class="relative text-sm font-semibold text-primary">Back to app</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Full-screen streak-up celebration (teleports to <body>; plays over any screen) -->
+    <StreakUpOverlay />
+
+    <!-- Offline-sync toast -->
+    <transition name="screen">
+      <div
+        v-if="redeemQueue.syncMessage"
+        class="fixed inset-x-0 bottom-24 z-[55] flex justify-center px-4"
+        role="status"
+      >
+        <div class="surface flex items-center gap-2 rounded-full px-4 py-2 text-sm shadow-2xl shadow-black/40">
+          <span class="text-base">✅</span>
+          {{ redeemQueue.syncMessage }}
+        </div>
+      </div>
+    </transition>
+  </div>
+</template>

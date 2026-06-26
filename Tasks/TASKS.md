@@ -5,6 +5,20 @@
 
 ---
 
+## ✅ Frontend — DONE (2026-06-16)
+
+The Vue 3 + Tailwind/DaisyUI mobile-first PWA is built and lives in `frontend/`. All FE
+implementation tasks (Week 2 + Week 3) are complete: auth, role-based routing + guards,
+home dashboard, in-app QR scanner with auto-redeem + celebration, badge gallery with
+sharing, events list + detail with progress/prize, public redeem flow, profile, and the
+full admin panel (create event → mint badge → inline QR + download → live redemption
+counts). Boots demoable out of the box (`VITE_USE_MOCK=true`); point `VITE_API_URL` at the
+Flask API and set `VITE_USE_MOCK=false` to use the real backend. Production build + PWA
+(manifest + service worker + icons) verified. Remaining FE items are deployment-only
+(`W3-WED-FE-01/02/03`) and the live end-to-end test, which need the deployed backend.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -148,11 +162,11 @@ TokenTeamW/
 - [ ] **W2-MON-BE-06** Install all backend dependencies (Flask, PyJWT, PyMongo, qrcode, etc.)
 
 **Frontend**
-- [ ] **W2-MON-FE-01** Initialize Vue project
-- [ ] **W2-MON-FE-02** Install Tailwind CSS + DaisyUI
-- [ ] **W2-MON-FE-03** Configure frontend `.env` variables
-- [ ] **W2-MON-FE-04** Set up frontend folder structure (`views/`, `components/`)
-- [ ] **W2-MON-FE-05** Verify blank screen runs in local — project boots without errors
+- [x] **W2-MON-FE-01** Initialize Vue project
+- [x] **W2-MON-FE-02** Install Tailwind CSS + DaisyUI
+- [x] **W2-MON-FE-03** Configure frontend `.env` variables
+- [x] **W2-MON-FE-04** Set up frontend folder structure (`views/`, `components/`)
+- [x] **W2-MON-FE-05** Verify blank screen runs in local — project boots without errors
 
 ---
 
@@ -167,13 +181,13 @@ TokenTeamW/
 - [ ] **W2-TUE-BE-06** `POST /admin/event` — create event with name, description, dates, prize (admin only)
 
 **Frontend**
-- [ ] **W2-TUE-FE-01** Register screen — form with all user fields
-- [ ] **W2-TUE-FE-02** Login screen — email + password form
-- [ ] **W2-TUE-FE-03** Save JWT in `localStorage` after login
-- [ ] **W2-TUE-FE-04** Redirect by role on login (admin → admin panel, attendee → events)
-- [ ] **W2-TUE-FE-05** Create event view (admin) — form with name, description, dates, prize
-- [ ] **W2-TUE-FE-06** Event list view — show active events
-- [ ] **W2-TUE-FE-07** Form validation on register and login
+- [x] **W2-TUE-FE-01** Register screen — form with all user fields
+- [x] **W2-TUE-FE-02** Login screen — email + password form
+- [x] **W2-TUE-FE-03** Save JWT in `localStorage` after login
+- [x] **W2-TUE-FE-04** Redirect by role on login (admin → admin panel, attendee → events)
+- [x] **W2-TUE-FE-05** Create event view (admin) — form with name, description, dates, prize
+- [x] **W2-TUE-FE-06** Event list view — show active events
+- [x] **W2-TUE-FE-07** Form validation on register and login
 
 ---
 
@@ -184,9 +198,9 @@ TokenTeamW/
 - [ ] **W2-WED-BE-02** `GET /events/<id>` — event detail with badge list and prize (authenticated)
 
 **Frontend**
-- [ ] **W2-WED-FE-01** Add badge to event view — form with badge name, description, image
-- [ ] **W2-WED-FE-02** Show generated QR on screen after badge creation
-- [ ] **W2-WED-FE-03** Download and print button for the QR
+- [x] **W2-WED-FE-01** Add badge to event view — form with badge name, description, image
+- [x] **W2-WED-FE-02** Show generated QR on screen after badge creation
+- [x] **W2-WED-FE-03** Download and print button for the QR
 
 ---
 
@@ -196,10 +210,10 @@ TokenTeamW/
 - [ ] **W2-THU-BE-01** `GET /redeem/<event_id>/<token>` — validate token, verify not already redeemed, register badge for user, detect if user completed all event badges
 
 **Frontend**
-- [ ] **W2-THU-FE-01** Public redemption page (no login required to land on it)
-- [ ] **W2-THU-FE-02** Redirect to login if no active session, then back to redemption
-- [ ] **W2-THU-FE-03** Clear visual feedback on successful badge redemption
-- [ ] **W2-THU-FE-04** Special message if user completes all badges in the event
+- [x] **W2-THU-FE-01** Public redemption page (no login required to land on it)
+- [x] **W2-THU-FE-02** Redirect to login if no active session, then back to redemption
+- [x] **W2-THU-FE-03** Clear visual feedback on successful badge redemption
+- [x] **W2-THU-FE-04** Special message if user completes all badges in the event
 
 ---
 
@@ -209,10 +223,10 @@ TokenTeamW/
 - [ ] **W2-FRI-BE-01** `GET /me/badges` — all badges earned by the current user, grouped by event, including prize description on completion
 
 **Frontend**
-- [ ] **W2-FRI-FE-01** Badge profile view — show badges grouped by event
-- [ ] **W2-FRI-FE-02** Progress bar per event — how many badges earned vs total
-- [ ] **W2-FRI-FE-03** Congratulations message + prize reveal when event is completed
-- [ ] **W2-FRI-TEST-01** End-to-end test: create event → generate QR → scan → see badge in profile
+- [x] **W2-FRI-FE-01** Badge profile view — show badges grouped by event
+- [x] **W2-FRI-FE-02** Progress bar per event — how many badges earned vs total
+- [x] **W2-FRI-FE-03** Congratulations message + prize reveal when event is completed
+- [ ] **W2-FRI-TEST-01** End-to-end test: create event → generate QR → scan → see badge in profile _(FE side verified in demo/mock mode; full e2e pending live backend)_
 
 ---
 
@@ -224,7 +238,7 @@ TokenTeamW/
 - [ ] **W3-MON-BE-01** `GET /admin/events/<id>/badges` — list all badges for an event with QR and redemption status per attendee
 
 **Frontend**
-- [ ] **W3-MON-FE-01** Admin panel — event list with status and attendee list per event
+- [x] **W3-MON-FE-01** Admin panel — event list with status and attendee list per event
 
 ---
 
@@ -235,8 +249,8 @@ TokenTeamW/
 - [ ] **W3-TUE-BE-02** Improved error validation on all endpoints — clear error responses
 
 **Frontend**
-- [ ] **W3-TUE-FE-01** Visual indicator of how many badges were redeemed per event
-- [ ] **W3-TUE-FE-02** Error handling in UI — clear messages when something fails
+- [x] **W3-TUE-FE-01** Visual indicator of how many badges were redeemed per event
+- [x] **W3-TUE-FE-02** Error handling in UI — clear messages when something fails
 
 ---
 
@@ -248,9 +262,9 @@ TokenTeamW/
 - [ ] **W3-WED-BE-03** Verify QR codes point to the production domain
 
 **Frontend**
-- [ ] **W3-WED-FE-01** Deploy Vue frontend to Vercel
-- [ ] **W3-WED-FE-02** Set frontend environment variables in Vercel
-- [ ] **W3-WED-FE-03** Full flow test from production URL
+- [ ] **W3-WED-FE-01** Deploy Vue frontend to Vercel _(build + `vercel.json` rewrite ready; deploy not yet run)_
+- [ ] **W3-WED-FE-02** Set frontend environment variables in Vercel _(`.env.production` template ready)_
+- [ ] **W3-WED-FE-03** Full flow test from production URL _(pending deploy + live backend)_
 
 ---
 

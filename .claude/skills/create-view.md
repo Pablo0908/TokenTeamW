@@ -1,6 +1,6 @@
 ---
 name: create-view
-description: Create a Vue 3 view/page for this project. Use when the user asks to create a view, add a new page, or needs a route-level component such as Login, Home, Events, Badges, Scanner, or Admin.
+description: Create a route-level Vue 3 view for this project, wired into the router with the right auth meta. Use when the user asks for a new screen/page reachable by a URL.
 user-invocable: true
 allowed-tools:
   - Read
@@ -10,35 +10,41 @@ allowed-tools:
   - Grep
 ---
 
-# /create-view — Create a Vue 3 View
+# /create-view — Create a Route-Level View
 
-Create a Vue 3 view called `$ARGUMENTS`.
-
-Arguments passed: `$ARGUMENTS`
+Create a view called `$ARGUMENTS` in `src/views/` (or `src/views/admin/` for organizer screens).
 
 ## Mandatory rules
 
-- `<script setup>` with plain JavaScript, no TypeScript
-- File: `$ARGUMENTSView.vue` in `src/views/`
-- If auth is required, add meta `requiresAuth: true` in a top comment
-- If admin-only, add meta `requiresAdmin: true`
+- `<script setup>`, plain JavaScript, mobile-first
+- Views are **thin**: fetch through a Pinia store, render the result. No direct `axios`
+- Handle the three states explicitly: **loading**, **error** (via `AlertMessage`), **empty**
+- Base container is centered and mobile-first (the app shell already applies `max-w-md mx-auto`);
+  use `px-4` and top padding inside the view
+- Register the route in `src/router/index.js` with the correct `meta`:
+  - public: `meta: { public: true }`
+  - signed-in attendee: `meta: { requiresAuth: true }`
+  - organizer: `meta: { requiresAuth: true, requiresAdmin: true }`
+- Use lazy import in the router: `component: () => import('@/views/$ARGUMENTS.vue')`
 
-## Layout
+## Base structure
 
-- Background: `min-h-screen bg-base-300` or `bg-app-gradient`
-- Mobile container: `max-w-md mx-auto px-4 py-6`
-- DaisyUI for all elements: `card`, `btn`, `input`, `badge`, `alert`
-- Tailwind for spacing and structure
-- Mobile-first mandatory
+```vue
+<script setup>
+import { onMounted } from 'vue'
+import { useSomeStore } from '@/stores/some'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+import AlertMessage from '@/components/ui/AlertMessage.vue'
 
-## Imports to include based on the view's purpose
+const store = useSomeStore()
+onMounted(() => store.fetchAll())
+</script>
 
-- `import { useRouter } from 'vue-router'`
-- `import { useAuthStore } from '@/stores/auth'`
-- `import api from '@/services/api'`
-
-## API errors
-
-Always display `err.response?.data?.error ?? 'Unexpected error'`
-
-Infer content from the name: Login, Home, Events, Badges, Scanner, Admin, etc.
+<template>
+  <div class="space-y-5 px-4 pb-4 pt-6">
+    <AlertMessage type="warning" :message="store.error || ''" />
+    <LoadingSpinner v-if="store.loading" />
+    <!-- content -->
+  </div>
+</template>
+```

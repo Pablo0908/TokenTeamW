@@ -1,0 +1,157 @@
+import secrets
+from datetime import datetime, timezone
+
+from flask import Blueprint, request, jsonify
+
+from app import mongo
+from app.models import user as user_model
+from app.models import membership as membership_model
+from app.models import organization as org_model
+from app.utils.auth import jwt_required, hash_password, encode_token
+from app.utils.email import send_reset_email
+from app.routes.auth import _validate_password
+
+_CODE_TTL = 600
+_CODE_MAX_ATTEMPTS = 5
+
+# Current-user endpoints. /me/badges lives in badges.py; this owns /me/settings.
+me_bp = Blueprint("me", __name__, url_prefix="/me")
+
+
+@me_bp.route("/orgs", methods=["GET"])
+@jwt_required
+def my_orgs(current_user):
+    """The caller's platform tier + the orgs they belong to (with their role in each).
+    Drives the client's platform-vs-org panel split and the active-org switcher."""
+    actor = user_model.find_by_id(current_user["sub"])
+    orgs = []
+    for m in membership_model.list_for_user(current_user["sub"]):
+        org = org_model.find_by_id(m["org_id"])
+        if org:
+            orgs.append({
+                "id": str(org["_id"]),
+                "name": org.get("name", ""),
+                "slug": org.get("slug", ""),
+                "status": org.get("status", "active"),
+                "role": m.get("role"),
+                "theme": org.get("theme") or {},
+            })
+    return jsonify({
+        "platform_role": actor.get("platform_role") if actor else None,
+        "orgs": orgs,
+    }), 200
+
+
+@me_bp.route("/settings", methods=["GET"])
+@jwt_required
+def get_settings(current_user):
+    return jsonify(user_model.get_preferences(current_user["sub"])), 200
+
+
+@me_bp.route("/settings", methods=["PUT"])
+@jwt_required
+def put_settings(current_user):
+    body = request.get_json(silent=True) or {}
+    prefs = user_model.update_preferences(current_user["sub"], body)
+    if prefs is None:
+        return jsonify({"error": "User not found."}), 404
+    return jsonify(prefs), 200
+
+
+@me_bp.route("/profile", methods=["PATCH"])
+@jwt_required
+def update_profile(current_user):
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    lastname = (body.get("lastname") or "").strip()
+    if not name:
+        return jsonify({"error": "Name is required."}), 400
+    user_model.update_name(current_user["sub"], name, lastname)
+    return jsonify({"name": name, "lastname": lastname}), 200
+
+
+@me_bp.route("/avatar", methods=["PATCH"])
+@jwt_required
+def update_avatar(current_user):
+    body = request.get_json(silent=True) or {}
+    avatar_url = (body.get("avatar_url") or "").strip()
+    if avatar_url and len(avatar_url) > 2_000_000:
+        return jsonify({"error": "Image too large. Use a smaller image (under ~1.5 MB) or an external URL."}), 400
+    user_model.update_avatar(current_user["sub"], avatar_url or None)
+    return jsonify({"avatar_url": avatar_url or None}), 200
+
+
+@me_bp.route("/password/send-code", methods=["POST"])
+@jwt_required
+def send_change_password_code(current_user):
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+
+    user = user_model.find_by_id(current_user["sub"])
+    if not user or user["email"] != email:
+        return jsonify({"error": "Email does not match your account."}), 403
+
+    code = str(secrets.randbelow(1_000_000)).zfill(6)
+    mongo.db.change_pwd_codes.replace_one(
+        {"user_id": current_user["sub"]},
+        {
+            "user_id": current_user["sub"],
+            "email": email,
+            "code": code,
+            "attempts": 0,
+            "created_at": datetime.now(timezone.utc),
+        },
+        upsert=True,
+    )
+    try:
+        send_reset_email(email, code)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("Failed to send change-pwd email to %s: %s", email, exc)
+
+    return jsonify({"message": "Verification code sent."}), 200
+
+
+@me_bp.route("/password", methods=["PUT"])
+@jwt_required
+def change_password(current_user):
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    code = (body.get("code") or "").strip()
+    new_pwd = body.get("new_password") or ""
+
+    if not email or not code or not new_pwd:
+        return jsonify({"error": "Email, code and new password are required."}), 400
+
+    user = user_model.find_by_id(current_user["sub"])
+    if not user or user["email"] != email:
+        return jsonify({"error": "Email does not match your account."}), 403
+
+    doc = mongo.db.change_pwd_codes.find_one({"user_id": current_user["sub"]})
+    if not doc:
+        return jsonify({"error": "Code expired or not found. Request a new one."}), 400
+
+    if doc.get("attempts", 0) >= _CODE_MAX_ATTEMPTS:
+        mongo.db.change_pwd_codes.delete_one({"user_id": current_user["sub"]})
+        return jsonify({"error": "Too many incorrect attempts. Request a new code."}), 400
+
+    if doc["code"] != code:
+        mongo.db.change_pwd_codes.update_one({"user_id": current_user["sub"]}, {"$inc": {"attempts": 1}})
+        left = _CODE_MAX_ATTEMPTS - doc.get("attempts", 0) - 1
+        return jsonify({"error": f"Incorrect code — {left} attempt(s) remaining."}), 400
+
+    mongo.db.change_pwd_codes.delete_one({"user_id": current_user["sub"]})
+
+    pwd_error = _validate_password(new_pwd)
+    if pwd_error:
+        return jsonify({"error": pwd_error}), 400
+
+    user_model.update_password(current_user["sub"], hash_password(new_pwd))
+    # update_password bumped token_version (revoking other sessions). Hand the current
+    # device a fresh token so it stays signed in.
+    fresh = user_model.find_by_id(current_user["sub"])
+    new_token = encode_token(current_user["sub"], fresh.get("role", "attendee"), fresh.get("token_version", 0))
+    return jsonify({"message": "Password updated successfully.", "token": new_token}), 200

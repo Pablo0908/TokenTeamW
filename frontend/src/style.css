@@ -1,0 +1,555 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  height: 100%;
+  /* Solid root canvas: any area not covered by content (overscroll bounce, the
+     region past the last screen) is always this dark tone — never a brighter
+     cut-off. The decorative gradient lives on the fixed BrandBackground layer,
+     which reliably covers the viewport at every scroll position. */
+  background-color: #090b11;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  /* Gotham (brand body) -> Montserrat stand-in. */
+  font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  color: theme('colors.base-content');
+  background-color: #090b11;
+  overscroll-behavior: none; /* no rubber-band overscroll revealing the canvas */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  min-height: 100%;
+}
+
+/* Newake (brand display) -> Space Grotesk stand-in, used for titles and the wordmark. */
+h1,
+h2,
+.font-display {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+@layer components {
+  /* Minimum 44x44 tap target (PRD mobile rule). */
+  .tap-target {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center;
+  }
+  /* Frosted surface used by cards and the bottom nav. */
+  .surface {
+    @apply rounded-3xl border border-base-300/60 bg-base-100/70 backdrop-blur;
+  }
+  .surface-soft {
+    @apply rounded-2xl border border-base-300/50 bg-base-100/50;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY SETTINGS
+   ============================================================ */
+
+/* Dyslexia-friendly font — Atkinson Hyperlegible loaded in index.html */
+html.dyslexia-font,
+html.dyslexia-font body,
+html.dyslexia-font input,
+html.dyslexia-font button,
+html.dyslexia-font select,
+html.dyslexia-font textarea {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif !important;
+}
+html.dyslexia-font h1,
+html.dyslexia-font h2,
+html.dyslexia-font .font-display {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+/* Increased line spacing */
+html.line-spacing body,
+html.line-spacing p,
+html.line-spacing span,
+html.line-spacing label,
+html.line-spacing li {
+  line-height: 1.9 !important;
+}
+
+/* Bold text mode */
+html.bold-text body { font-weight: 600; }
+html.bold-text h1, html.bold-text h2 { font-weight: 800; }
+html.bold-text .font-medium { font-weight: 700 !important; }
+
+/* High contrast mode — remove blur, boost borders, full opacity on muted text */
+html.high-contrast .surface {
+  background: hsl(var(--b1)) !important;
+  border-color: hsl(var(--bc) / 0.7) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.high-contrast .surface-soft {
+  background: hsl(var(--b2)) !important;
+  border: 1px solid hsl(var(--bc) / 0.5) !important;
+}
+html.high-contrast [class*="text-base-content/"] {
+  opacity: 1 !important;
+  color: hsl(var(--bc)) !important;
+}
+html.high-contrast [class*="bg-base-100/"],
+html.high-contrast [class*="bg-base-200/"],
+html.high-contrast [class*="bg-base-300/"] {
+  background-color: hsl(var(--b2)) !important;
+}
+
+/* Color-blind safe palette — deuteranopia shift */
+html.color-blind body {
+  filter: hue-rotate(-20deg) saturate(1.4);
+}
+
+/* Large tap targets */
+html.large-targets .tap-target {
+  min-height: 3.75rem !important;
+  min-width:  3.75rem !important;
+}
+html.large-targets .btn { min-height: 3rem !important; }
+
+/* Focus highlight ring */
+html.focus-highlight *:focus-visible {
+  outline: 3px solid hsl(var(--p)) !important;
+  outline-offset: 3px !important;
+  border-radius: 6px !important;
+}
+
+
+/* Accordion reveal */
+@keyframes accReveal {
+  0%   { opacity: 0; transform: translateY(-18px) scaleY(0.85); filter: blur(8px); transform-origin: top; }
+  55%  { filter: blur(0); }
+  75%  { transform: translateY(4px) scaleY(1.02); transform-origin: top; }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); filter: blur(0); transform-origin: top; }
+}
+
+/* Greeting emoji swap */
+.emoji-enter-active {
+  animation: emojiIn 0.4s cubic-bezier(0.34, 1.6, 0.64, 1) both;
+}
+.emoji-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.emoji-leave-to {
+  opacity: 0;
+  transform: scale(0.4) translateY(-6px);
+}
+@keyframes emojiIn {
+  from { opacity: 0; transform: scale(0.3) translateY(10px) rotate(-15deg); }
+  to   { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
+}
+
+/* Route transition — the prototype's screen-in entry on every navigation. */
+.screen-enter-active {
+  animation: screenIn 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.screen-leave-active {
+  transition: opacity 0.12s ease;
+}
+.screen-leave-to {
+  opacity: 0;
+}
+
+/* --- Brand entry animations (from the Lyfter prototype) --- */
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(113, 206, 255, 0.45); }
+  50% { box-shadow: 0 0 0 12px rgba(113, 206, 255, 0); }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -7px, 0); }
+}
+
+.anim-screen-in { animation: screenIn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-pop { animation: pop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-pulse-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
+/* Gentle idle bob — used on the auth-screen logo. The lockup (isotipo + wordmark)
+   is promoted to its own GPU layer so it floats as one solid object: no per-frame
+   text re-rasterization, no subpixel shimmer or jitter. */
+.anim-float {
+  animation: floatY 3.2s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter-active {
+    animation: none;
+  }
+  .screen-leave-active {
+    transition: none;
+  }
+  .anim-screen-in,
+  .anim-rise,
+  .anim-pop,
+  .anim-pulse-glow,
+  .anim-float {
+    animation: none;
+  }
+}
+
+/* --- Settings: "extra effects" off --- */
+/* Mirrors the reduced-motion behaviour on demand: stop entrance/idle animations, the
+   animated brand backdrop, falling glyphs and confetti. The static layout stays intact. */
+html.fx-off .screen-enter-active,
+html.fx-off .anim-screen-in,
+html.fx-off .anim-rise,
+html.fx-off .anim-pop,
+html.fx-off .anim-pulse-glow,
+html.fx-off .anim-float,
+html.fx-off .grid-pan,
+html.fx-off .orb,
+html.fx-off .glyph,
+html.fx-off .star {
+  animation: none !important;
+}
+html.fx-off .screen-leave-active {
+  transition: none;
+}
+html.fx-off .glyph {
+  opacity: 0;
+}
+html.fx-off .confetti-piece {
+  display: none;
+}
+
+/* --- Badge detail polish: tilt, 3D flip, shine sweep --- */
+.badge-tilt {
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (hover: hover) {
+  .badge-tilt:hover {
+    transform: perspective(500px) rotateX(7deg) translateY(-2px);
+  }
+}
+
+.flip-card {
+  perspective: 900px;
+}
+.flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-inner {
+  transform: rotateY(180deg);
+}
+.flip-front,
+.flip-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 9999px;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+.badge-shine {
+  position: relative;
+  overflow: hidden;
+}
+.badge-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  transform: translateX(-130%);
+  animation: shine 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes shine {
+  0%, 55% { transform: translateX(-130%); }
+  80%, 100% { transform: translateX(130%); }
+}
+
+/* Catchy periodic glare sweep for a call-to-action button (e.g. Sign in).
+   The button must clip the overlay; pointer-events stay on the button itself. */
+.btn-flash {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Wider, softer glint band reads as a smoother sweep. */
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+  transform: translateX(-160%);
+  /* Slower + gentler than the badge shine; the sweep eases over ~45% of the
+     cycle and rests off-screen the rest of the time. */
+  animation: btnFlash 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes btnFlash {
+  0%, 55% { transform: translateX(-160%); }
+  100% { transform: translateX(160%); }
+}
+
+/* Soft, breathing glow for text links — coloured from the DaisyUI primary token
+   (hsl(var(--p))) so it always matches the link's own text colour. */
+@keyframes linkGlow {
+  0%, 100% {
+    text-shadow: 0 0 5px hsl(var(--p) / 0.6), 0 0 10px hsl(var(--p) / 0.35);
+  }
+  50% {
+    text-shadow:
+      0 0 6px hsl(var(--p) / 1),
+      0 0 14px hsl(var(--p) / 0.9),
+      0 0 24px hsl(var(--p) / 0.65);
+  }
+}
+.link-glow { animation: linkGlow 2.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-tilt,
+  .flip-inner { transition: none; }
+  .badge-shine::after,
+  .btn-flash::after { animation: none; display: none; }
+  .link-glow { animation: none; text-shadow: none; }
+}
+html.fx-off .badge-shine::after,
+html.fx-off .btn-flash::after { animation: none; display: none; }
+html.fx-off .link-glow { animation: none; text-shadow: none; }
+html.fx-off .flip-inner { transition: none; }
+
+/* --- Settings: light mode --- */
+/* The dark canvas tones live on <html>/<body> and the fixed BrandBackground gradient;
+   override them for the opt-in light theme (DaisyUI swaps the component palette). */
+html.theme-light,
+html.theme-light body {
+  background-color: #eef1f6;
+}
+html.theme-light .bg {
+  background:
+    radial-gradient(1100px 600px at 50% -10%, #cfe2fb 0%, rgba(207, 226, 251, 0) 60%),
+    radial-gradient(900px 520px at 100% 110%, #ecdcf7 0%, rgba(236, 220, 247, 0) 55%),
+    linear-gradient(180deg, #f7f9fd 0%, #e9edf5 100%);
+}
+html.theme-light .grid-pan {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+/* Same ambient effects as dark mode, re-inked for a light canvas: the orbs glow
+   stronger, white stars become slate, and the pastel code glyphs are darkened/saturated
+   so they read against white (their per-glyph hues are preserved). */
+html.theme-light .orb {
+  opacity: 0.55;
+}
+html.theme-light .orb-c,
+html.theme-light .orb-d {
+  opacity: 0.42;
+}
+html.theme-light .star {
+  background: #5b6b8c;
+}
+html.theme-light .glyph {
+  filter: saturate(1.5) brightness(0.6);
+}
+
+/* ============================================================
+   WELCOME MODAL (LanguageModal)
+   ============================================================ */
+
+/* Overlay fade */
+.welcome-overlay-enter-active { transition: opacity 0.35s ease; }
+.welcome-overlay-leave-active  { transition: opacity 0.2s ease; }
+.welcome-overlay-enter-from,
+.welcome-overlay-leave-to      { opacity: 0; }
+
+/* Deep blurred tinted backdrop */
+.welcome-backdrop {
+  background: rgba(4, 6, 14, 0.86);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Ambient orbs — brand colours bleeding through the blur */
+.welcome-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: welcomeFloat 7s ease-in-out infinite;
+}
+.welcome-orb-a {
+  width: 380px; height: 380px;
+  top: -130px; left: -90px;
+  background: radial-gradient(circle, rgba(113, 206, 255, 0.30) 0%, transparent 70%);
+}
+.welcome-orb-b {
+  width: 320px; height: 320px;
+  bottom: -100px; right: -70px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.24) 0%, transparent 70%);
+  animation-delay: -3.5s;
+}
+@keyframes welcomeFloat {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50%       { transform: scale(1.08) translateY(-20px); }
+}
+
+/* Card: spring-like entrance from scale(0.92) */
+@keyframes welcomeCardIn {
+  from { transform: scale(0.92) translateY(18px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+/* Logo: overshoot pop */
+@keyframes welcomeLogoIn {
+  0%   { transform: scale(0.35); opacity: 0; }
+  65%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+/* Content stagger: gentle rise */
+@keyframes welcomeRise {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+/* One-shot shimmer sweep */
+@keyframes welcomeShimmerSweep {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+
+/* Wire animations to the Vue transition enter phase */
+.welcome-overlay-enter-active .welcome-card {
+  animation: welcomeCardIn 0.65s cubic-bezier(0.34, 1.15, 0.64, 1) both;
+}
+.welcome-overlay-enter-active .welcome-logo {
+  animation: welcomeLogoIn 0.75s cubic-bezier(0.34, 1.5, 0.64, 1) 80ms both;
+}
+.welcome-overlay-enter-active .welcome-stagger-1 {
+  animation: welcomeRise 0.5s cubic-bezier(0.23, 1, 0.32, 1) 170ms both;
+}
+.welcome-overlay-enter-active .welcome-stagger-2 {
+  animation: welcomeRise 0.5s cubic-bezier(0.23, 1, 0.32, 1) 250ms both;
+}
+.welcome-overlay-enter-active .welcome-stagger-3 {
+  animation: welcomeRise 0.5s cubic-bezier(0.23, 1, 0.32, 1) 330ms both;
+}
+
+/* Shimmer: runs once, 0.7s after card enters */
+.welcome-shimmer {
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.065) 50%,
+    transparent 70%
+  );
+  animation: welcomeShimmerSweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.7s 1 both;
+}
+
+/* ============================================================
+   COACHMARK TRANSITION
+   ============================================================ */
+.coachmark-enter-active {
+  transition: transform 300ms cubic-bezier(0.34, 1.2, 0.64, 1),
+              opacity   220ms ease-out;
+}
+.coachmark-enter-from {
+  transform: scale(0.88) translateY(-8px);
+  opacity: 0;
+}
+.coachmark-leave-active {
+  transition: transform 140ms ease-in, opacity 120ms ease-in;
+}
+.coachmark-leave-to {
+  transform: scale(0.9) translateY(-4px);
+  opacity: 0;
+}
+
+/* ============================================================
+   TUTORIAL BACKDROP (dims page during coachmark steps)
+   ============================================================ */
+.tutorial-fade-enter-active { transition: opacity 300ms ease; }
+.tutorial-fade-leave-active { transition: opacity 220ms ease; }
+.tutorial-fade-enter-from,
+.tutorial-fade-leave-to     { opacity: 0; }
+
+/* ============================================================
+   APP PREVIEW (landing + auth hero phone mockups)
+   ============================================================ */
+@keyframes float-a {
+  0%, 100% { transform: translateY(0px) rotate(-3deg); }
+  50% { transform: translateY(-16px) rotate(-3deg); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translateY(0px) rotate(3deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+@keyframes float-c {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-20px) rotate(-1deg); }
+}
+@keyframes pulse-orb {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.06); }
+}
+@keyframes scan-line { 0% { top: 14%; } 100% { top: 80%; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes streak-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,212,193,0.3), 0 0 60px rgba(0,212,193,0.1); }
+  50% { box-shadow: 0 0 30px rgba(0,212,193,0.6), 0 0 80px rgba(0,212,193,0.2); }
+}
+
+/* ============================================================
+   REDUCED MOTION + FX-OFF
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .app-preview * { animation: none !important; }
+  .welcome-orb, .welcome-shimmer { animation: none; }
+  .welcome-overlay-enter-active .welcome-card,
+  .welcome-overlay-enter-active .welcome-logo,
+  .welcome-overlay-enter-active .welcome-stagger-1,
+  .welcome-overlay-enter-active .welcome-stagger-2,
+  .welcome-overlay-enter-active .welcome-stagger-3 { animation: none; }
+  .coachmark-enter-active, .coachmark-leave-active { transition: none; }
+}
+html.fx-off .app-preview * { animation: none !important; }
+html.fx-off .welcome-orb,
+html.fx-off .welcome-shimmer { animation: none !important; }
+html.fx-off .welcome-overlay-enter-active .welcome-card,
+html.fx-off .welcome-overlay-enter-active .welcome-logo,
+html.fx-off .welcome-overlay-enter-active .welcome-stagger-1,
+html.fx-off .welcome-overlay-enter-active .welcome-stagger-2,
+html.fx-off .welcome-overlay-enter-active .welcome-stagger-3 { animation: none !important; }
+html.fx-off .coachmark-enter-active,
+html.fx-off .coachmark-leave-active { transition: none !important; }

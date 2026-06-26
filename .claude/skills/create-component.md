@@ -14,43 +14,40 @@ allowed-tools:
 
 Create a Vue 3 component called `$ARGUMENTS`.
 
-Arguments passed: `$ARGUMENTS`
-
 ## Mandatory rules
 
-- `<script setup>` with plain JavaScript, no TypeScript
+- `<script setup>` with plain JavaScript — no TypeScript, no Options API
 - File in PascalCase: `$ARGUMENTS.vue`
-- Location: `src/components/ui/` if generic, `src/components/domain/` if business-specific
-- Props with `defineProps`, emits with `defineEmits`
+- Location: `src/components/ui/` if generic (NavBar, AlertMessage, LoadingSpinner),
+  `src/components/domain/` if business-specific (BadgeCard, EventCard, ProgressBar, QRDisplay)
+- Props with `defineProps`, events with `defineEmits` — never mutate props
+- Keep it under ~150 lines; one responsibility per component
+- Receive data via props; do not fetch the API from a component (views/stores do that)
 
-## Styles
+## Styles (mobile-first)
 
-- DaisyUI first: `btn`, `card`, `badge`, `input`, `alert` as appropriate
-- Tailwind for layout and spacing: `flex`, `gap-4`, `p-4`, etc.
-- Dark theme colors: `bg-base-100`, `bg-base-200`, `text-base-content`
-- Do not use fixed colors like `bg-blue-500` if DaisyUI already covers them
-- Mobile-first: design for mobile first, then `sm:` and `md:` for larger screens
+- DaisyUI first: `btn`, `card`, `badge`, `input`, `alert`, `progress`, `modal`
+- Tailwind for layout/spacing: `flex`, `gap-4`, `p-4`, `max-w-md`
+- Dark theme tokens only: `bg-base-100/200/300`, `text-base-content`, semantic
+  `primary`/`secondary`/`accent`/`success`/`info`/`warning`/`error`
+- Never hardcode colors like `bg-blue-500` where a DaisyUI token exists
+- Tap targets ≥ 44×44 px — add the `tap-target` utility on interactive elements
+- When mapping a dynamic color to a class, use a static lookup object (full class
+  strings) so Tailwind's purge keeps them
 
 ## Base structure
 
 ```vue
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps({
-  // props based on context
+  // ...
 })
-
-const emit = defineEmits([/* events based on context */])
+defineEmits(['select'])
 </script>
 
 <template>
-  <!-- DaisyUI + Tailwind, dark theme -->
+  <!-- mobile-first markup -->
 </template>
-
-<style scoped>
-/* only if Tailwind/DaisyUI is not enough */
-</style>
 ```
-
-Infer props and emits from the component name and project context: badges, events, QR, users, admin/assistant roles.
