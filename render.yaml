@@ -1,0 +1,47 @@
+# Render Blueprint for the TokenTeamW Flask backend.
+# Render builds from GitHub (branch: main). Secrets are set in the dashboard
+# (sync: false) — never committed here. See docs/DEPLOYMENT.md.
+services:
+  - type: web
+    name: tokenteamw-api
+    runtime: python
+    rootDir: backend
+    plan: free            # free spins down after ~15 min idle (cold start ~30-60s).
+                          # For true always-on, change to: starter  (paid).
+    branch: main
+    autoDeploy: true
+    # gunicorn MUST bind to Render's injected $PORT, else the port isn't detected.
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION       # pin a Render-supported version (local dev uses 3.14)
+        value: "3.12.8"
+      - key: FLASK_ENV
+        value: production
+      - key: DB_NAME              # prod reuses the dev database (decision 2026-06-26)
+        value: beeworking
+      - key: JWT_EXPIRY_HOURS
+        value: "8"
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_FROM
+        value: "Lyfter <lyfterbadges@gmail.com>"
+      # --- secrets / environment-specific: set these in the Render dashboard ---
+      - key: MONGO_URI            # the Atlas SRV string (same cluster as dev)
+        sync: false
+      - key: JWT_SECRET           # FRESH production value (see secrets handed over in chat)
+        sync: false
+      - key: SECRET_KEY           # FRESH production value
+        sync: false
+      - key: FRONTEND_URL         # the Vercel URL, once known (Stage 6)
+        sync: false
+      - key: CORS_ORIGINS         # the Vercel origin ONLY (no localhost)
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      # GOOGLE_CLIENT_ID intentionally omitted — Google sign-in is optional/disabled.
