@@ -35,15 +35,13 @@ onMounted(async () => {
   if (!badges.loaded) badges.fetchMyBadges()
   badges.fetchStreak()
   if (!events.loaded) events.fetchEvents()
-  // Load announcements, then mark them seen shortly after so the unread markers are
-  // visible on arrival but clear for the next visit.
   await announcements.fetchAnnouncements()
-  if (announcements.hasUnread) setTimeout(() => announcements.markSeen(), 2500)
   // Replay the first-run greeting + tutorial on demand (e.g. for a demo/test).
   if (route.query.welcome === '1') onboarding.forceStart(auth.user?.id)
 })
 
 function openAnnouncement(a) {
+  announcements.markSeen()
   if (a.event_id) router.push(`/events/${a.event_id}`)
 }
 
