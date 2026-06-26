@@ -3,6 +3,7 @@ import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/ui/NavBar.vue'
 import BrandBackground from '@/components/ui/BrandBackground.vue'
+import StreakUpOverlay from '@/components/domain/StreakUpOverlay.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useRedeemQueueStore } from '@/stores/redeemQueue'
 import { useAuthStore } from '@/stores/auth'
@@ -93,6 +94,9 @@ const filterCss = computed(() => `saturate(${settings.saturation}) contrast(${se
         </div>
       </div>
     </div>
+
+    <!-- Full-screen streak-up celebration (teleports to <body>; plays over any screen) -->
+    <StreakUpOverlay />
 
     <!-- Offline-sync toast -->
     <transition name="screen">
