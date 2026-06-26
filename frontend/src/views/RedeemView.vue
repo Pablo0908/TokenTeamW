@@ -71,7 +71,7 @@ onMounted(() => {
 
     <LoadingSpinner v-if="state === 'working'" :label="$t('redeem.working')" />
 
-    <div v-else class="flex w-full flex-col items-center gap-5">
+    <div v-else class="mx-auto flex w-full max-w-md flex-col items-center gap-5">
       <div
         class="grid h-28 w-28 place-items-center rounded-full text-6xl shadow-2xl"
         :class="{

@@ -140,7 +140,7 @@ async function downloadCard(badge) {
 </script>
 
 <template>
-  <div class="space-y-6 px-4 pb-4 pt-6">
+  <div class="space-y-6 px-4 lg:px-8 pb-4 pt-6">
     <!-- Header -->
     <header class="flex items-start justify-between">
       <div>
@@ -183,7 +183,7 @@ async function downloadCard(badge) {
     <!-- Stats -->
     <section class="space-y-3">
       <StreakCard :value="streak" :label="$t('home.streak')" />
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" :label="$t('home.badges')" tone="primary" />
         <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" :label="$t('home.events')" tone="secondary" />
       </div>
@@ -243,7 +243,7 @@ async function downloadCard(badge) {
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      <div v-show="!annCollapsed" class="space-y-2">
+      <div v-show="!annCollapsed" class="grid grid-cols-1 gap-2 md:grid-cols-2">
         <component
           :is="a.event_id ? 'button' : 'div'"
           v-for="a in announcements.items"
@@ -299,7 +299,7 @@ async function downloadCard(badge) {
             />
           </transition>
         </div>
-        <div v-if="previewBadges.length" class="grid grid-cols-4 gap-2.5">
+        <div v-if="previewBadges.length" class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
           <BadgeCard v-for="b in previewBadges" :key="b.id" :badge="b" clickable @select="openBadge(b)" />
         </div>
         <p v-else class="text-sm text-base-content/50">{{ $t('home.noBadges') }}</p>
@@ -322,7 +322,7 @@ async function downloadCard(badge) {
             />
           </transition>
         </div>
-        <div class="space-y-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <EventCard
             v-for="ev in previewEvents"
             :key="ev.id"

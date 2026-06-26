@@ -59,7 +59,7 @@ function accAfterLeave(el) {
 </script>
 
 <template>
-  <div class="space-y-6 px-4 pb-4 pt-6">
+  <div class="mx-auto w-full max-w-2xl space-y-6 px-4 pb-4 pt-6 lg:px-8">
     <!-- Profile Settings nav card -->
     <section class="space-y-2">
       <h2 class="font-semibold">{{ $t('settings.profileSettings') }}</h2>

@@ -189,7 +189,7 @@ onUnmounted(clearOrgTheme)
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <header>
       <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('org.eyebrow') }}</p>
       <div class="flex items-center gap-2">
@@ -214,7 +214,7 @@ onUnmounted(clearOrgTheme)
       </select>
     </header>
 
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <template v-for="t in TABS" :key="t.key">
         <button v-if="t.show" role="tab" class="tab" :class="{ 'tab-active': tab === t.key }" @click="go(t.key)">{{ t.label }}</button>
       </template>
@@ -315,7 +315,7 @@ onUnmounted(clearOrgTheme)
         <button v-if="isAdmin" class="btn btn-primary btn-sm tap-target" @click="showNewEvent = !showNewEvent">
           {{ showNewEvent ? $t('common.cancel') : $t('org.newEvent') }}
         </button>
-        <div v-if="showNewEvent" class="surface space-y-2 p-4">
+        <div v-if="showNewEvent" class="surface space-y-2 p-4 mx-auto w-full max-w-2xl">
           <input v-model="newEvent.name" :placeholder="$t('org.eventName')" class="input input-bordered input-sm w-full bg-base-100/70" />
           <textarea v-model="newEvent.description" rows="2" :placeholder="$t('admin.eventNew.descriptionLabel')" class="textarea textarea-bordered textarea-sm w-full bg-base-100/70" />
           <select v-model="newEvent.event_type" class="select select-bordered select-sm w-full bg-base-100/70">
@@ -339,6 +339,7 @@ onUnmounted(clearOrgTheme)
           <p class="text-[0.7rem] text-base-content/55">{{ $t('org.startsClosed') }}</p>
           <button class="btn btn-primary btn-sm w-full" @click="createEvent">{{ $t('org.createEvent') }}</button>
         </div>
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         <button
           v-for="ev in events"
           :key="ev.id"
@@ -353,21 +354,22 @@ onUnmounted(clearOrgTheme)
             <svg class="h-4 w-4 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>
           </div>
         </button>
+        </div>
         <p v-if="!events.length" class="surface p-6 text-center text-sm text-base-content/50">{{ $t('org.noEventsYet') }}</p>
       </section>
 
       <!-- VERIFIER (staff+) — scan an attendee's prize-claim QR and hand over the prize. -->
-      <section v-else-if="tab === 'verifier'" class="surface p-4">
+      <section v-else-if="tab === 'verifier'" class="surface p-4 mx-auto w-full max-w-2xl">
         <VerifierPanel />
       </section>
 
       <!-- MEMBERS -->
       <section v-else-if="tab === 'members'" class="space-y-4">
-        <div class="surface flex gap-2 p-4">
+        <div class="surface flex gap-2 p-4 mx-auto w-full max-w-2xl">
           <input v-model="inviteEmail" type="email" :placeholder="$t('org.invitePlaceholder')" class="input input-bordered input-sm flex-1 bg-base-100/70" />
           <button class="btn btn-primary btn-sm" @click="sendInvite">{{ $t('org.invite') }}</button>
         </div>
-        <div class="space-y-2">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-3">
           <div v-for="m in members" :key="m.user_id" class="surface flex items-center justify-between gap-2 p-3">
             <div class="min-w-0"><p class="truncate text-sm font-medium">{{ m.name }} {{ m.lastname }}</p>
               <p class="truncate text-[0.7rem] text-base-content/45">{{ m.email }}</p></div>
@@ -395,8 +397,9 @@ onUnmounted(clearOrgTheme)
           v-model="participantSearch"
           type="search"
           :placeholder="$t('org.searchPeople')"
-          class="input input-bordered input-sm w-full bg-base-100/70"
+          class="input input-bordered input-sm w-full bg-base-100/70 lg:max-w-md"
         />
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3 lg:gap-3">
         <div v-for="p in filteredParticipants" :key="p.id" class="surface flex items-center justify-between gap-2 p-3">
           <div class="min-w-0">
             <p class="truncate text-sm font-medium">
@@ -415,6 +418,7 @@ onUnmounted(clearOrgTheme)
             >{{ p.banned ? $t('org.unban') : $t('org.ban') }}</button>
           </div>
         </div>
+        </div>
         <p v-if="!participants.length" class="surface p-6 text-center text-sm text-base-content/50">{{ $t('org.noParticipantsYet') }}</p>
       </section>
 
@@ -424,12 +428,14 @@ onUnmounted(clearOrgTheme)
           v-model="auditSearch"
           type="search"
           :placeholder="$t('org.searchAudit')"
-          class="input input-bordered input-sm w-full bg-base-100/70"
+          class="input input-bordered input-sm w-full bg-base-100/70 lg:max-w-md"
         />
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div v-for="(e, i) in audit.entries" :key="i" class="surface p-3">
           <p class="text-sm font-medium">{{ auditActionLabel(e.action) }}</p>
           <p v-if="e.detail" class="truncate text-xs text-base-content/60">{{ e.detail }}</p>
           <p class="text-[0.7rem] text-base-content/45">{{ e.actor_email || e.actor_id }} · {{ fmtTime(e.ts) }}</p>
+        </div>
         </div>
         <p v-if="!audit.entries.length" class="surface p-6 text-center text-sm text-base-content/50">{{ $t('org.noActivityYet') }}</p>
         <div v-if="audit.entries.length || audit.page > 1" class="flex items-center justify-center gap-5">
@@ -440,7 +446,7 @@ onUnmounted(clearOrgTheme)
       </section>
 
       <!-- SETTINGS -->
-      <section v-else-if="tab === 'settings'" class="space-y-3">
+      <section v-else-if="tab === 'settings'" class="space-y-3 mx-auto w-full max-w-2xl">
         <label class="form-control w-full">
           <span class="label-text mb-1 text-base-content/70">{{ $t('org.orgName') }}</span>
           <input v-model="settings.name" class="input input-bordered w-full bg-base-100/70" />

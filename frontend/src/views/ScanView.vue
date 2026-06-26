@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-dvh px-4 pb-4 pt-6">
+  <div class="mx-auto min-h-dvh w-full max-w-md px-4 pb-4 pt-6 lg:max-w-xl lg:px-8">
     <header class="mb-4">
       <h1 class="text-2xl font-bold">{{ $t('scan.title') }}</h1>
     </header>

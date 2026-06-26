@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/ui/NavBar.vue'
+import SideNav from '@/components/ui/SideNav.vue'
 import BrandBackground from '@/components/ui/BrandBackground.vue'
 import StreakUpOverlay from '@/components/domain/StreakUpOverlay.vue'
 import { useSettingsStore } from '@/stores/settings'
@@ -47,6 +48,16 @@ const showAdminClose = computed(() => isPanel.value)
 // ancestor instead would make the fixed BrandBackground scroll with the page.
 const filterActive = computed(() => settings.saturation !== 1 || settings.contrast !== 1)
 const filterCss = computed(() => `saturate(${settings.saturation}) contrast(${settings.contrast})`)
+
+// Content width by surface: panels go wide; the participant app gets a roomy desktop
+// column (paired with the side nav); auth/public screens span the full width.
+const contentMax = computed(() =>
+  isPanel.value
+    ? 'max-w-md lg:max-w-5xl xl:max-w-6xl'
+    : showNav.value
+      ? 'max-w-md md:max-w-3xl lg:max-w-7xl'
+      : 'max-w-none',
+)
 </script>
 
 <template>
@@ -58,15 +69,19 @@ const filterCss = computed(() => `saturate(${settings.saturation}) contrast(${se
       :style="{ backdropFilter: filterCss, WebkitBackdropFilter: filterCss }"
     />
     <BrandBackground />
-    <div class="relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col bg-base-200/30">
-      <main class="flex-1" :class="showNav || showAdminClose ? 'pb-24' : ''">
-        <RouterView v-slot="{ Component }">
-          <transition name="screen" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </RouterView>
-      </main>
-      <NavBar v-if="showNav" />
+    <div class="relative z-10 flex min-h-dvh w-full">
+      <SideNav v-if="showNav" />
+      <div class="flex min-h-dvh min-w-0 flex-1 flex-col bg-base-200/30">
+        <main class="flex-1" :class="(showNav || showAdminClose) ? 'pb-24 lg:pb-8' : ''">
+          <div class="mx-auto w-full" :class="contentMax">
+            <RouterView v-slot="{ Component }">
+              <transition name="screen" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </RouterView>
+          </div>
+        </main>
+        <NavBar v-if="showNav" class="lg:hidden" />
       <div v-if="showAdminClose" class="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
         <div class="mx-auto max-w-md flex justify-center pb-4 anim-rise">
           <div class="relative">
@@ -92,6 +107,7 @@ const filterCss = computed(() => `saturate(${settings.saturation}) contrast(${se
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
 

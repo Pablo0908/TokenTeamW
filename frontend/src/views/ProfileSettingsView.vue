@@ -19,7 +19,7 @@ function logout() {
 </script>
 
 <template>
-  <div class="space-y-6 px-4 pb-4 pt-6">
+  <div class="mx-auto w-full max-w-2xl space-y-6 px-4 pb-4 pt-6 lg:px-8">
     <!-- Header -->
     <header class="flex items-center gap-3">
       <button type="button" class="tap-target -ml-2 grid h-10 w-10 place-items-center rounded-2xl transition-colors hover:bg-base-300/40" @click="router.back()">
