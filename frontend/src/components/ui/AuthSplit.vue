@@ -7,12 +7,15 @@ const featureKeys = ['heroF1', 'heroF2', 'heroF3']
 
 <template>
   <div class="lg:grid lg:min-h-dvh lg:grid-cols-2">
-    <!-- Brand hero — desktop only; fills the empty half of the page. -->
+    <!-- Brand hero — desktop only; fills the empty half of the page.
+         A `hero` slot lets a screen (e.g. login) replace the default copy with a richer
+         visual such as the app preview; without it, the brand pitch below is shown. -->
     <aside class="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center lg:px-16 lg:py-14">
       <div
         class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10"
         aria-hidden="true"
       />
+      <slot name="hero">
       <div class="relative max-w-lg anim-rise">
         <BrandLogo :size="76" wordmark-class="text-4xl" :float="true" />
         <h2 class="mt-10 font-display text-4xl font-bold leading-tight">{{ $t('auth.heroTitle') }}</h2>
@@ -32,6 +35,7 @@ const featureKeys = ['heroF1', 'heroF2', 'heroF3']
           </li>
         </ul>
       </div>
+      </slot>
     </aside>
 
     <!-- Form column — identical to the previous single-column auth screen on mobile. -->

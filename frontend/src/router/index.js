@@ -3,6 +3,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useOrgContextStore } from '@/stores/orgContext'
 
 const routes = [
+  // Public marketing preview shown to logged-out visitors. The sign-in form lives at the
+  // bottom of this page (scroll down), so unauthenticated users meet the preview first.
+  { path: '/welcome', name: 'welcome', component: () => import('@/views/LandingView.vue'), meta: { public: true } },
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
   { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { public: true } },
   { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/ForgotPasswordView.vue'), meta: { public: true } },
@@ -68,11 +71,12 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     auth.setRedirect(to.fullPath)
-    return { name: 'login' }
+    // Send logged-out users to the preview landing; its embedded sign-in form is one scroll away.
+    return { name: 'welcome' }
   }
 
-  // Logged-in users shouldn't see auth screens — send them to their home surface.
-  if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
+  // Logged-in users shouldn't see the preview or auth screens — send them to their home surface.
+  if ((to.name === 'welcome' || to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
     return { name: 'home' }
   }
 

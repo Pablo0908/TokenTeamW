@@ -6,11 +6,21 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 import AuthSplit from '@/components/ui/AuthSplit.vue'
+import AppPreview from '@/components/ui/AppPreview.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
+
+// `embedded` renders just the centered form (no AuthSplit two-column hero) — used when
+// this view is dropped into the landing page. In that mode the "sign in" link toggles
+// the landing's auth panel to log-in instead of navigating away.
+const props = defineProps({ embedded: { type: Boolean, default: false } })
+const emit = defineEmits(['switch'])
 
 const router = useRouter()
 const auth = useAuthStore()
 const onboarding = useOnboardingStore()
+
+const wrapperIs = computed(() => (props.embedded ? 'div' : AuthSplit))
+const wrapperClass = computed(() => (props.embedded ? 'mx-auto w-full max-w-md px-6 pt-2 pb-8' : ''))
 
 const form = reactive({ name: '', lastname: '', email: '', password: '', confirm: '' })
 const touched = ref(false)
@@ -88,9 +98,16 @@ async function resendCode() {
 </script>
 
 <template>
-  <AuthSplit>
+  <component :is="wrapperIs" :class="wrapperClass">
+    <!-- Standalone register: preview the app in the hero half instead of the brand pitch. -->
+    <template v-if="!embedded" #hero>
+      <div class="relative flex w-full items-center justify-center anim-rise">
+        <AppPreview single />
+      </div>
+    </template>
+
     <div class="mb-6 flex flex-col items-center gap-4 text-center">
-      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop lg:hidden" :float="true" />
+      <BrandLogo :size="56" wordmark-class="text-2xl" :class="['anim-pop', { 'lg:hidden': !embedded }]" :float="true" />
       <div>
         <h1 class="text-2xl font-bold">
           {{ step === 'otp' ? $t('auth.twoFaTitle') : $t('auth.registerTitle') }}
@@ -228,7 +245,8 @@ async function resendCode() {
 
     <p v-if="step === 'form'" class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.haveAccount') }}
-      <RouterLink to="/login" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
+      <button v-if="embedded" type="button" class="link-glow font-medium text-primary underline underline-offset-2" @click="emit('switch')">{{ $t('auth.signInLink') }}</button>
+      <RouterLink v-else to="/login" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
     </p>
-  </AuthSplit>
+  </component>
 </template>

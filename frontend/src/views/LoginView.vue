@@ -7,12 +7,23 @@ import { isMock } from '@/services/api'
 import AlertMessage from '@/components/ui/AlertMessage.vue'
 import BrandLogo from '@/components/ui/BrandLogo.vue'
 import AuthSplit from '@/components/ui/AuthSplit.vue'
+import AppPreview from '@/components/ui/AppPreview.vue'
 import GoogleSignInButton from '@/components/ui/GoogleSignInButton.vue'
 import PasswordInput from '@/components/ui/PasswordInput.vue'
+
+// `embedded` renders just the centered form (no AuthSplit two-column hero) — used when
+// this view is dropped into the landing page, which already has its own marketing hero.
+const props = defineProps({ embedded: { type: Boolean, default: false } })
+// In embedded mode the "create an account" link toggles the landing's auth panel to
+// sign-up instead of navigating away.
+const emit = defineEmits(['switch'])
 
 const router = useRouter()
 const auth = useAuthStore()
 const onboarding = useOnboardingStore()
+
+const wrapperIs = computed(() => (props.embedded ? 'div' : AuthSplit))
+const wrapperClass = computed(() => (props.embedded ? 'mx-auto w-full max-w-md px-6 pt-2 pb-8' : ''))
 
 // step: 'credentials' | 'otp'
 const step = ref('credentials')
@@ -77,9 +88,16 @@ function backToCredentials() {
 </script>
 
 <template>
-  <AuthSplit>
+  <component :is="wrapperIs" :class="wrapperClass">
+    <!-- Standalone login: preview the app in the hero half instead of the brand pitch. -->
+    <template v-if="!embedded" #hero>
+      <div class="relative flex w-full items-center justify-center anim-rise">
+        <AppPreview single />
+      </div>
+    </template>
+
     <div class="mb-8 flex flex-col items-center gap-4 text-center">
-      <BrandLogo :size="56" wordmark-class="text-2xl" class="anim-pop lg:hidden" :float="true" />
+      <BrandLogo :size="56" wordmark-class="text-2xl" :class="['anim-pop', { 'lg:hidden': !embedded }]" :float="true" />
       <div>
         <h1 class="text-2xl font-bold">
           {{ step === 'otp' ? $t('auth.twoFaTitle') : $t('auth.loginTitle') }}
@@ -178,12 +196,13 @@ function backToCredentials() {
 
     <p v-if="step === 'credentials'" class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.newHere') }}
-      <RouterLink to="/register" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.createLink') }}</RouterLink>
+      <button v-if="embedded" type="button" class="link-glow font-medium text-primary underline underline-offset-2" @click="emit('switch')">{{ $t('auth.createLink') }}</button>
+      <RouterLink v-else to="/register" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.createLink') }}</RouterLink>
     </p>
 
     <p v-if="isMock" class="mt-6 rounded-xl border border-base-300/60 bg-base-100/40 p-3 text-center text-xs text-base-content/50">
       Demo mode is on. Any password works — sign in with an email containing
       <span class="font-semibold text-secondary">"admin"</span> to open the organizer panel.
     </p>
-  </AuthSplit>
+  </component>
 </template>

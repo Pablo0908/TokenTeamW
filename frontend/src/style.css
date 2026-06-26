@@ -505,9 +505,36 @@ html.theme-light .glyph {
 .tutorial-fade-leave-to     { opacity: 0; }
 
 /* ============================================================
+   APP PREVIEW (landing + auth hero phone mockups)
+   ============================================================ */
+@keyframes float-a {
+  0%, 100% { transform: translateY(0px) rotate(-3deg); }
+  50% { transform: translateY(-16px) rotate(-3deg); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translateY(0px) rotate(3deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+@keyframes float-c {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-20px) rotate(-1deg); }
+}
+@keyframes pulse-orb {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.06); }
+}
+@keyframes scan-line { 0% { top: 14%; } 100% { top: 80%; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes streak-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,212,193,0.3), 0 0 60px rgba(0,212,193,0.1); }
+  50% { box-shadow: 0 0 30px rgba(0,212,193,0.6), 0 0 80px rgba(0,212,193,0.2); }
+}
+
+/* ============================================================
    REDUCED MOTION + FX-OFF
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
+  .app-preview * { animation: none !important; }
   .welcome-orb, .welcome-shimmer { animation: none; }
   .welcome-overlay-enter-active .welcome-card,
   .welcome-overlay-enter-active .welcome-logo,
@@ -516,6 +543,7 @@ html.theme-light .glyph {
   .welcome-overlay-enter-active .welcome-stagger-3 { animation: none; }
   .coachmark-enter-active, .coachmark-leave-active { transition: none; }
 }
+html.fx-off .app-preview * { animation: none !important; }
 html.fx-off .welcome-orb,
 html.fx-off .welcome-shimmer { animation: none !important; }
 html.fx-off .welcome-overlay-enter-active .welcome-card,
