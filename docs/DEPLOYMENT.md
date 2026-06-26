@@ -35,8 +35,24 @@ no separate prod DB) · Install path: **PWA**.
 | `FLASK_ENV` | `production` |
 | `RATELIMIT_STORAGE_URI` | `redis://<host>:6379` if >1 worker (else omit) |
 
-- Start command: `gunicorn run:app` · Build: `pip install -r requirements.txt` (root dir `backend/`).
+- **Build:** `pip install -r requirements.txt` · **Start:** `gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120` · **Root dir:** `backend` · **Health check:** `/health`.
+- `gunicorn` must bind to Render's injected `$PORT` (the start command above does).
 - `JWT_SECRET` is required — the app refuses to boot without it.
+- TLS + HTTP→HTTPS redirect are automatic on Render (managed certs) — no config needed.
+
+### Deploy steps (Render)
+1. A `render.yaml` Blueprint is committed at the repo root — Render → **New → Blueprint** →
+   pick this repo → it provisions the `tokenteamw-api` web service from that file.
+   (Or **New → Web Service** manually with the Build/Start/Root/Health values above.)
+2. Set the dashboard secrets (the `sync: false` keys): `MONGO_URI`, `JWT_SECRET`, `SECRET_KEY`,
+   `MAIL_USER`, `MAIL_PASSWORD`, and later `FRONTEND_URL` + `CORS_ORIGINS` (the Vercel origin).
+3. First deploy → note the service URL `https://tokenteamw-api.onrender.com` (feeds Vercel's `VITE_API_URL`).
+4. Atlas Network Access already allows `0.0.0.0/0` ✅ — Render egress is covered.
+5. **Plan note:** the Blueprint uses the **free** plan, which **spins down after ~15 min idle**
+   (first request then takes ~30-60s — a cold start). For genuine always-on, change `plan: free`
+   to `plan: starter` (paid) in `render.yaml` or the dashboard.
+6. **Render builds from GitHub `main`** — so deploying requires pushing `main` (currently held
+   per your instruction). Render won't see the code until `main` is pushed.
 
 ## Vercel — frontend project env vars (build-time, `VITE_*`)
 | Var | Value |
