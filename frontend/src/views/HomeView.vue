@@ -182,7 +182,20 @@ async function downloadCard(badge) {
 
     <!-- Stats -->
     <section class="space-y-2">
-      <StreakCard :value="streak" :label="$t('home.streak')" />
+      <div :class="['relative', onboarding.showTip('streak') && 'z-30']">
+        <StreakCard :value="streak" :label="$t('home.streak')" />
+        <transition name="coachmark">
+          <Coachmark
+            v-if="onboarding.showTip('streak')"
+            class="absolute left-1/2 top-[calc(100%+10px)] z-30 -translate-x-1/2"
+            :title="$t('coach.streakTitle')"
+            :body="$t('coach.streakBody')"
+            :step="1"
+            :total="4"
+            @dismiss="onboarding.dismissTip('streak')"
+          />
+        </transition>
+      </div>
       <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto w-full">
         <StatTile class="anim-rise" style="animation-delay: 0.05s" :value="badges.totalEarned" :label="$t('home.badges')" tone="primary" />
         <StatTile class="anim-rise" style="animation-delay: 0.12s" :value="badges.eventsCount" :label="$t('home.events')" tone="secondary" />
@@ -213,8 +226,8 @@ async function downloadCard(badge) {
           class="absolute left-1/2 top-[calc(100%+10px)] z-30 -translate-x-1/2"
           :title="$t('coach.scanTitle')"
           :body="$t('coach.scanBody')"
-          :step="1"
-          :total="3"
+          :step="2"
+          :total="4"
           @dismiss="onboarding.dismissTip('scan')"
         />
       </transition>
@@ -293,8 +306,8 @@ async function downloadCard(badge) {
               class="absolute right-0 top-[calc(100%+10px)] z-30"
               :title="$t('coach.badgesTitle')"
               :body="$t('coach.badgesBody')"
-              :step="2"
-              :total="3"
+              :step="3"
+              :total="4"
               @dismiss="onboarding.dismissTip('badges')"
             />
           </transition>
@@ -316,8 +329,8 @@ async function downloadCard(badge) {
               class="absolute right-0 top-[calc(100%+10px)] z-30"
               :title="$t('coach.eventsTitle')"
               :body="$t('coach.eventsBody')"
-              :step="3"
-              :total="3"
+              :step="4"
+              :total="4"
               @dismiss="onboarding.dismissTip('events')"
             />
           </transition>

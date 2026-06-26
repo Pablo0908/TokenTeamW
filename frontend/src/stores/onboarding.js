@@ -7,7 +7,7 @@ import { setLocale } from '@/i18n'
 // Tracked PER USER (by account id) so every new email that signs in for the first time
 // gets it — not just the first user on a given device.
 const COMPLETED_KEY = 'lyfter_onboarded_users'
-const TIP_ORDER = ['scan', 'badges', 'events']
+const TIP_ORDER = ['streak', 'scan', 'badges', 'events']
 
 function completedIds() {
   try {
