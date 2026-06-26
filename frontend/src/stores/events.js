@@ -30,10 +30,13 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
-  async function fetchEvent(id) {
+  // keepCurrent: true keeps the currently-shown event on screen during the round-trip
+  // (used by in-place refreshes after moderation/badge actions) so the detail page does
+  // not flash to a full-screen spinner. Default clears it (fresh navigation to an event).
+  async function fetchEvent(id, { keepCurrent = false } = {}) {
     loading.value = true
     error.value = null
-    current.value = null
+    if (!keepCurrent) current.value = null
     try {
       const { data } = await api.get(`/events/${id}`)
       current.value = data
@@ -135,14 +138,16 @@ export const useEventsStore = defineStore('events', () => {
     }
   }
 
-  async function fetchAdminBadges(eventId, orgId = null) {
-    error.value = null
+  // silent: true is for the background poll — it must not clear a user-action error
+  // (a failed badge create) on success, nor raise its own error over the user's view.
+  async function fetchAdminBadges(eventId, orgId = null, { silent = false } = {}) {
+    if (!silent) error.value = null
     try {
       const { data } = await api.get(`${badgeBase(eventId, orgId)}/badges`)
       adminBadges.value = Array.isArray(data) ? data : []
       return adminBadges.value
     } catch (e) {
-      error.value = readError(e)
+      if (!silent) error.value = readError(e)
       return []
     }
   }

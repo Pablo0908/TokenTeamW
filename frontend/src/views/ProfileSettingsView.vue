@@ -14,7 +14,7 @@ const initials = computed(() => {
 
 function logout() {
   auth.logout()
-  router.push('/login')
+  router.push('/welcome')
 }
 </script>
 

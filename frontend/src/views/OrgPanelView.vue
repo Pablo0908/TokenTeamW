@@ -91,6 +91,9 @@ const NEW_EVENT = () => ({ name: '', description: '', event_type: 'conference', 
 const newEvent = ref(NEW_EVENT())
 const showNewEvent = ref(false)
 const inviteEmail = ref('')
+// In-flight guard so double-clicking create/invite/save doesn't POST twice
+// (would otherwise create duplicate events / invites).
+const submitting = ref(false)
 const EVENT_TYPES = ['conference', 'workshop', 'meetup', 'hackathon', 'networking', 'other']
 const VISIBILITIES = computed(() => [
   { value: 'public', label: t('org.visPublic') },
@@ -132,18 +135,22 @@ async function loadTab() {
 }
 
 async function createEvent() {
-  if (!newEvent.value.name.trim()) return
+  if (!newEvent.value.name.trim() || submitting.value) return
+  submitting.value = true
   try {
     await api.post(`/orgs/${orgId.value}/event`, { ...newEvent.value, name: newEvent.value.name.trim() })
     showNewEvent.value = false; newEvent.value = NEW_EVENT()
     await loadTab()
   } catch (e) { error.value = readApiError(e, t('org.couldNotCreateEvent')) }
+  finally { submitting.value = false }
 }
 async function sendInvite() {
   const email = inviteEmail.value.trim()
-  if (!email) return
+  if (!email || submitting.value) return
+  submitting.value = true
   try { await api.post(`/orgs/${orgId.value}/invites`, { email }); inviteEmail.value = ''; await loadTab() }
   catch (e) { error.value = readApiError(e, t('org.couldNotSendInvite')) }
+  finally { submitting.value = false }
 }
 async function revokeInvite(id) {
   try { await api.post(`/orgs/${orgId.value}/invites/${id}/revoke`); await loadTab() }
@@ -165,10 +172,12 @@ async function banParticipant(uid, banned) {
   } catch (e) { error.value = readApiError(e, t('org.couldNotUpdateBan')) }
 }
 async function saveSettings() {
+  if (submitting.value) return
+  submitting.value = true
   try {
     await api.patch(`/orgs/${orgId.value}`, {
       name: settings.value.name.trim(),
-      description: settings.value.description,
+      description: settings.value.description.trim(),
       theme: settings.value.theme,
     })
     await orgContext.load()
@@ -176,6 +185,7 @@ async function saveSettings() {
     settingsSaved.value = true
     setTimeout(() => { settingsSaved.value = false }, 2500)
   } catch (e) { error.value = readApiError(e, t('org.couldNotSaveSettings')) }
+  finally { submitting.value = false }
 }
 function resetTheme() {
   settings.value.theme = { primary: '', secondary: '', accent: '', logo_url: '' }
@@ -384,7 +394,7 @@ onUnmounted(clearOrgTheme)
           <input v-model="newEvent.location" :placeholder="$t('admin.eventNew.locationLabel')" class="input input-bordered input-sm w-full bg-base-100/70" />
           <input v-model="newEvent.prize" :placeholder="$t('admin.eventNew.prizeLabel')" class="input input-bordered input-sm w-full bg-base-100/70" />
           <p class="text-[0.7rem] text-base-content/55">{{ $t('org.startsClosed') }}</p>
-          <button class="btn btn-primary btn-sm w-full" @click="createEvent">{{ $t('org.createEvent') }}</button>
+          <button class="btn btn-primary btn-sm w-full" :disabled="submitting" @click="createEvent">{{ $t('org.createEvent') }}</button>
         </div>
         <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         <button
@@ -414,7 +424,7 @@ onUnmounted(clearOrgTheme)
       <section v-else-if="tab === 'members'" class="space-y-4">
         <div class="surface flex gap-2 p-4 mx-auto w-full max-w-2xl">
           <input v-model="inviteEmail" type="email" :placeholder="$t('org.invitePlaceholder')" class="input input-bordered input-sm flex-1 bg-base-100/70" />
-          <button class="btn btn-primary btn-sm" @click="sendInvite">{{ $t('org.invite') }}</button>
+          <button class="btn btn-primary btn-sm" :disabled="submitting" @click="sendInvite">{{ $t('org.invite') }}</button>
         </div>
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-3">
           <div v-for="m in members" :key="m.user_id" class="surface flex items-center justify-between gap-2 p-3">
@@ -558,6 +568,7 @@ onUnmounted(clearOrgTheme)
         <button
           class="btn btn-primary w-full tap-target"
           :class="{ 'btn-success': settingsSaved }"
+          :disabled="submitting"
           @click="saveSettings"
         >
           <svg v-if="settingsSaved" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>

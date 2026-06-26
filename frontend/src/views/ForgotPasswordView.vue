@@ -72,7 +72,7 @@ async function submitReset() {
       password: reset.password,
     })
     successMsg.value = 'resetSuccess'
-    setTimeout(() => router.push({ name: 'login' }), 2000)
+    setTimeout(() => router.push({ name: 'welcome' }), 2000)
   } catch (err) {
     errorMsg.value = err.response?.data?.error ?? 'Error inesperado'
   } finally {
@@ -120,7 +120,7 @@ async function submitReset() {
       </button>
 
       <p class="text-center text-sm text-base-content/60">
-        <RouterLink to="/login" class="text-primary hover:underline">{{ $t('auth.backToSignIn') }}</RouterLink>
+        <RouterLink to="/welcome" class="text-primary hover:underline">{{ $t('auth.backToSignIn') }}</RouterLink>
       </p>
     </form>
 
@@ -180,7 +180,7 @@ async function submitReset() {
       </button>
 
       <div class="flex justify-between text-sm">
-        <RouterLink to="/login" class="text-base-content/50 hover:text-base-content">
+        <RouterLink to="/welcome" class="text-base-content/50 hover:text-base-content">
           {{ $t('auth.backToSignIn') }}
         </RouterLink>
         <button type="button" class="text-primary" :disabled="loading" @click="resendCode">

@@ -55,10 +55,10 @@ async function redeem() {
 }
 
 onMounted(() => {
-  // Public QR landing: send unauthenticated users to login, then back here (TDD §5).
+  // Public QR landing: send unauthenticated users to the welcome/auth page, then back here (TDD §5).
   if (!auth.isAuthenticated) {
     auth.setRedirect(route.fullPath)
-    router.replace('/login')
+    router.replace('/welcome')
     return
   }
   redeem()

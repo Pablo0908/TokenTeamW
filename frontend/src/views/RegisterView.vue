@@ -246,7 +246,7 @@ async function resendCode() {
     <p v-if="step === 'form'" class="mt-6 text-center text-sm text-base-content/60">
       {{ $t('auth.haveAccount') }}
       <button v-if="embedded" type="button" class="link-glow font-medium text-primary underline underline-offset-2" @click="emit('switch')">{{ $t('auth.signInLink') }}</button>
-      <RouterLink v-else to="/login" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
+      <RouterLink v-else to="/welcome" class="link-glow font-medium text-primary underline underline-offset-2">{{ $t('auth.signInLink') }}</RouterLink>
     </p>
   </component>
 </template>

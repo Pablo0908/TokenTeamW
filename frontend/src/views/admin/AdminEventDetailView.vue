@@ -97,7 +97,9 @@ const attendees = computed(() => list.value[0]?.total_attendees ?? 0)
 let poll = null
 
 async function refresh() {
-  await Promise.all([events.fetchEvent(id), events.fetchAdminBadges(id, orgId.value)])
+  // keepCurrent so a post-action refresh doesn't blank the page to a spinner; on first
+  // mount `current` is still null, so the spinner shows until the initial load lands.
+  await Promise.all([events.fetchEvent(id, { keepCurrent: true }), events.fetchAdminBadges(id, orgId.value)])
 }
 
 const moderating = ref(false)
@@ -106,7 +108,7 @@ async function runModeration(fn) {
   moderating.value = true
   try {
     await fn()
-    await events.fetchEvent(id)
+    await events.fetchEvent(id, { keepCurrent: true })
   } catch {
     /* error surfaced via store */
   } finally {
@@ -202,7 +204,7 @@ watch(() => ev.value?.org?.theme, (th) => applyOrgTheme(th || {}), { deep: true 
 onMounted(async () => {
   await refresh()
   // Near-real-time redemption counts (PRD §4.2 dashboard polling).
-  poll = setInterval(() => events.fetchAdminBadges(id, orgId.value), 4000)
+  poll = setInterval(() => events.fetchAdminBadges(id, orgId.value, { silent: true }), 4000)
 })
 onBeforeUnmount(() => { clearInterval(poll); clearOrgTheme() })
 </script>

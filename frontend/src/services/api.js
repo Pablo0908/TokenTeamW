@@ -29,7 +29,7 @@ function createRealApi() {
     return config
   })
 
-  // On an expired/invalid session, clear auth and bounce to login.
+  // On an expired/invalid session, clear auth and bounce to the welcome/auth page.
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -37,7 +37,7 @@ function createRealApi() {
         const { useAuthStore } = await import('@/stores/auth')
         useAuthStore().logout()
         const { default: router } = await import('@/router')
-        if (router.currentRoute.value.path !== '/login') router.push('/login')
+        if (router.currentRoute.value.path !== '/welcome') router.push('/welcome')
       }
       return Promise.reject(error)
     },

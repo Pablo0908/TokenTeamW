@@ -17,7 +17,7 @@ const title = computed(() => route.meta.title || '')
 
 function logout() {
   auth.logout()
-  router.push('/login')
+  router.push('/welcome')
 }
 </script>
 

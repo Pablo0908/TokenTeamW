@@ -40,6 +40,12 @@ DEFAULT_PREFERENCES = {
 _LANGUAGES = ("en", "es")
 _SATURATION = (0.5, 1.5)
 _CONTRAST = (0.8, 1.2)
+_FONT_SIZE = (14, 22)
+# Accessibility toggles — all plain booleans, mirrored by the frontend Settings panel.
+_BOOL_PREFS = (
+    "dyslexiaFont", "lineSpacing", "boldText", "autoTheme",
+    "highContrast", "colorBlind", "largeTapTargets", "focusHighlight",
+)
 
 
 def _clamp(value, lo, hi, fallback):
@@ -72,6 +78,11 @@ def sanitize_preferences(raw, base=None):
             result["saturation"] = _clamp(raw["saturation"], *_SATURATION, result["saturation"])
         if "contrast" in raw:
             result["contrast"] = _clamp(raw["contrast"], *_CONTRAST, result["contrast"])
+        if "fontSize" in raw:
+            result["fontSize"] = int(_clamp(raw["fontSize"], *_FONT_SIZE, result["fontSize"]))
+        for key in _BOOL_PREFS:
+            if key in raw:
+                result[key] = bool(raw[key])
     return result
 
 
