@@ -311,6 +311,9 @@ function accAfterLeave(el) {
       </svg>
     </RouterLink>
 
+    <RouterLink v-if="orgContext.isSuperAdmin" to="/admin/events" class="btn btn-outline w-full tap-target">
+      {{ $t('profile.openAdmin') }}
+    </RouterLink>
     <RouterLink v-if="orgContext.isOrgMember" to="/org/events" class="btn btn-outline w-full tap-target">
       {{ $t('profile.manageOrg') }}
     </RouterLink>

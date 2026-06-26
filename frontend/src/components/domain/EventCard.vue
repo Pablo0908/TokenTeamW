@@ -33,10 +33,23 @@ const statusRing = computed(() => {
   if (props.event.status === 'locked') return 'ring-1 ring-warning/40 shadow-warning/10 shadow-lg'
   if (completed.value) return 'ring-1 ring-primary/40 shadow-primary/10 shadow-lg'
   switch (props.event.status) {
-    case 'active': return 'ring-1 ring-success/50 shadow-lg shadow-success/15'
-    case 'upcoming': return 'ring-1 ring-secondary/35 shadow-secondary/10 shadow-md'
+    case 'active': return 'ring-1 shadow-lg'
+    case 'upcoming': return 'ring-1 shadow-md'
     default: return 'opacity-75'
   }
+})
+
+// Org-colored ring — uses org's accent/primary when available, falls back to status colors
+const ringStyle = computed(() => {
+  const color = accent.value
+  if (!color) return {}
+  if (props.event.status === 'active') {
+    return { '--tw-ring-color': color + '80', boxShadow: `0 0 0 1px ${color}80, 0 10px 15px -3px ${color}26` }
+  }
+  if (props.event.status === 'upcoming') {
+    return { '--tw-ring-color': color + '59', boxShadow: `0 0 0 1px ${color}59, 0 4px 6px -1px ${color}1a` }
+  }
+  return {}
 })
 
 const visibilityLabel = computed(() =>
@@ -69,7 +82,7 @@ const dateLabel = computed(() => {
     type="button"
     class="surface w-full space-y-3 p-4 text-left transition-transform"
     :class="[clickable ? 'active:scale-[0.98]' : '', statusRing]"
-    :style="accent ? { borderLeft: `3px solid ${accent}` } : {}"
+    :style="{ ...(accent ? { borderLeft: `3px solid ${accent}` } : {}), ...ringStyle }"
     @click="clickable && $emit('select', event)"
   >
     <div class="flex items-start justify-between gap-3">

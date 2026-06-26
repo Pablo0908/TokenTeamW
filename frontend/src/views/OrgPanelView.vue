@@ -227,7 +227,15 @@ onUnmounted(clearOrgTheme)
 
     <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <template v-for="t in TABS" :key="t.key">
-        <button v-if="t.show" role="tab" class="tab" :class="{ 'tab-active': tab === t.key }" @click="go(t.key)">{{ t.label }}</button>
+        <RouterLink
+          v-if="t.show"
+          :to="`/org/${t.key}`"
+          role="tab"
+          class="tab transition-all duration-200"
+          :class="tab === t.key
+            ? 'tab-active !bg-primary !text-primary-content shadow-sm'
+            : 'text-base-content/60 hover:text-base-content'"
+        >{{ t.label }}</RouterLink>
       </template>
     </div>
 

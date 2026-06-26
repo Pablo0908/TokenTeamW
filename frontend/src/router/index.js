@@ -23,19 +23,30 @@ const routes = [
   { path: '/redeem/:eventId/:token', name: 'redeem', component: () => import('@/views/RedeemView.vue'), meta: { public: true } },
 
   // Platform panel — super-admin only (global events/users/audit across all orgs).
-  { path: '/admin/events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  // The tab pages are children of AdminLayout, which holds the persistent header + AdminNav
+  // so the active-tab pill animates across navigations (matching the org panel, whose single
+  // OrgPanelView component likewise persists its tabs). Title/eyebrow come from each route's meta.
+  {
+    path: '/admin',
+    component: () => import('@/views/admin/AdminLayout.vue'),
+    meta: { requiresAuth: true, requiresSuperAdmin: true },
+    children: [
+      { path: '', redirect: { name: 'admin-events' } },
+      { path: 'events', name: 'admin-events', component: () => import('@/views/admin/AdminEventsView.vue'), meta: { eyebrow: 'roles.superAdmin', title: 'admin.eventsTitle' } },
+      { path: 'users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersView.vue'), meta: { eyebrow: 'roles.superAdmin', title: 'admin.users.title' } },
+      { path: 'audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { eyebrow: 'admin.organizer', title: 'admin.audit.title' } },
+      { path: 'insights', name: 'admin-insights', component: () => import('@/views/admin/AdminInsightsView.vue'), meta: { eyebrow: 'admin.platform', title: 'admin.insights.title' } },
+      { path: 'orgs', name: 'admin-orgs', component: () => import('@/views/admin/AdminOrgsView.vue'), meta: { eyebrow: 'admin.platform', title: 'admin.orgs.title' } },
+      { path: 'org-invites', name: 'admin-org-invites', component: () => import('@/views/admin/AdminOrgInvitesView.vue'), meta: { eyebrow: 'admin.platform', title: 'admin.codes.title' } },
+      { path: 'announcements', name: 'admin-announcements', component: () => import('@/views/admin/AdminAnnouncementsView.vue'), meta: { eyebrow: 'admin.platform', title: 'admin.announcements.title' } },
+      { path: 'verifier', name: 'admin-verifier', component: () => import('@/views/admin/AdminVerifierView.vue'), meta: { eyebrow: 'admin.platform', title: 'verifier.title' } },
+    ],
+  },
+  // Detail / create pages stand alone (no section nav).
   // /new must come before /:id so Vue Router doesn't treat "new" as an event ID.
   { path: '/admin/events/new', name: 'admin-event-new', component: () => import('@/views/admin/AdminEventNewView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/admin/events/:id', name: 'admin-event-detail', component: () => import('@/views/admin/AdminEventDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/audit', name: 'admin-audit', component: () => import('@/views/admin/AdminAuditView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/insights', name: 'admin-insights', component: () => import('@/views/admin/AdminInsightsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/orgs', name: 'admin-orgs', component: () => import('@/views/admin/AdminOrgsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/org-invites', name: 'admin-org-invites', component: () => import('@/views/admin/AdminOrgInvitesView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/admin/announcements', name: 'admin-announcements', component: () => import('@/views/admin/AdminAnnouncementsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  // Global prize verifier — super-admin can hand over prizes for any org's event.
-  { path: '/admin/verifier', name: 'admin-verifier', component: () => import('@/views/admin/AdminVerifierView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/admin/users/:id', name: 'admin-user-detail', component: () => import('@/views/admin/AdminUserDetailView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
 
   // Org-scoped panel — any member of the active org (tabs gate by role in-view).
   { path: '/org/:tab(dashboard|events|verifier|members|participants|audit|settings)?', name: 'org-panel', component: () => import('@/views/OrgPanelView.vue'), meta: { requiresAuth: true, requiresOrgMember: true } },
