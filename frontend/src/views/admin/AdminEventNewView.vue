@@ -39,7 +39,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <button class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70" @click="router.back()">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
@@ -52,7 +52,7 @@ async function submit() {
       <p class="text-sm text-base-content/60">{{ $t('admin.eventNew.subtitle') }}</p>
     </header>
 
-    <form class="space-y-4" novalidate @submit.prevent="submit">
+    <form class="space-y-4 mx-auto w-full max-w-2xl" novalidate @submit.prevent="submit">
       <AlertMessage type="error" :message="events.error || ''" />
 
       <label class="form-control w-full">

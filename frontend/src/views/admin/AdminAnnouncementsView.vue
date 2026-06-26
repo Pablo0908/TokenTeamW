@@ -96,7 +96,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <header class="flex items-center justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-secondary">{{ $t('admin.platform') }}</p>
@@ -105,7 +105,7 @@ onMounted(() => {
       <button class="btn btn-ghost btn-sm tap-target" @click="logout">{{ $t('admin.logout') }}</button>
     </header>
 
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40">
+    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
       <RouterLink to="/admin/events" role="tab" class="tab">{{ $t('tabs.events') }}</RouterLink>
       <RouterLink to="/admin/users" role="tab" class="tab">{{ $t('tabs.users') }}</RouterLink>
       <RouterLink to="/admin/audit" role="tab" class="tab">{{ $t('tabs.audit') }}</RouterLink>
@@ -121,7 +121,7 @@ onMounted(() => {
     </p>
 
     <!-- Composer / editor -->
-    <form class="surface space-y-3 p-4" novalidate @submit.prevent="submit">
+    <form class="surface space-y-3 p-4 mx-auto w-full max-w-2xl" novalidate @submit.prevent="submit">
       <div class="flex items-center justify-between">
         <h2 class="font-semibold">{{ editingId ? $t('admin.announcements.editTitle') : $t('admin.announcements.newTitle') }}</h2>
         <button v-if="editingId" type="button" class="btn btn-ghost btn-xs" @click="resetForm">{{ $t('admin.announcements.cancelEdit') }}</button>
@@ -176,7 +176,7 @@ onMounted(() => {
 
     <LoadingSpinner v-if="announcements.loading && !announcements.loaded" :label="$t('admin.announcements.loading')" />
 
-    <section v-else-if="announcements.items.length" class="space-y-3">
+    <section v-else-if="announcements.items.length" class="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <div v-for="a in announcements.items" :key="a.id" class="surface p-4">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">

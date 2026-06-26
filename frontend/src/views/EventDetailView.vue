@@ -70,7 +70,7 @@ onUnmounted(() => { clearOrgTheme(); clearInterval(claimTimer) })
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-4 pt-6">
+  <div class="space-y-5 px-4 lg:px-8 pb-4 pt-6">
     <button class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70" @click="router.back()">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
@@ -82,6 +82,8 @@ onUnmounted(() => { clearOrgTheme(); clearInterval(claimTimer) })
     <LoadingSpinner v-if="events.loading || !ev" :label="$t('eventDetail.loading')" />
 
     <template v-else>
+      <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
+      <div class="space-y-5">
       <header class="space-y-2">
         <div v-if="ev.org?.name" class="flex items-center gap-2 text-xs text-base-content/55">
           <img v-if="ev.org.theme?.logo_url" :src="ev.org.theme.logo_url" alt="" class="h-5 w-5 rounded object-cover ring-1 ring-base-300" />
@@ -138,14 +140,16 @@ onUnmounted(() => { clearOrgTheme(); clearInterval(claimTimer) })
         </div>
         <p class="text-center text-xs text-base-content/55">{{ $t('eventDetail.claimHint') }}</p>
       </div>
+      </div>
 
       <section class="space-y-3">
         <h2 class="font-semibold">{{ $t('eventDetail.badges') }}</h2>
-        <div v-if="ev.badges?.length" class="grid grid-cols-4 gap-2.5">
+        <div v-if="ev.badges?.length" class="grid grid-cols-4 md:grid-cols-6 gap-2.5">
           <BadgeCard v-for="b in ev.badges" :key="b.id" :badge="b" />
         </div>
         <p v-else class="text-sm text-base-content/50">{{ $t('eventDetail.noBadges') }}</p>
       </section>
+      </div>
     </template>
   </div>
 </template>

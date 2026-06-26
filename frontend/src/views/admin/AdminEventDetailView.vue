@@ -208,7 +208,7 @@ onBeforeUnmount(() => { clearInterval(poll); clearOrgTheme() })
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-10 pt-6">
+  <div class="space-y-5 px-4 lg:px-6 pb-10 pt-6">
     <button class="tap-target -ml-1 flex items-center gap-1 text-sm text-base-content/70" @click="router.push(backTo)">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 19l-7-7 7-7" />
@@ -419,7 +419,7 @@ onBeforeUnmount(() => { clearInterval(poll); clearOrgTheme() })
             {{ $t('admin.eventDetail.qrSheet') }}
           </button>
         </div>
-        <div v-if="list.length" class="space-y-3">
+        <div v-if="list.length" class="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div v-for="b in list" :key="b.id" class="surface p-4">
             <div class="flex items-center gap-3">
               <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-base-300/60 text-xl">{{ b.icon || '🏅' }}</span>

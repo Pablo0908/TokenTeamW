@@ -80,7 +80,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="space-y-6 px-4 pb-4 pt-6">
+  <div class="mx-auto w-full max-w-md space-y-6 px-4 pb-4 pt-6 lg:px-8">
     <header class="flex items-center gap-3">
       <button type="button" class="tap-target -ml-2 grid h-10 w-10 place-items-center rounded-2xl transition-colors hover:bg-base-300/40" @click="router.back()">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">

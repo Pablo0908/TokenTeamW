@@ -48,7 +48,7 @@ const grouped = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-5 px-4 pb-4 pt-6">
+  <div class="space-y-5 px-4 lg:px-8 pb-4 pt-6">
     <PullToRefresh :on-refresh="onRefresh" />
     <header>
       <h1 class="text-2xl font-bold">{{ $t('events.title') }}</h1>
@@ -79,12 +79,14 @@ const grouped = computed(() => {
     <div v-else-if="visible.length" class="space-y-5">
       <section v-for="g in grouped" :key="g.name" class="space-y-3">
         <h2 class="px-1 text-xs font-semibold uppercase tracking-wide text-base-content/45">{{ g.name === '__other__' ? $t('events.other') : g.name }}</h2>
-        <EventCard
-          v-for="ev in g.list"
-          :key="ev.id"
-          :event="ev"
-          @select="router.push(`/events/${ev.id}`)"
-        />
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <EventCard
+            v-for="ev in g.list"
+            :key="ev.id"
+            :event="ev"
+            @select="router.push(`/events/${ev.id}`)"
+          />
+        </div>
       </section>
     </div>
 
