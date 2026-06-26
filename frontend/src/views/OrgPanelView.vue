@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, readApiError } from '@/services/api'
 import { useOrgContextStore } from '@/stores/orgContext'
@@ -194,6 +194,22 @@ function auditPage(delta) {
 watch([orgId, tab], loadTab)
 onMounted(loadTab)
 
+// Sliding active-tab indicator: measure the active tab and animate a single pill to it.
+const tablistEl = ref(null)
+const indicator = ref({ left: 0, top: 0, width: 0, height: 0, ready: false })
+function updateIndicator() {
+  const root = tablistEl.value
+  const el = root?.querySelector('[data-active="true"]')
+  if (!el) { indicator.value = { ...indicator.value, ready: false }; return }
+  indicator.value = {
+    left: el.offsetLeft, top: el.offsetTop,
+    width: el.offsetWidth, height: el.offsetHeight, ready: true,
+  }
+}
+watch([tab, TABS], () => nextTick(updateIndicator), { flush: 'post' })
+onMounted(() => { nextTick(updateIndicator); window.addEventListener('resize', updateIndicator) })
+onUnmounted(() => window.removeEventListener('resize', updateIndicator))
+
 // Apply the active org's brand colors while the panel is open; restore on leave.
 watch(() => activeOrg.value?.theme, (th) => applyOrgTheme(th || {}), { immediate: true, deep: true })
 onUnmounted(clearOrgTheme)
@@ -225,15 +241,27 @@ onUnmounted(clearOrgTheme)
       </select>
     </header>
 
-    <div role="tablist" class="tabs tabs-boxed bg-base-300/40 flex-nowrap overflow-x-auto">
+    <div ref="tablistEl" role="tablist" class="tabs tabs-boxed relative bg-base-300/40 flex-nowrap overflow-x-auto">
+      <span
+        class="pointer-events-none absolute z-0 rounded-full bg-primary shadow-sm transition-all duration-300 ease-out"
+        :style="{
+          left: indicator.left + 'px',
+          top: indicator.top + 'px',
+          width: indicator.width + 'px',
+          height: indicator.height + 'px',
+          opacity: indicator.ready ? 1 : 0,
+        }"
+        aria-hidden="true"
+      />
       <template v-for="t in TABS" :key="t.key">
         <RouterLink
           v-if="t.show"
           :to="`/org/${t.key}`"
           role="tab"
-          class="tab transition-all duration-200"
+          :data-active="tab === t.key"
+          class="tab relative z-10 transition-colors duration-200"
           :class="tab === t.key
-            ? 'tab-active !bg-primary !text-primary-content shadow-sm'
+            ? '!text-primary-content'
             : 'text-base-content/60 hover:text-base-content'"
         >{{ t.label }}</RouterLink>
       </template>
