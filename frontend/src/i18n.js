@@ -196,10 +196,10 @@ const en = {
     english: 'English', spanish: 'Español', continue: 'Continue',
   },
   coach: {
-    streakTitle: 'Your streak 🔥', streakBody: 'Each event you fully complete (collect every badge) adds +1 to your streak. Complete events back to back to keep the flame alive — miss one and it resets!',
+    streakTitle: 'Your streak 🔥', streakBody: 'Collect every badge at an event and it counts toward your streak. Keep completing events one after another and watch the number grow. Miss one and it resets.',
     scanTitle: 'Scan badges', scanBody: 'Tap here to open the camera and scan a QR at any booth to earn a badge.',
-    badgesTitle: 'Your badges', badgesBody: 'Badges you earn show up here — tap one to flip it and reveal its rarity (common → legendary), or share it with friends.',
-    eventsTitle: 'Events', eventsBody: 'Browse active and upcoming events. Complete every badge in an event to close it out and grow your streak!',
+    badgesTitle: 'Your badges', badgesBody: 'Badges you earn show up here. Tap one to flip it and see how rare it is, or share it with friends.',
+    eventsTitle: 'Events', eventsBody: 'Browse what\'s active and what\'s coming up. Complete all the badges in an event and it counts toward your streak.',
     gotIt: 'Got it',
   },
   errors: {
@@ -700,10 +700,10 @@ const es = {
     english: 'English', spanish: 'Español', continue: 'Continuar',
   },
   coach: {
-    streakTitle: 'Tu racha 🔥', streakBody: 'Cada evento donde colecciones todos los badges suma +1 a tu racha. ¡Complétalos seguidos para mantener la llama encendida — si te saltas uno, se reinicia!',
-    scanTitle: 'Escanea insignias', scanBody: 'Toca aquí para abrir la cámara y escanear un QR en cualquier estación y ganar una insignia.',
-    badgesTitle: 'Tus insignias', badgesBody: 'Las insignias que ganes aparecen aquí — toca una para revelar su rareza (común → legendaria) o compartirla con amigos.',
-    eventsTitle: 'Eventos', eventsBody: 'Explora los eventos activos y próximos. ¡Completa todos los badges de un evento para cerrarlo y hacer crecer tu racha!',
+    streakTitle: 'Tu racha 🔥', streakBody: 'Colecciona todos los badges de un evento y suma a tu racha. Completá eventos seguidos y el número va a crecer. Si te saltás uno, se reinicia.',
+    scanTitle: 'Escanea insignias', scanBody: 'Tocá aquí para abrir la cámara y escanear un QR en cualquier estación y ganar una insignia.',
+    badgesTitle: 'Tus insignias', badgesBody: 'Las insignias que ganés aparecen acá. Tocá una para darla vuelta y ver qué tan rara es, o compartila con alguien.',
+    eventsTitle: 'Eventos', eventsBody: 'Mirá qué eventos están activos y cuáles se vienen. Completá todos los badges de uno y cuenta para tu racha.',
     gotIt: 'Entendido',
   },
   errors: {
