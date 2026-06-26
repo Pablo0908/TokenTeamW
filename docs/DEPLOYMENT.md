@@ -1,7 +1,11 @@
 # Production Deployment — env & config reference
 
 Backend: **Render** (gunicorn, always-on, HTTPS) · Frontend: **Vercel** (Vue PWA static) ·
-DB: **separate `beeworking_prod` database in the same Atlas cluster** · Install path: **PWA**.
+DB: **`beeworking` — the dev database is reused for production** (decision 2026-06-26;
+no separate prod DB) · Install path: **PWA**.
+
+> Because prod shares the dev DB, the go-live hardening below is **mandatory** and must run
+> as the LAST step before launch (see "Go-live hardening").
 
 > No secrets live in the repo. Set everything below in the host dashboards. Generate fresh
 > production secrets — never reuse dev values.
@@ -18,7 +22,7 @@ DB: **separate `beeworking_prod` database in the same Atlas cluster** · Install
 | Var | Value |
 |---|---|
 | `MONGO_URI` | `mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?retryWrites=true&w=majority` |
-| `DB_NAME` | `beeworking_prod` |
+| `DB_NAME` | `beeworking` (dev DB reused for prod) |
 | `JWT_SECRET` | *(fresh 64-hex, generated separately — not in repo)* |
 | `SECRET_KEY` | *(fresh 64-hex, generated separately — not in repo)* |
 | `JWT_EXPIRY_HOURS` | `8` |
@@ -52,5 +56,15 @@ two vars later — no redeploy of the rest is needed beyond rebuilding the front
 (free) Google OAuth client is set up and the prod origin is an Authorized JavaScript origin.
 
 ## Production super admins (Stage 4, explicit designation only)
-`santimenac23@gmail.com` and `pablofori09@gmail.com` — set via `PATCH /admin/users/<id>/super-admin`
-(or a one-off designation script). The dev auto-promotion is removed; no other account is promoted.
+`santimenac23@gmail.com` and `pablofori09@gmail.com`. The dev auto-promotion is removed; no
+other account is promoted.
+
+## Go-live hardening (MANDATORY — prod reuses the dev DB)
+Run these as the LAST step before launch, once testing on the shared DB has stopped:
+1. **Super admins** → exactly the two owners:
+   `python designate_prod_superadmins.py` (dry-run) then `--apply`.
+   Demotes the 3 dev super admins (admin@lyfter.cc, valerodnav29@gmail.com, saencopra@gmail.com).
+2. **Test data cleanup** — remove leftover test content, e.g. the orphan event
+   `Lyfter i18n Test` (+ its 2 badges / 2 scans, all missing org_id) and any other dev fixtures.
+3. **Re-run the Stage 4 audit** to confirm: exactly 2 super admins, 0 records missing org_id.
+4. (Optional) reset/rotate the seed `admin@lyfter.cc` password or remove the account.
