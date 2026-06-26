@@ -71,29 +71,6 @@ function goAuth(mode) {
   <AppPreview />
 </section>
 
-<!-- ─── SOCIAL PROOF TICKER ───────────────────────────────────────────── -->
-<div class="lp-ticker-wrap" style="padding:0 40px 80px;overflow:hidden;position:relative;">
-  <p style="text-align:center;font-size:13px;color:rgba(255,255,255,0.25);letter-spacing:1px;text-transform:uppercase;margin-bottom:28px;">Hecho para comunidades que crecen</p>
-  <div class="lp-ticker" style="display:flex;justify-content:center;flex-wrap:wrap;gap:16px;max-width:1100px;margin:0 auto;">
-    <div class="lp-chip" style="opacity:0;animation:lp-chip-in 0.6s ease forwards;animation-delay:0.05s;display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,193,0.06);border:1px solid rgba(0,212,193,0.22);border-radius:100px;padding:12px 22px;backdrop-filter:blur(8px);box-shadow:0 0 24px rgba(0,212,193,0.12);">
-      <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00d4c1;">500+</span>
-      <span style="font-size:14px;color:rgba(255,255,255,0.6);">eventos creados</span>
-    </div>
-    <div class="lp-chip" style="opacity:0;animation:lp-chip-in 0.6s ease forwards;animation-delay:0.18s;display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,193,0.06);border:1px solid rgba(0,212,193,0.22);border-radius:100px;padding:12px 22px;backdrop-filter:blur(8px);box-shadow:0 0 24px rgba(0,212,193,0.12);">
-      <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00d4c1;">12,000+</span>
-      <span style="font-size:14px;color:rgba(255,255,255,0.6);">badges emitidos</span>
-    </div>
-    <div class="lp-chip" style="opacity:0;animation:lp-chip-in 0.6s ease forwards;animation-delay:0.31s;display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,193,0.06);border:1px solid rgba(0,212,193,0.22);border-radius:100px;padding:12px 22px;backdrop-filter:blur(8px);box-shadow:0 0 24px rgba(0,212,193,0.12);">
-      <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00d4c1;">98%</span>
-      <span style="font-size:14px;color:rgba(255,255,255,0.6);">tasa de escaneo</span>
-    </div>
-    <div class="lp-chip" style="opacity:0;animation:lp-chip-in 0.6s ease forwards;animation-delay:0.44s;display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,193,0.06);border:1px solid rgba(0,212,193,0.22);border-radius:100px;padding:12px 22px;backdrop-filter:blur(8px);box-shadow:0 0 24px rgba(0,212,193,0.12);">
-      <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00d4c1;">40+</span>
-      <span style="font-size:14px;color:rgba(255,255,255,0.6);">organizaciones</span>
-    </div>
-  </div>
-</div>
-
 <!-- ─── FEATURES GRID ─────────────────────────────────────────────────── -->
 <section id="landing-features" class="lp-features" style="padding:0 40px 100px;max-width:1200px;margin:0 auto;">
   <div style="text-align:center;margin-bottom:56px;">
@@ -265,15 +242,9 @@ function goAuth(mode) {
   100% { background-position: 200% center; }
 }
 
-@keyframes lp-chip-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Honor reduced-motion: stop the looping/auto effects and reveal chips. */
+/* Honor reduced-motion: stop the looping/auto effects. */
 @media (prefers-reduced-motion: reduce) {
   .landing .lp-gradient-text { animation: none; }
-  .landing .lp-chip { animation: none !important; opacity: 1 !important; }
 }
 
 /* ── Responsive overrides ──────────────────────────────────────────────
